@@ -89,7 +89,7 @@ terrain. If voxels look like Lego bricks, it fails.
   voxel glint). Mouths are big and expressive.
 * **Squash and stretch** on every jump, land and munch. Belly inflation is
   animated with a wobble, not snapped.
-* Glazey: soft peach-pink body, cream belly, a 3-sprinkle tuft on top, stubby
+* Glazey (canonical: `art/reference/03_glazey_sheet.jpg`): coral body (~`#F28B6E`), cream belly, pink blush, a 5-stripe rainbow sprinkle tuft on top, stubby arms and
   feet. The silhouette must read at 64 px tall.
 
 ## 8. Effects ("juice")

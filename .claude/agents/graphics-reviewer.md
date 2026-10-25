@@ -23,8 +23,10 @@ enough to pass.
    Never judge images supplied any other way. If the harness fails, that is a
    FAIL with the error as a blocker.
 3. **Look at every image** with the Read tool, including every file in
-   `art/reference/`. If no reference image exists, say so in the report and
-   judge "reference fidelity" against the art bible text alone.
+   `art/reference/`. Read `art/reference/NOTES.md` first: judge reference
+   fidelity only against each image's "Follow" list, and never reward a flaw
+   from its "Ignore" list (e.g. chunky Minecraft grass in 02). If no reference
+   image exists, say so and judge against the art bible text alone.
 4. **Write only to `reviews/`.** Never modify source, assets, docs or shots.
 5. **Be specific.** Every finding names the shot, where it is in the frame
    (e.g. "lower-left, under the bakery eave"), what is wrong, which rule it

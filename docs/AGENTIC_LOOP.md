@@ -110,7 +110,7 @@ Previous review: <path or "none">.
 Previously passed gates for the regression check: <list of shots/*/final dirs or "none">.
 
 1. Read docs/ART_BIBLE.md and docs/AGENTIC_LOOP.md §3–§4 in full.
-2. View every image in art/reference/.
+2. Read art/reference/NOTES.md, then view every image in art/reference/.
 3. Run: npm run shots -- --gate <GATE_ID> --iter <N>
 4. View every resulting PNG at full resolution. Zoom mentally into silhouettes,
    shadows and edges; look for every artifact.

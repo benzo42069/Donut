@@ -1,6 +1,6 @@
 # Kickoff Prompt (paste into a fresh Claude Code session)
 
-Before pasting: put at least `art/reference/01_environment_hero.png` in the
+Before pasting: put at least `art/reference/01_environment_hero.jpg` in the
 repo (see `prompts/REFERENCE_IMAGE_PROMPTS.md`) and commit it.
 
 To run one milestone per session (recommended for long projects), change the

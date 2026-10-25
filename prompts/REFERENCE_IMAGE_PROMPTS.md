@@ -14,7 +14,7 @@ Tips:
 
 ---
 
-## 1. Environment master (required) → `art/reference/01_environment_hero.png`
+## 1. Environment master (required) → `art/reference/01_environment_hero.jpg`
 
 ```
 A whimsical miniature voxel-art diorama of a ring-shaped island shaped like a
@@ -53,7 +53,7 @@ black shadows, noisy, cluttered, blurry`
 
 ---
 
-## 2. Ground-level gameplay view → `art/reference/02_ground_level.png`
+## 2. Ground-level gameplay view → `art/reference/02_ground_level.jpg`
 
 ```
 Third-person gameplay view at a low camera height of a cute small round voxel
@@ -70,7 +70,7 @@ shadows, rich ambient occlusion, warm and cozy, children's game, 16:9.
 
 ---
 
-## 3. Glazey character sheet → `art/reference/03_glazey_sheet.png`
+## 3. Glazey character sheet → `art/reference/03_glazey_sheet.jpg`
 
 ```
 Character turnaround sheet of Glazey, a cute voxel creature for a children's
@@ -85,7 +85,7 @@ occlusion, clean pale cream background, premium voxel art, 16:9.
 
 ---
 
-## 4. Donut lineup / asset sheet → `art/reference/04_donut_lineup.png`
+## 4. Donut lineup / asset sheet → `art/reference/04_donut_lineup.jpg`
 
 ```
 Product-shot lineup of nine voxel-art donuts on a soft cream background, each

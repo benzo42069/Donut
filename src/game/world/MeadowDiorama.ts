@@ -60,7 +60,7 @@ import {
 import { HERO_DONUT, MEADOW_LAYOUT, SPOTS, band, polar } from './meadowLayout';
 
 /** Direction toward the golden-hour sun: upper right of the hero view (K-01). */
-export const SUN_DIR = new Vector3(0.8, 0.43, -0.32).normalize();
+export const SUN_DIR = new Vector3(0.72, 0.34, -0.48).normalize();
 /** Where the hero camera sits (props that "face the viewer" turn toward it). */
 export const HERO_EYE = new Vector3(-8, 23, 32.5);
 
@@ -107,7 +107,7 @@ export async function buildMeadowDiorama(
   const low = quality.tier === 'low';
 
   // --- Light (art bible §6): golden key, cool sky fill, warm bounce. ---
-  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 5.6);
+  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 6.4);
   sun.position.copy(SUN_DIR).multiplyScalar(60);
   sun.target.position.set(0, 0, 0);
   sun.castShadow = true;
@@ -116,8 +116,8 @@ export async function buildMeadowDiorama(
   Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext });
   sun.shadow.camera.near = 20;
   sun.shadow.camera.far = 110;
-  sun.shadow.radius = 3;
-  sun.shadow.blurSamples = 10;
+  sun.shadow.radius = 5;
+  sun.shadow.blurSamples = 16;
   sun.shadow.bias = -0.0002;
   sun.shadow.normalBias = 0.01;
   scene.add(sun, sun.target);
@@ -125,7 +125,7 @@ export async function buildMeadowDiorama(
     new HemisphereLight(
       new Color(LIGHT_PALETTE.shadowFill),
       new Color(LIGHT_PALETTE.groundBounce),
-      0.3,
+      0.38,
     ),
   );
   // The environment map is fill and gloss, not the key: keep it soft.
@@ -202,6 +202,7 @@ export async function buildMeadowDiorama(
       const c = shape.column(x, z);
       if (c.zone !== Zone.Frosting || c.zoneDepth < 0.1) continue;
       if (c.r < c.ri + 0.18 || c.r > c.ro - 0.05) continue;
+      if (inDetail(detail, x, z)) continue;
       const fx = Math.floor(x / FINE);
       const fz = Math.floor(z / FINE);
       const alongX = hash3(i, k, 7, 53) > 0.5;
@@ -292,7 +293,7 @@ export async function buildMeadowDiorama(
       for (let m = 0; m < 3; m++) {
         const a = hash3(i, m, 2, 3) * Math.PI * 2;
         const q = { x: p.x + Math.cos(a) * 0.75, z: p.z + Math.sin(a) * 0.75 };
-        if (shape.column(q.x, q.z).zone !== Zone.Meadow) continue;
+        if (shape.column(q.x, q.z).zone !== Zone.Meadow || inDetail(detail, q.x, q.z)) continue;
         stamp(
           fineGrid,
           mushroomStamp(i * 7 + m, 0.8 + m * 0.25),

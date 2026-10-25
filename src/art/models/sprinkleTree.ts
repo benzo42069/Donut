@@ -89,7 +89,9 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
         const h = hash3(x, y, z, seed + 31);
         if (h > 0.975) return PALETTE_INDEX[leafC];
         // Darker underside, lighter crown top.
-        return PALETTE_INDEX[n + py / 60 < 0.42 ? leafB : leafA];
+        // Soft, dithered shading split (no hard two-tone band).
+        const k = n + py / 110 + (hash3(x, y, z, seed + 37) - 0.5) * 0.18;
+        return PALETTE_INDEX[k < 0.4 ? leafB : leafA];
       }
       const band = (y + Math.sin((x + z) * 0.4) * 1.5) % 7;
       return band < 1.2
@@ -132,23 +134,25 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
           : 2;
     const step = [0, 0, 0];
     step[ax] = Math.sign(dir[ax] ?? 1);
-    const ox = x + (step[0] ?? 0);
-    const oy = y + (step[1] ?? 0);
-    const oz = z + (step[2] ?? 0);
     // Lay the capsule along one of the two axes tangent to the surface.
     const along = (ax + 1 + (hash3(i, seed, 3, 47) > 0.5 ? 1 : 0)) % 3;
     const color = PALETTE_INDEX[SPRINKLES[(i * 3 + seed) % SPRINKLES.length] ?? 'sprinkleRed'];
+    // Inlaid flush: recolor three exposed crown voxels in a row (never stand off it).
     const cells: [number, number, number][] = [-1, 0, 1].map((k) => [
-      ox + (along === 0 ? k : 0),
-      oy + (along === 1 ? k : 0),
-      oz + (along === 2 ? k : 0),
+      x + (along === 0 ? k : 0),
+      y + (along === 1 ? k : 0),
+      z + (along === 2 ? k : 0),
     ]);
-    if (cells.some(([a, b, c]) => grid.get(a, b, c) !== 0)) continue;
-    // Every cell must rest on the crown (no sprinkles hovering like hairs).
     const sx = step[0] ?? 0;
     const sy = step[1] ?? 0;
     const sz = step[2] ?? 0;
-    if (cells.some(([a, b, c]) => grid.get(a - sx, b - sy, c - sz) === 0)) continue;
+    const leafIds = new Set([PALETTE_INDEX[leafA], PALETTE_INDEX[leafB], PALETTE_INDEX[leafC]]);
+    if (
+      cells.some(
+        ([a, b, c]) => !leafIds.has(grid.get(a, b, c)) || grid.get(a + sx, b + sy, c + sz) !== 0,
+      )
+    )
+      continue;
     for (const [a, b, c] of cells) grid.set(a, b, c, color);
     placed++;
   }

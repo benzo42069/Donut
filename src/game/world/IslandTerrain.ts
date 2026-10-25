@@ -92,19 +92,23 @@ const P = PALETTE_INDEX;
  */
 function doughColor(x: number, y: number, z: number, theta: number, aboveBottom: number): number {
   const h = hash3(Math.floor(x * 64), Math.floor(y * 64), Math.floor(z * 64), 4);
-  if (aboveBottom < 0.16) return h > 0.3 ? P.doughCrust : P.doughToasted;
-  // Fried gradient: more toasted voxels the closer to the bottom.
-  if (aboveBottom < 0.9 && h < 0.85 - aboveBottom) return P.doughToasted;
-  const n = valueNoise3(x * 0.7, y * 0.6, z * 0.7, 31);
-  const wave = Math.sin(theta * 5 + y * 0.9 + n * 2.5) * 0.13 + (n - 0.5) * 0.45;
-  const b = (y + wave + 8) / 0.72;
+  // Fried underside: a smooth crust → toasted → golden gradient broken by soft
+  // low-frequency patches (never a per-voxel checkerboard).
+  if (aboveBottom < 1.1) {
+    const t = aboveBottom / 1.1 + (valueNoise3(x * 1.2, y * 1.2, z * 1.2, 35) - 0.5) * 0.35;
+    if (t < 0.22) return P.doughCrust;
+    if (t < 0.62) return P.doughToasted;
+  }
+  // Broad, soft toasted strata of varying thickness (K-02), dithered at their edges.
+  const n = valueNoise3(x * 0.5, y * 0.45, z * 0.5, 31);
+  const wave = Math.sin(theta * 4 + n * 3) * 0.18 + (n - 0.5) * 0.5;
+  const b = (y + wave + 8) / 0.95;
   const band = Math.floor(b);
   const f = b - band;
-  const thick = 0.07 + 0.1 * valueNoise3(theta * 2.5, band * 1.7, 0.5, 33);
-  if (f < thick) return h > 0.15 ? P.doughToasted : P.doughGolden;
-  if (f < thick + 0.07) return h > 0.4 ? P.doughCrumb : P.doughGolden;
-  if (h > 0.95) return P.doughCrumb;
-  if (h < 0.03) return P.doughToasted;
+  const thick = 0.14 + 0.16 * valueNoise3(theta * 2, band * 1.7, 0.5, 33);
+  if (f < thick) return P.doughToasted;
+  if (f < thick + 0.07 && h < 1 - (f - thick) / 0.07) return P.doughToasted;
+  if (h > 0.96) return P.doughCrumb;
   return P.doughGolden;
 }
 
@@ -131,12 +135,14 @@ function surfaceColor(c: Column, x: number, z: number, res: number, slope: numbe
       return P.syrupLight;
     case Zone.Sugar:
     case Zone.Rock:
-      // Powdered sugar settles on the flat tops only; steep faces show gingerbread.
-      if (slope < 0.9 && c.zone === Zone.Sugar) return P.powderedSugar;
-      if (slope < 0.55) return P.powderedSugar;
-      return hash3(Math.floor(x * res), 2, Math.floor(z * res), 29) > 0.75
-        ? P.doughToasted
-        : P.doughGolden;
+      // Powdered sugar dusts every upward face (the top voxel of each column);
+      // the steps' sides below show gingerbread. Higher up it is thicker.
+      if (
+        c.zone === Zone.Sugar ||
+        hash3(Math.floor(x * res), 2, Math.floor(z * res), 29) > 0.25 + slope * 0.2
+      )
+        return P.powderedSugar;
+      return P.doughToasted;
     default:
       return meadowColor(x, z, res);
   }
@@ -170,7 +176,10 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     const y1 = Math.ceil(yTop / COARSE - 0.5); // centers strictly below yTop
     for (let iy = y0; iy < y1; iy++) {
       const y = (iy + 0.5) * COARSE;
-      if (r > c.ri && r > outerWall(c.ro, c.theta, y, c.top)) continue;
+      const wall = outerWall(c.ro, c.theta, y, c.top);
+      if (r > c.ri && r > wall) continue;
+      // The outer belly gets a 1/32 m shell (fine pass) so its silhouette is smooth.
+      if (inBelly(c, r) && (y < c.bottom + BELLY_SHELL || r > wall - BELLY_SHELL - 0.15)) continue;
       if (r < c.ri && iy === y1 - 1) put(iy, P.milkFloor);
       else put(iy, doughColor(x, y, z, c.theta, y - c.bottom));
     }
@@ -197,23 +206,13 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       const along = Math.abs(((theta - f.theta + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * ri;
       if (along < f.halfWidth * 0.8 + 0.04 * Math.sin(r * 40)) inFall = true;
     }
-    const dOut = dripDepth(theta * ro, 1, 0.56, 1.9);
+    const dOut = dripDepth(theta * ro, 1, 0.56, 1.35);
     const dIn = inFall ? top - MILK_LEVEL + 0.05 : dripDepth(theta * ri, 2, 0.22, 1.5);
     const coatInT = inFall ? SYRUP_SHEET : COAT_IN;
 
-    // Rim corners: rounded where the frosting coat meets the top.
-    const cornerOut = ro + COAT_OUT - RIM_ROUND;
-    const cornerIn = ri - coatInT + RIM_ROUND;
-    let drop = 0;
-    if (r > cornerOut) {
-      const d = Math.min(RIM_ROUND, r - cornerOut);
-      drop = RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
-    } else if (r < cornerIn && !inFall) {
-      const d = Math.min(RIM_ROUND, cornerIn - r);
-      drop = RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
-    }
+    const drop = rimDrop(c, r, inFall);
     const surf = top - drop;
-    const macro = inDetail(opts.detail, x, z) && (c.zone === Zone.Meadow || c.zone === Zone.Path);
+    const macro = inDetail(opts.detail, x, z) && macroColumn(c, r);
 
     let slope = 0;
     if (c.zone === Zone.Sugar || c.zone === Zone.Rock) {
@@ -222,7 +221,9 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       slope = Math.hypot(tx - top, tz - top) / FINE;
     }
 
+    const belly = inBelly(c, r - 0.2);
     let yLow = top - 1.0;
+    if (belly) yLow = c.bottom;
     if (r < ri + 0.7) yLow = Math.min(yLow, -0.9);
     if (r > ro - 0.3) yLow = Math.min(yLow, top - dOut - 0.1);
     const fy0 = Math.floor(yLow / FINE);
@@ -233,7 +234,7 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       if (y < c.bottom) continue;
       if (coarseFilled(fx, fy, fz)) continue;
       const below = top - y;
-      if (macro && below < MACRO_SKIN) continue;
+      if (macro && surf - y < MACRO_SKIN) continue;
       const wallO = outerWall(ro, theta, y, top);
       const wallI = innerWall(ri, theta, y);
       // Coat: frosting (or the syrup sheet) outside the dough wall, down to the drip line.
@@ -243,7 +244,7 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       if (r < (coatIn ? wallI - coatInT - (inFall ? 0 : dripBulb(below, dIn)) : wallI)) continue;
       const isCoat = r > wallO || r < wallI || (coatOut && r > wallO - 0.2 && below > SKIN - 0.05);
       const fineZone = below < 1.0 || (r < ri + 0.7 && y > -0.9) || isCoat;
-      if (!fineZone) continue;
+      if (!fineZone && !belly) continue;
 
       let color: number;
       const topVoxel = fy === fyTop - 1;
@@ -263,8 +264,11 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
         color = surfaceColor(c, x, z, 32, slope);
       } else if (c.zone === Zone.Meadow && below < 0.07) {
         color = P.grassDeep;
-      } else if (c.zone === Zone.Sugar && below < 0.12 && slope < 0.9) {
+      } else if (c.zone === Zone.Sugar && below < 0.06 && slope < 0.9) {
         color = P.powderedSugar;
+      } else if ((c.zone === Zone.Sugar || c.zone === Zone.Rock) && below < 0.5) {
+        // Gingerbread crags under the sugar.
+        color = hash3(fx, fy, fz, 29) > 0.7 ? P.doughCrust : P.doughToasted;
       } else {
         color = doughColor(x, y, z, theta, y - c.bottom);
       }
@@ -298,7 +302,34 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
   };
 }
 
-/** The 1/128 m near-field patches: the top `MACRO_SKIN` of meadow and path, plus grass. */
+/** Thickness of the fine shell over the outer belly (meters). */
+const BELLY_SHELL = 0.3;
+/** The outer half of the ring's underside, seen from the hero camera. */
+const inBelly = (c: Column, r: number): boolean => r > (c.ri + c.ro) / 2;
+
+/** Rim corners: rounded where the frosting coat meets the top (meters below `top`). */
+function rimDrop(c: Column, r: number, inFall: boolean): number {
+  const coatInT = inFall ? SYRUP_SHEET : COAT_IN;
+  const cornerOut = c.ro + COAT_OUT - RIM_ROUND;
+  const cornerIn = c.ri - coatInT + RIM_ROUND;
+  if (r > cornerOut) {
+    const d = Math.min(RIM_ROUND, r - cornerOut);
+    return RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
+  }
+  if (r < cornerIn && !inFall) {
+    const d = Math.min(RIM_ROUND, cornerIn - r);
+    return RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
+  }
+  return 0;
+}
+
+/** Columns a macro patch rebuilds: meadow, path and frosting tops inside the dough walls. */
+const macroColumn = (c: Column, r: number): boolean =>
+  (c.zone === Zone.Meadow || c.zone === Zone.Path || c.zone === Zone.Frosting) &&
+  r > c.ri + 0.02 &&
+  r < c.ro;
+
+/** The 1/128 m near-field patches: the top `MACRO_SKIN` of meadow, path and frosting, plus grass and sprinkles. */
 function buildMacro(
   shape: IslandShape,
   patches: readonly DetailPatch[],
@@ -321,21 +352,40 @@ function buildMacro(
         if (Math.hypot(x - q.x, z - q.z) < q.radius) return;
       }
       const c = shape.column(x, z);
-      if (c.zone !== Zone.Meadow && c.zone !== Zone.Path) return;
-      const top = c.top;
+      const r = Math.hypot(x, z);
+      if (!macroColumn(c, r)) return;
+      const drop = rimDrop(c, r, false);
+      const top = c.top - drop;
       const y0 = Math.floor((top - MACRO_SKIN - FINE) / MACRO);
       const yTop = Math.ceil(top / MACRO - 0.5);
-      const surface = surfaceColor(c, x, z, 128, 0);
+      const frosting = c.zone === Zone.Frosting;
+      const surface = frosting ? P.frostingPinkLight : surfaceColor(c, x, z, 128, 0);
       for (let y = y0; y < yTop; y++) {
         const below = top - (y + 0.5) * MACRO;
-        put(
-          y,
-          y === yTop - 1
-            ? surface
-            : c.zone === Zone.Meadow && below < 0.03
-              ? P.grassDeep
-              : P.doughCrumb,
-        );
+        let v: number;
+        if (y === yTop - 1) v = surface;
+        else if (frosting) v = below < 0.05 ? P.frostingPink : P.frostingPinkShadow;
+        else v = c.zone === Zone.Meadow && below < 0.03 ? P.grassDeep : P.doughCrumb;
+        put(y, v);
+      }
+      if (frosting) {
+        // Sprinkles at close-up scale: 1×1×3 macro capsules lying flat.
+        if (drop === 0 && c.zoneDepth > 0.06 && hash3(mx, 13, mz, 71) < 0.012) {
+          const colors = [
+            P.sprinkleRed,
+            P.sprinkleYellow,
+            P.sprinkleBlue,
+            P.sprinkleGreen,
+            P.sprinkleViolet,
+            P.sprinkleOrange,
+            P.candyCream,
+          ];
+          const col = colors[Math.floor(hash3(mx, 14, mz, 71) * colors.length)] ?? P.butter;
+          const alongX = hash3(mx, 15, mz, 71) > 0.5;
+          for (let k = -1; k <= 1; k++)
+            leans.push([mx + (alongX ? k : 0), yTop, mz + (alongX ? 0 : k), col]);
+        }
+        return;
       }
       if (c.zone !== Zone.Meadow || c.zoneDepth < 0.03) return;
       if (clear.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr)) return;
@@ -373,14 +423,6 @@ function buildMacro(
           [-1, 0],
           [0, 1],
           [0, -1],
-          [1, 1],
-          [-1, -1],
-          [1, -1],
-          [-1, 1],
-          [2, 0],
-          [-2, 0],
-          [0, 2],
-          [0, -2],
         ] as const)
           leans.push([mx + dx, yTop + h, mz + dz, petal]);
         leans.push([mx, yTop + h, mz, P.sprinkleOrange]);

@@ -30,14 +30,19 @@ export function flowerStamp(seed: number): Stamp {
   const center = hash3(seed, 3, 0, 3) > 0.5 ? P.butter : P.sprinkleOrange;
   const cells: Stamp = [];
   for (let y = 0; y < h; y++) cells.push([0, y, 0, P.grassDeep]);
-  for (const [dx, dz] of [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ] as const)
-    cells.push([dx, h, dz, petal]);
-  cells.push([0, h, 0, petal === P.butter ? P.sprinkleOrange : center]);
+  // Most blooms are a single bead (small at any distance); a few are crosses.
+  if (hash3(seed, 6, 0, 3) < 0.25) {
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const)
+      cells.push([dx, h, dz, petal]);
+    cells.push([0, h, 0, petal === P.butter ? P.sprinkleOrange : center]);
+  } else {
+    cells.push([0, h, 0, petal]);
+  }
   // A leaf on some stems.
   if (h > 2 && hash3(seed, 4, 0, 3) > 0.4)
     cells.push([hash3(seed, 5, 0, 3) > 0.5 ? 1 : -1, 1, 0, P.grassMint]);

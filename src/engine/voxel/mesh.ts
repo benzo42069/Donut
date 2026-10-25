@@ -9,7 +9,7 @@ import { CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
  */
 const SMOOTH = new Uint8Array(256);
 PALETTE_NAMES.forEach((n, i) => {
-  if (VOXEL_PALETTE[n].mat & MAT.gloss) SMOOTH[i + 1] = 1;
+  if (VOXEL_PALETTE[n].mat & (MAT.gloss | MAT.lit)) SMOOTH[i + 1] = 1;
 });
 
 /**

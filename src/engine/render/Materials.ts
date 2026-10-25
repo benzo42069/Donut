@@ -63,7 +63,10 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   crackEps: 5e-5,
 };
 
-/** Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap). */
+/** Added to `.w` (wrap) of smooth-normal entries (gloss, lit); see mesh.ts SMOOTH. */
+const SMOOTH_FLAG = 10;
+
+/** Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap + smooth flag). */
 export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
   colors: Vector4[];
   materials: Vector4[];
@@ -80,7 +83,7 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
       rough,
       e.mat & MAT.glow ? t.glow : e.mat & MAT.lit ? t.lit : e.mat & MAT.emissive ? t.emissive : 0,
       e.mat & MAT.translucent ? t.rim : 0,
-      e.mat & MAT.soft ? t.wrap : 0,
+      (e.mat & MAT.soft ? t.wrap : 0) + (e.mat & (MAT.gloss | MAT.lit) ? SMOOTH_FLAG : 0),
     );
   });
   return { colors, materials };
@@ -162,7 +165,9 @@ const FRAGMENT_COLOR = /* glsl */ `
   float jv = 1.0 + (voxelHash(cell, 1u) * 2.0 - 1.0) * vPal.w;
   float hue = (voxelHash(cell, 2u) * 2.0 - 1.0) * 0.012;
   vec3 s = clamp(vec3(vPal.r * jv + hue, vPal.g * jv, vPal.b * jv - hue), 0.0, 1.0);
-  float ao = mix(1.0 - uAoStrength, 1.0, vAO);
+  // Smooth-shaded voxels (icing, clouds) keep only a whisper of baked AO, so
+  // their 1-voxel steps don't print contour lines; N8AO still grounds them.
+  float ao = mix(1.0 - uAoStrength * (vVoxelMat.w >= 5.0 ? 0.3 : 1.0), 1.0, vAO);
   diffuseColor.rgb *= voxelSrgbToLinear(s) * ao;
 }
 `;
@@ -186,7 +191,8 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
   /* glsl */ `{
     float nlRaw = dot( geometryNormal, directLight.direction );
     float nl = saturate( nlRaw );
-    float wrapNL = saturate( ( nlRaw + vVoxelMat.w ) / ( 1.0 + vVoxelMat.w ) );
+    float wrapW = mod( vVoxelMat.w, 10.0 );
+    float wrapNL = saturate( ( nlRaw + wrapW ) / ( 1.0 + wrapW ) );
     vec3 wrapIrr = directLight.color * ( nl + max( wrapNL - nl, 0.0 ) * uSssTint );
     reflectedLight.directDiffuse += wrapIrr * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
     // Glaze sheen for gloss voxels: a broad candy highlight plus a Fresnel lift.
@@ -233,13 +239,13 @@ export function createVoxelMaterial(
         '#include <normal_fragment_maps>',
         /* glsl */ `#include <normal_fragment_maps>
 // Gloss voxels shade with the smooth occupancy normal (rounded icing).
-if (vVoxelMat.x < 0.4) {
+if (vVoxelMat.w >= 5.0) {
   vec3 sn = normalize(vSNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   normal = normalize(mix(normal, sn, uSmooth));
 }`,
       )
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS);
   };
-  mat.customProgramCacheKey = () => 'voxel-v4';
+  mat.customProgramCacheKey = () => 'voxel-v5';
   return mat;
 }

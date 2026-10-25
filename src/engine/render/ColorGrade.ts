@@ -6,9 +6,9 @@ import { LIGHT_PALETTE } from '../../art/palette';
  * Gentle grade after tone mapping (art bible §6): warm highlights, cool
  * shadows, a soft filmic contrast and a touch of saturation, then a vignette.
  *
- * Gamut-safe: contrast is a smooth curve on luma only, and saturation scales
- * chroma (color minus luma) by at most the amount that keeps every channel in
- * [0, 1], so no channel ever clips to 0 (§10.7 crushed blacks).
+ * Contrast is a smooth curve on luma only; saturation has a soft knee so
+ * already-saturated colors are left alone. `GamutEffect` runs before tone
+ * mapping so channels never reach 0 in the first place (§10.7).
  */
 const fragment = /* glsl */ `
 uniform vec3 warm;
@@ -33,14 +33,11 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float s = l * l * (3.0 - 2.0 * l);
   float l2 = mix(l, s, contrast);
   vec3 chroma = c - l;
-  // Saturation, limited so no channel leaves [0, 1].
-  float k = saturation;
-  for (int i = 0; i < 3; i++) {
-    float ch = chroma[i];
-    if (ch > 1e-5) k = min(k, (1.0 - l2) / ch);
-    else if (ch < -1e-5) k = min(k, -l2 / ch);
-  }
-  c = l2 + chroma * max(k, 0.0);
+  // Saturation with a soft knee: colors near the gamut edge are boosted less.
+  float sat = (max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b))) / max(max(c.r, max(c.g, c.b)), 1e-4);
+  float k = mix(saturation, 1.0, smoothstep(0.4, 0.9, sat));
+  // Chroma scales with luma, so a darker luma never pushes a channel below 0.
+  c = clamp(l2 + chroma * k * (l2 / max(l, 1e-4)), 0.0, 1.0);
 
   vec2 d = uv - 0.5;
   c *= 1.0 - vignette * dot(d, d) * 1.6;
@@ -49,7 +46,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class ColorGradeEffect extends Effect {
-  constructor(strength = 0.22, vignette = 0.2, saturation = 1.08, contrast = 0.18) {
+  constructor(strength = 0.16, vignette = 0.2, saturation = 1.06, contrast = 0.18) {
     super('ColorGradeEffect', fragment, {
       blendFunction: BlendFunction.NORMAL,
       uniforms: new Map<string, Uniform>([
@@ -59,6 +56,43 @@ export class ColorGradeEffect extends Effect {
         ['vignette', new Uniform(vignette)],
         ['saturation', new Uniform(saturation)],
         ['contrast', new Uniform(contrast)],
+      ]),
+    });
+  }
+}
+
+/**
+ * Linear-HDR gamut guard before tone mapping (art bible §4, §10.7): pulls chroma
+ * toward luma just enough that no channel drops below `floor` × luma, so
+ * saturated warm light on dough never clips a channel to 0 downstream. Also
+ * clamps isolated HDR spikes (fireflies) before bloom.
+ */
+const gamutFragment = /* glsl */ `
+uniform float floorK;
+uniform float maxHdr;
+
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec3 c = max(inputColor.rgb, 0.0);
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  float lo = min(c.r, min(c.g, c.b));
+  float target = floorK * l;
+  if (lo < target && l > 1e-5) {
+    // c' = l + (c - l) * k, solved so the smallest channel lands on target.
+    float k = (l - target) / max(l - lo, 1e-5);
+    c = l + (c - l) * k;
+  }
+  c = min(c, vec3(maxHdr));
+  outputColor = vec4(c, inputColor.a);
+}
+`;
+
+export class GamutEffect extends Effect {
+  constructor(floorK = 0.14, maxHdr = 12) {
+    super('GamutEffect', gamutFragment, {
+      blendFunction: BlendFunction.NORMAL,
+      uniforms: new Map<string, Uniform>([
+        ['floorK', new Uniform(floorK)],
+        ['maxHdr', new Uniform(maxHdr)],
       ]),
     });
   }

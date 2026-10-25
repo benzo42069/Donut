@@ -23,7 +23,7 @@ import {
   type Scene,
 } from 'three';
 import type { QualitySettings } from '../quality';
-import { ColorGradeEffect } from './ColorGrade';
+import { ColorGradeEffect, GamutEffect } from './ColorGrade';
 
 /** Per-scene post settings (look-dev knobs; every field optional). */
 export interface PostSettings {
@@ -133,7 +133,7 @@ export class Renderer {
       composer.addPass(new EffectPass(camera, new TiltShiftEffect(post.tiltShift)));
     }
 
-    const effects: Effect[] = [];
+    const effects: Effect[] = [new GamutEffect()];
     if (q.bloom) {
       effects.push(
         new BloomEffect({

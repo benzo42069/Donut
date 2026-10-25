@@ -38,7 +38,7 @@ export const groundAhead = (ahead: number, left = 0): { x: number; z: number } =
 });
 
 /** The hero wild donut: on the left third in front of the ground camera; the close-up subject. */
-export const HERO_DONUT = groundAhead(2.2, 0.42);
+export const HERO_DONUT = groundAhead(3.0, 0.6);
 
 export const MEADOW_LAYOUT: IslandLayout = {
   pads: [

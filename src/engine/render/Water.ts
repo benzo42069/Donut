@@ -44,8 +44,8 @@ const SPEC_LINE =
 const MILK_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
   SPEC_LINE,
   `${SPEC_LINE}
-  reflectedLight.directSpecular += directLight.color * 0.22 *
-    pow( saturate( dot( reflect( - geometryViewDir, geometryNormal ), directLight.direction ) ), 10.0 );`,
+  reflectedLight.directSpecular += directLight.color * 0.3 *
+    pow( saturate( dot( reflect( - geometryViewDir, geometryNormal ), directLight.direction ) ), 5.0 );`,
 );
 if (MILK_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
   throw new Error('Water.ts: three.js lighting chunk changed; update SPEC_LINE');
@@ -73,6 +73,8 @@ export function createMilk(opts: MilkOptions): Milk {
     uTexMatrix: { value: opts.reflection?.textureMatrix ?? new Matrix4() },
     uReflect: { value: opts.reflection?.strength ?? 0 },
     uReflectTexel: { value: new Vector2(1 / 960, 1 / 540) },
+    uSkyTop: { value: new Color(LIGHT_PALETTE.skyZenith) },
+    uSkyLow: { value: new Color(LIGHT_PALETTE.skyHorizon) },
     uSyrup: { value: new Vector3(...(opts.syrup ?? [1e4, 1e4, 0])) },
     uSyrupColor: { value: new Color(VOXEL_PALETTE.syrupLight.hex) },
     uPosts: {
@@ -117,6 +119,8 @@ uniform vec3 uShore;
 uniform vec3 uWaves[8];
 uniform vec3 uPosts[${MAX_POSTS}];
 uniform vec3 uSyrup;
+uniform vec3 uSkyTop;
+uniform vec3 uSkyLow;
 uniform vec3 uSyrupColor;
 
 float milkHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -129,7 +133,7 @@ float milkNoise(vec2 p) {
 // Gentle swell: a few directional waves plus soft noise (height in meters).
 float milkHeight(vec2 p) {
   float h = 0.0;
-  h += sin(dot(p, vec2(0.83, 0.55)) * 2.1 + uTime * 0.9) * 0.012;
+  h += sin(dot(p, vec2(0.83, 0.55)) * 2.1 + uTime * 0.9) * 0.016;
   h += sin(dot(p, vec2(-0.42, 0.91)) * 3.3 + uTime * 1.3) * 0.008;
   h += sin(dot(p, vec2(0.97, -0.25)) * 5.7 - uTime * 1.7) * 0.004;
   h += (milkNoise(p * 2.4 + uTime * 0.15) - 0.5) * 0.014;
@@ -164,7 +168,7 @@ float shoreDist(vec2 p) {
   diffuseColor.rgb = mix(diffuseColor.rgb, uDeep, smoothstep(0.15, 2.5, d) * 0.7);
   // Foam line hugging the shore, breathing slowly.
   float n = milkNoise(p * 6.0 + vec2(uTime * 0.3, -uTime * 0.2));
-  float foamW = 0.14 + 0.08 * n;
+  float foamW = 0.2 + 0.1 * n;
   float foam = 1.0 - smoothstep(foamW * 0.45, foamW, d);
   float lace = smoothstep(0.5, 0.72, milkNoise(p * 14.0 - uTime * 0.4)) * (1.0 - smoothstep(0.12, 0.45, d));
   diffuseColor.rgb = mix(diffuseColor.rgb, uFoam, clamp(foam + lace * 0.6, 0.0, 1.0));
@@ -193,6 +197,14 @@ float shoreDist(vec2 p) {
       .replace(
         '#include <opaque_fragment>',
         /* glsl */ `
+{
+  // Sky-tinted Fresnel sheen: the milk mirrors a soft pastel sky at every angle.
+  vec3 Rv = reflect(-normalize(vViewPosition), normal);
+  vec3 Rw = normalize((vec4(Rv, 0.0) * viewMatrix).xyz);
+  vec3 sky = mix(uSkyLow, uSkyTop, smoothstep(0.0, 0.8, Rw.y));
+  float fr = 0.07 + 0.93 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
+  outgoingLight = mix(outgoingLight, sky * 0.95, clamp(fr * 0.6, 0.0, 0.5));
+}
 if (uReflect > 0.0) {
   // Soft, ripple-distorted mirror image, Fresnel-weighted (milk is no mirror).
   vec2 ruv = vReflUv.xy / vReflUv.w + milkNW.xz * 0.06;
@@ -214,10 +226,10 @@ if (uReflect > 0.0) {
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
 // Milk scatters light: shaded milk stays warm cream, never neutral gray.
-totalEmissiveRadiance += diffuseColor.rgb * 0.06 + uDeep * 0.1;`,
+totalEmissiveRadiance += diffuseColor.rgb * 0.08 + uDeep * 0.2;`,
       );
   };
-  material.customProgramCacheKey = () => 'milk-v2';
+  material.customProgramCacheKey = () => 'milk-v3';
 
   const geo = new CircleGeometry(opts.radius, 128);
   geo.rotateX(-Math.PI / 2);

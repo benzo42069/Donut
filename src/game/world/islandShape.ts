@@ -12,7 +12,7 @@ import { hash3 } from '../../art/palette';
 
 export const MILK_LEVEL = 0;
 /** Base meadow height above the milk. */
-export const TOP_BASE = 1.6;
+export const TOP_BASE = 0.85;
 /** Lagoon floor under the milk. */
 export const LAGOON_FLOOR = -1.1;
 
@@ -171,7 +171,7 @@ export class IslandShape {
       const d = Math.hypot(x - m.x, z - m.z);
       if (d > m.radius * 1.6) continue;
       const n = fbm3(x / 1.3 + m.x, 3, z / 1.3, 3, 11) - 0.5;
-      const t = d / m.radius + n * 0.35;
+      const t = d / m.radius + n * (m.kind === 'sugar' ? 0.6 : 0.35);
       if (m.kind === 'sugar') {
         // Rounded mountain: soft cone with a bulging middle.
         const h = m.height * Math.pow(Math.max(0, 1 - t * t), 1.5);

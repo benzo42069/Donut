@@ -9,6 +9,8 @@ export interface ShotScene {
   update?(t: number): void;
   /** Times (seconds) of the 3-frame motion strip. */
   readonly stripTimes?: readonly number[];
+  /** Optional engine benchmark (e.g. carve + remesh timings), run by `npm run perf`. */
+  bench?(): Promise<Record<string, number>>;
 }
 
 export interface ShotDefinition {

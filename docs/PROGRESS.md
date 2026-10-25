@@ -1,45 +1,52 @@
 # Progress
 
-## Handoff → M1 (Voxel engine core)
+## Handoff → M2 (Beauty slice / look-dev ★)
 
-**What was built (M0):** a Vite + strict TypeScript + three.js app, with lint
-(eslint + prettier), Vitest, and a Playwright screenshot harness that renders
-deterministic `?shot=<id>` scenes through the full post stack.
+**What was built (M1):** the voxel engine core. A sparse chunked grid, greedy
+meshing with per-vertex AO in Web Workers, per-voxel color jitter computed in the
+shader, material flags, remeshing on edit, SDF/sphere carving, a minimal SDF
+modeling toolkit with a donut and grass-tuft model, instanced props, and the
+`m1-terrain` stress scene with an in-browser carve/remesh benchmark.
 
 **Key files and APIs**
-- `src/art/palette.ts`: THE palette. `VOXEL_PALETTE` (hex, `MAT` flags, jitter amplitude), `PALETTE_INDEX` (Uint8, 0 = empty), `paletteEntryAt(i)`, `jitteredLinear(i, x, y, z)` (deterministic per-voxel value/hue jitter → linear RGB), `hash3`. `LIGHT_PALETTE` holds sun, sky, fog and bounce colors. eslint forbids hex literals in `src/` outside this file.
-- `src/engine/quality.ts`: `QualityTier` (`low|medium|high`), the `QUALITY` settings table (pixel ratio, shadow map size, SSAO, bloom, SMAA, MSAA) and `detectTier()`. `?quality=` overrides the tier.
-- `src/engine/render/Renderer.ts`: WebGL2 renderer with VSM soft shadows and a pmndrs `postprocessing` chain: RenderPass → N8AO (`N8AOPostPass`, not on `low`) → Bloom → AgX tone mapping → `ColorGradeEffect` (warm highlights, cool shadows, vignette) → SMAA. `setScene()`, `setSize()`, `render()`, `finish()` (GPU sync), `ao` (for tuning), `info()`.
-- `src/engine/render/Sky.ts`: dithered pastel gradient dome with sun glow.
-- `src/debug/shots.ts`: the `SHOTS` registry (`ShotDefinition`: `build(aspect)`, optional forced `tier`, still `time`). `src/debug/shotTypes.ts`: `ShotScene` (`scene`, `camera`, `update(t)`, `stripTimes`).
-- `src/main.ts`: boot. In shot mode the clock is frozen; it sets `window.__SHOT_READY__` once the frame is really drawn, and exposes `window.__SHOT__` = `{ id, tier, gpu, setTime(t), stripTimes, perf(frames) }`. Errors go to `window.__SHOT_ERROR__`.
-- `scripts/gates.json`: gate → `shots` and `strips` lists. **Add each gate's shot IDs here** (a test checks that every ID exists in `SHOTS`, and that `*-low-tier` IDs force `tier: 'low'`).
-- `scripts/shots.mjs`: `npm run shots -- --gate <G> [--iter N] [--only a,b] [--renderer auto|gpu|swiftshader] [--dev]`. Builds, serves with `vite preview`, captures 1920×1080 and 844×390 for every shot, plus a 3-frame strip (frames and a stitched `<id>_strip.png`), into `shots/<G>/<N>/`. It writes `harness.json` (WebGL path, GPU, flags, timings, console errors) and exits non-zero if any shot fails.
-- `scripts/perf.mjs`: `npm run perf -- --gate <G> [--frames 30]` → `shots/<G>/<N>/perf.json` (ms/frame, draw calls, triangles) on the shot's tier and on `low`.
-- `scripts/harness.mjs`: shared browser launch, server and openShot code.
-- `src/debug/scenes/testCube.ts`: the M0 lit test scene (a 1/32 m frosted dough cube with sprinkles on a 1/8 m meadow). It uses an `InstancedMesh` of boxes as a **stopgap** until M1's mesher.
+- `src/engine/voxel/VoxelGrid.ts`: `VoxelGrid` (32³ Uint8 chunks, 0 = empty). `get/set`, `fill` and `generate(x0,y0,z0,x1,y1,z1, fn)` (half-open box, written chunk by chunk; use it for world gen, it is far faster than `set`). Writes mark chunks dirty, **including neighbours** when a voxel is on a border (faces and AO change next door). `takeDirty()`, `markDirty()`, `padded(cx,cy,cz)` → PAD³ (34³) array with a 1-voxel neighbour border (the mesher's input), `paddedIndex`, `chunkKey`.
+- `src/engine/voxel/mesh.ts`: `meshChunk(padded, origin)` → `MeshData` (positions in voxel units incl. chunk origin, Int8 normals, `voxel` Uint8×2 = palette index + packed byte [AO 0–3 | max-u corner bit 2 | max-v corner bit 3], Uint16/32 indices). Merges only faces with equal palette index **and** equal 4-corner AO. Quad flip on the AO diagonal. `meshGrid(grid)` meshes a small grid on the main thread (props). `mergeMeshData`.
+- `src/engine/voxel/Mesher.worker.ts` + `MesherPool.ts`: worker pool (min(4, cores−1)), transferable buffers, JIT warm-up on start, inline fallback where `Worker` is missing (Vitest).
+- `src/engine/voxel/VoxelObject.ts`: `VoxelObject extends Group` (one Mesh per chunk, scaled by voxel size). `await obj.update()` remeshes dirty chunks and returns `RemeshStats` (worker ms, wall ms, quads, coords). Stale results are dropped by a per-chunk version.
+- `src/engine/voxel/Carve.ts`: `carveSdf(grid, sdf, min, max)`, `carveSphere(grid, cx,cy,cz, r)` → `RemovedVoxel[]` ({x,y,z,index}: feed these to M5's crumb particles), `restore(grid, removed)`.
+- `src/engine/voxel/PropInstances.ts`: `createPropInstances(model, voxelSize, pivot, material, placements)` → one `InstancedMesh` per model. The pivot must be whole voxels (the shader derives voxel cells from positions).
+- `src/engine/voxel/geometry.ts`: `buildGeometry(MeshData)` → `BufferGeometry` (attributes `position`, `normal`, `voxel`).
+- `src/engine/render/Materials.ts`: `createVoxelMaterial(params?, tuning?)`: a `MeshStandardMaterial` patched via `onBeforeCompile`. Palette colors arrive as uniforms (`uPalette`, sRGB + jitter amplitude; `uVoxelMat`, roughness / emissive / rim), never textures. **The per-voxel jitter is an exact GLSL port of `hash3` + `jitteredLinear`**, evaluated per fragment from `floor(position − normal/2)`, so greedy quads stay big. Baked AO multiplies albedo (`aoStrength`). `DEFAULT_TUNING` holds every look knob (gloss/matte roughness, emissive pop, translucent fresnel rim, AO strength, crack epsilon). **M2 look-dev should start here.**
+- `src/art/sdf.ts`: `sphere`, `box` (rounded), `torus`, `translate`, `union`, `subtract`, `intersect`, `smoothUnion`, `valueNoise3`, `fbm3`, `voxelize(grid, sdf, min, max, paint)`.
+- `src/art/models/donut.ts` (`buildDonut('strawberry'|'chocolate'|'glazed', seed)`, 22×12×22 at 1/32 m: drips, pale dough band, 1×1×3 sprinkles) and `grassTuft.ts` (`buildGrassTuft(seed, flower)`). First drafts; M3 owns the real library.
+- `src/debug/scenes/m1Terrain.ts`: `m1-terrain` / `m1-low-tier`. A 256×64×256 floating plateau at 1/8 m (meadow, frosting rim with drips over dough-strata cliffs, two carved bites) plus 200 props at 1/32 m (60 donuts in 3 flavors, 140 tufts). Its `bench()` carves 3 bites and times the remesh.
+- `ShotScene.bench?()` → exposed as `window.__SHOT__.bench()`; `npm run perf` records it in `perf.json` under `bench`.
+- `src/debug/scenes/testCube.ts` now uses the real mesher (the M0 InstancedMesh stopgap is gone).
 
 **Decisions**
-- Pinned exact versions: three 0.186.1, postprocessing 6.39.5 (requires three < 0.187), n8ao 2.0.1 (no types; see `src/types/n8ao.d.ts`), rapier3d-compat 0.21.0, howler 2.2.4, vite 8.3.5, vitest 5.0.5, **TypeScript 6.0.3** (TS 7 is out, but typescript-eslint 8.72 supports only < 6.1), eslint 10.13, and **playwright 1.63.0**, which must match the pre-installed `/opt/pw-browsers/chromium-1243`. Do not bump it.
-- Shadows use `VSMShadowMap` for now (art bible: PCSS or VSM). Revisit in M2 if VSM light-bleeding shows.
-- `THREE.Clock` is deprecated in r183+. Use `Timer` (done in `main.ts`).
-- Renderer tone mapping is `NoToneMapping`; the post chain does AgX. Custom `ShaderMaterial`s should still `#include <tonemapping_fragment>` and `<colorspace_fragment>` (they are no-ops into the HalfFloat target).
+- **Jitter in the shader, not baked.** Baking per-voxel color would stop the greedy mesher merging anything. The GLSL hash matches the TS `hash3` bit for bit (uint math wraps like `Math.imul`), so CPU-side tools can predict a voxel's color.
+- **T-junction cracks are closed in the vertex shader.** Greedy meshes have T-junctions. A magenta-vs-green background diff test showed about 300 sub-pixel cracks per 1080p frame (single MSAA samples showing the sky through convex edges). Each vertex carries its quad-corner bits, and the material pushes every quad outward in its plane by `crackEps × view depth` (≈ 0.1 px). After the fix the diff test found zero background pixels inside the terrain, apart from the deliberate carved opening. If you write another voxel shader, keep this.
+- All voxels are opaque to the mesher (faces between two solid voxels are culled). Translucent milk/jelly will need its own pass (M2 lagoon, M6). Plan: mesh water as a separate grid/material, or add a "transparent" flag check to the face test.
+- Props are instanced shared models. Bitten donuts (M5) should become their own small `VoxelObject` when first bitten (copy the model grid), so carving one doesn't change them all.
 
 **Gotchas**
-- **Headless WebGL path: SwiftShader.** The container has no GPU (`/dev/dri` is missing). With the GPU flags (`--enable-gpu --ignore-gpu-blocklist --use-angle=default`), Chromium still reports `ANGLE (Vulkan, SwiftShader)`, so the harness falls back to `--use-angle=swiftshader --enable-unsafe-swiftshader`. It works: WebGL2, N8AO, MSAA and VSM all render correctly.
-- SwiftShader is slow: about 8 s per high-tier 1080p frame, about 4 s on low. A full M0 run takes about 2 min. rAF fires *before* SwiftShader finishes the frame, so readiness must sync the GPU (`Renderer.finish()`, a 1-px `readPixels`). Without it, screenshots time out. The resulting "GPU stall due to ReadPixels" warning is filtered as noise.
-- **Perf numbers under SwiftShader are meaningless as fps.** For the M1 perf budget (60 fps high / 30 fps low), measure what is machine-independent here: meshing ms per chunk in workers (CPU, which *is* valid), draw calls and triangles. Record that real-GPU fps is unverified in this container. Do not claim the fps budget is met without a GPU. If the budget can only be verified on a GPU, flag it in this file for the user rather than inventing numbers.
-- The test cube's `InstancedMesh` draws every box face (about 280k triangles). That is the baseline the M1 greedy mesher should crush.
+- **Headless WebGL: SwiftShader** again (no `/dev/dri`). GPU flags report SwiftShader, so the harness falls back to `--use-angle=swiftshader --enable-unsafe-swiftshader`. M1 shots take about 35 s, perf about 1.5 min.
+- **The container has only 4 cores**, shared by 3 mesher workers, the main thread and SwiftShader's raster threads. Worker timings are wall-clock inside the worker, so preemption shows up as occasional 10–35 ms outliers (especially on the cold initial build). The serial remesh median (1.4–2.7 ms) and the Node benchmark (1.3 ms) are the meaningful numbers.
+- `VoxelGrid.padded()` and `MesherPool.mesh()` take `Uint8Array<ArrayBuffer>` (TS 6 typed-array generics). Buffers are transferred to workers, so don't reuse a buffer after `mesh()`. Use `pool.buffer()`.
+- The camera in `m1-terrain` looks down at the island, so the sky dome shows only its horizon colour (the beige background). M2 should frame some sky.
+- Bundle is 880 kB (+2 kB worker). Unchanged concern for M9/M10.
 
 **Open follow-ups**
-- Replace the InstancedMesh stopgap with the M1 chunk mesher (per-vertex AO plus jitter). Re-point `testCube.ts` at it.
-- `Materials.ts` (gloss/emissive/translucent flags → shader) is not built yet. The flags exist in the palette.
-- The bundle is 863 kB (three + postprocessing). Code-split later (M9/M10).
+- **Real-GPU fps is unverified** (see the perf table). The user should run `npm run perf -- --gate M1` on a machine with a GPU to confirm 60 fps high / 30 fps low. Draw calls (246 high / 224 low) and triangles (568k incl. the shadow pass) are modest, so no problem is expected.
+- Terrain LOD (`Lod.ts`, 1/4 m and 1/2 m rings) is not built. It's needed by M6 (full ring sector), not M2's 30×30 m patch.
+- Wrap lighting for dough (art bible §5 "subsurface feel") and a proper gloss response (env map) belong to the M2 material pass in `Materials.ts`.
+- The donut and tuft models are drafts. M2 will likely upgrade them in place; M3 owns the library and gallery.
+- The terrain's hill terraces read as stair steps from far away. M2 should use gentler slopes, and frosting swells or drips on slopes (RF-05).
 
-**First 3 steps for M1**
-1. `src/engine/voxel/VoxelGrid.ts`: sparse map of 32³ chunks of Uint8 palette indices with get/set/fill and dirty tracking. Unit-test it.
-2. `src/engine/voxel/mesh.ts` (pure function, unit-tested) + `Mesher.worker.ts`: greedy meshing that merges only faces with identical color *and* AO, with per-vertex AO (4-corner rule plus quad flip), per-voxel `jitteredLinear` colors (merging must respect jitter: either mesh per-voxel-colored quads, or merge and carry jitter via a tiny 3D hash in the shader), and material flags as a vertex attribute. Tests: face counts on known shapes, no seams across chunk borders.
-3. `Carve.ts` (sphere/SDF carve → removed voxel list → dirty chunks → remesh), then a `?shot=m1-terrain` stress scene (256×64×256 at 1/8 m plus 200 props at 1/32 m) and a `perf` run, logging meshing ms per chunk here.
+**First 3 steps for M2**
+1. Build `?shot=m2-*` scenes (`m2-hero`, `m2-ground`, `m2-closeup-donut`, `m2-lagoon-edge`, `m2-low-tier`), add them to `scripts/gates.json`, and frame `m2-hero` like `art/reference/01_environment_hero.jpg` (3/4 high angle, golden key from the upper right).
+2. Author the diorama patch in code with `sdf.ts` + `VoxelGrid.generate`: frosting hills dripping over a dough cliff (K-02, RF-05), a sprinkle-ball tree (RF-06), Granny's bakery with an icon sign (RF-08), 6 donuts, a milk lagoon strip (RF-02, RF-07, needs a water material), and finer-voxel clouds (RF-03), with micro-voxel grass (RF-04).
+3. Look-dev pass in `Materials.ts`, `Renderer.ts` and the scene lights: wrap lighting on dough, glossy frosting spec (add a small pastel env map), emissive sprinkle pop, AO balance (baked vs N8AO), VSM bias check, and the color grade. Then run the double-reviewer gate (AGENTIC_LOOP §7, two Agent calls in one message).
 
 ---
 
@@ -48,8 +55,8 @@ deterministic `?shot=<id>` scenes through the full post stack.
 | Milestone | Status | Gate | Notes |
 |---|---|---|---|
 | M0 Scaffold and screenshot harness | **DONE** | none | `npm run shots -- --gate M0` produces lit test-cube PNGs (`shots/M0/final/`) |
-| M1 Voxel engine core | next | perf budget | |
-| M2 Beauty slice ★ | — | double reviewer | user check-in after |
+| M1 Voxel engine core | **DONE** | perf budget | remesh 1.4–2.7 ms/chunk (median, in-browser); real-GPU fps unverified (no GPU here) |
+| M2 Beauty slice ★ | next | double reviewer | user check-in after |
 | M3–M10 | — | | |
 
 ## M0 — Scaffold and screenshot harness (DONE)
@@ -60,3 +67,39 @@ deterministic `?shot=<id>` scenes through the full post stack.
 - Perf probe (SwiftShader, so relative only): high 32 draw calls / 281k tris; low 10 draw calls / 281k tris.
 - `npm run lint && npm test && npm run build`: clean (12 tests).
 - Kid-sense check (GAME_DESIGN §2, §11): M0 adds only a test scene of a frosted cube on a meadow. Nothing scary, text-heavy or punishing.
+
+## M1 — Voxel engine core (DONE)
+
+No graphics gate (PLAN §3). The exit criteria are the perf budget, below. No RF
+items are tagged M1. Final shots and `perf.json` are in `shots/M1/final/`.
+
+**Unit tests (35 total, all green):** grid get/set/fill and negative coordinates;
+neighbour-aware dirty marking; padded borders; face counts (1 voxel → 6 quads;
+a solid box → 6 quads); no merging across palette or AO changes; **exact face
+coverage, with no holes or overlaps, on a blob spanning 8 chunks and on a random
+sparse field across chunk borders**; integer vertex positions; CCW winding; AO
+corner rule and floor-by-wall AO; corner flags; sphere carve removes exactly the
+voxels inside it; **carve → restore round-trips byte-identical**; carve dirties
+exactly the right chunks; remesh after a carve stays seamless; mesh time
+< 8 ms/chunk.
+
+**Perf budget** (`npm run perf -- --gate M1 --iter final --frames 10`, SwiftShader on a 4-core container):
+
+| Metric | high (`m1-terrain`) | low (`m1-low-tier`) | Budget |
+|---|---|---|---|
+| Terrain | 256×64×256 @ 1/8 m, 1.18 M voxels, 104 chunks, 41.7k quads | same | — |
+| Props | 200 @ 1/32 m (5 instanced draws) | same | 200 |
+| Generate terrain (main thread) | 183 ms | 174–259 ms | — |
+| Initial mesh, 104 chunks (3 workers, wall) | 433 ms; mean 5.5 ms/chunk | 325–348 ms; mean 4.4–4.8 | — |
+| **Remesh after carve** (3 bites, 1706 voxels, 14 chunks), worker mean / max | 2.4 / 5.9 ms | 1.1–2.4 / 1.5–7.4 ms | **< 8 ms/chunk** |
+| **Remesh, one chunk at a time** (wall, incl. round trip + upload), median / max | 2.2 / 4.1 ms | 1.6–1.7 / 3.3–13.1 ms | **< 8 ms/chunk** |
+| Mesh one carved surface chunk (Node, warm, median) | 1.3 ms | — | < 8 ms |
+| Draw calls / triangles (incl. shadow pass) | 246 / 568k | 224 / 568k | — |
+| Frame time | 4.1 s (SwiftShader, meaningless) | 2.9 s (SwiftShader) | 60 / 30 fps |
+
+- **Remesh budget: met.** Typical per-chunk remesh is 1–3 ms, 3–5× under budget. Occasional single-chunk maxima above 8 ms (one 13.1 ms in the final run, up to 17.5 ms in dev runs) are CPU preemption on this 4-core box while SwiftShader renders. They are not mesher cost (the same chunk meshes in about 1.3 ms in Node).
+- **fps budget: unverified.** There is no GPU in this container, and SwiftShader frame times say nothing about real hardware. The machine-independent load is small: 224–246 draws and 568k triangles. Flagged for the user in the handoff.
+- Before M1, the M0 test cube's InstancedMesh drew about 281k triangles for one cube and a small meadow. The greedy mesher now draws the whole 32 m plateau, 200 props and the shadow pass in 568k.
+- Seams: the magenta/green background diff test (see Handoff → Decisions) finds 0 crack pixels inside the terrain after the crack-closing fix (it found about 300 before).
+- `npm run lint && npm test && npm run build`: clean.
+- **Kid-sense check** (GAME_DESIGN §2, §11): M1 adds engine code and a stress scene of a frosted meadow plateau with donuts and grass. The carve "bites" are gentle scoops. Nothing scary, text-based or punishing.

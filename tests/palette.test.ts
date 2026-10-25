@@ -66,3 +66,15 @@ describe('palette', () => {
     expect(sum / n).toBeLessThan(0.55);
   });
 });
+
+describe('voxel material palette uniforms', () => {
+  it('fits the shader uniform array', async () => {
+    const { PALETTE_SIZE, paletteUniforms } = await import('../src/engine/render/Materials');
+    expect(PALETTE_NAMES.length + 1).toBeLessThanOrEqual(PALETTE_SIZE);
+    const { colors } = paletteUniforms();
+    const coral = colors[PALETTE_INDEX.glazeyCoral];
+    const s = hexToSrgb(VOXEL_PALETTE.glazeyCoral.hex);
+    expect(coral?.x).toBeCloseTo(s.r);
+    expect(coral?.w).toBe(VOXEL_PALETTE.glazeyCoral.jitter);
+  });
+});

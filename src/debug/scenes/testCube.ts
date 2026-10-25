@@ -1,24 +1,19 @@
 import {
-  BoxGeometry,
   Color,
   DirectionalLight,
   Fog,
   Group,
   HemisphereLight,
-  InstancedMesh,
-  Matrix4,
-  MeshStandardMaterial,
+  Mesh,
   PerspectiveCamera,
   Scene,
   Vector3,
 } from 'three';
-import {
-  LIGHT_PALETTE,
-  PALETTE_INDEX,
-  hash3,
-  jitteredLinear,
-  type VoxelColorName,
-} from '../../art/palette';
+import { LIGHT_PALETTE, PALETTE_INDEX, hash3, type VoxelColorName } from '../../art/palette';
+import { createVoxelMaterial } from '../../engine/render/Materials';
+import { buildGeometry } from '../../engine/voxel/geometry';
+import { meshGrid } from '../../engine/voxel/mesh';
+import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 import { createSky } from '../../engine/render/Sky';
 import type { ShotScene } from '../shotTypes';
 
@@ -26,6 +21,8 @@ import type { ShotScene } from '../shotTypes';
 const PROP_VOXEL = 1 / 32;
 /** Near-terrain voxel size (art bible §3). */
 const TERRAIN_VOXEL = 1 / 8;
+
+const material = createVoxelMaterial();
 
 interface Voxel {
   x: number;
@@ -86,18 +83,12 @@ function frostedCubeVoxels(n: number): Voxel[] {
   return out;
 }
 
-function voxelMesh(voxels: Voxel[], size: number, roughness: number): InstancedMesh {
-  const geo = new BoxGeometry(size, size, size);
-  const mat = new MeshStandardMaterial({ roughness, metalness: 0 });
-  const mesh = new InstancedMesh(geo, mat, voxels.length);
-  const m = new Matrix4();
-  const c = new Color();
-  voxels.forEach((v, i) => {
-    m.makeTranslation((v.x + 0.5) * size, (v.y + 0.5) * size, (v.z + 0.5) * size);
-    mesh.setMatrixAt(i, m);
-    const lin = jitteredLinear(PALETTE_INDEX[v.color], v.x, v.y, v.z);
-    mesh.setColorAt(i, c.setRGB(lin.r, lin.g, lin.b));
-  });
+/** Bakes a voxel list into a greedy-meshed, AO'd mesh (M1 engine). */
+function voxelMesh(voxels: Voxel[], size: number): Mesh {
+  const grid = new VoxelGrid();
+  for (const v of voxels) grid.set(v.x, v.y, v.z, PALETTE_INDEX[v.color]);
+  const mesh = new Mesh(buildGeometry(meshGrid(grid)), material);
+  mesh.scale.setScalar(size);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
@@ -149,12 +140,12 @@ export function buildTestCubeScene(aspect: number): ShotScene {
   );
   scene.add(createSky(sunDir));
 
-  const meadow = voxelMesh(meadowVoxels(24), TERRAIN_VOXEL, 0.9);
+  const meadow = voxelMesh(meadowVoxels(24), TERRAIN_VOXEL);
   scene.add(meadow);
 
   const n = 24;
   const cube = new Group();
-  const cubeMesh = voxelMesh(frostedCubeVoxels(n), PROP_VOXEL, 0.45);
+  const cubeMesh = voxelMesh(frostedCubeVoxels(n), PROP_VOXEL);
   cubeMesh.position.set((-n / 2) * PROP_VOXEL, 0, (-n / 2) * PROP_VOXEL);
   cube.add(cubeMesh);
   scene.add(cube);

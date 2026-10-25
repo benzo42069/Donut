@@ -36,8 +36,10 @@ async function main() {
         const page = await openShot(context, server.url, id, { w: 1920, h: 1080 }, log, q);
         const tier = await page.evaluate(() => window.__SHOT__.tier);
         const r = await page.evaluate((n) => window.__SHOT__.perf(n), frames);
+        const bench = await page.evaluate(() => window.__SHOT__.bench());
         await page.close();
-        results.push({ id, tier, ...r });
+        results.push({ id, tier, ...r, ...(bench ? { bench } : {}) });
+        if (bench) console.log(`[perf] ${id} ${tier} bench: ${JSON.stringify(bench)}`);
         console.log(
           `[perf] ${id} ${tier}: ${r.msPerFrame.toFixed(1)} ms (${r.fps.toFixed(1)} fps), ` +
             `${r.drawCalls} calls, ${r.triangles} tris`,

@@ -14,6 +14,8 @@ interface ShotApi {
   stripTimes: readonly number[];
   /** Renders `frames` frames back to back and reports timing and GPU load. */
   perf(frames: number): Promise<PerfReport>;
+  /** The shot's engine benchmark, if it has one (e.g. carve + remesh timings). */
+  bench(): Promise<Record<string, number> | null>;
 }
 
 interface PerfReport {
@@ -95,6 +97,7 @@ async function boot(): Promise<void> {
       gpu: renderer.info().gpu,
       setTime,
       stripTimes: shot.stripTimes ?? [0, 0.25, 0.5],
+      bench: async () => (shot.bench ? shot.bench() : null),
       async perf(frames: number): Promise<PerfReport> {
         const info = renderer.gl.info;
         info.autoReset = false;

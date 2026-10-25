@@ -2,5 +2,9 @@
   "M0": {
     "shots": ["m0-test-cube", "m0-low-tier"],
     "strips": ["m0-test-cube"]
+  },
+  "M1": {
+    "shots": ["m1-terrain", "m1-low-tier"],
+    "strips": []
   }
 }

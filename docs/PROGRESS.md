@@ -50,6 +50,28 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 
 ---
 
+## M2 gate log (in progress)
+
+| iter | reviewer 1 | reviewer 2 | verdict |
+|---|---|---|---|
+| 1 | 5.2 | 5.3 | FAIL |
+| 2 | 5.8 | 6.1 | FAIL |
+| 3 | 6.0 | 6.2 | FAIL |
+
+**Plateau (AGENTIC_LOOP §5), before iter 4.** The gate mean rose by only about 0.15 from iter 2 to iter 3
+after a 0.7 jump, and both reviewers name the same residual: terraced icing on donuts
+and slopes, contour-banded sugar hill and clouds, and seams where the near-field terrain
+patches meet the fine skin. More parameter tweaks will not fix these, so iter 4 makes a
+structural change to the mesher: **surface relaxation for smooth materials.** Faces of
+gloss / lit / smooth palette entries are emitted unmerged. Each lattice corner whose
+eight surrounding voxels are all empty or smooth is moved along its occupancy-gradient
+normal by (0.5 − solid fraction) voxels. This is a surface-nets-style relaxation that
+turns 1-voxel stair steps into sloped facets while keeping per-voxel colour and voxel
+silhouettes. Corners touching matte voxels stay on the lattice, so seams with dough,
+wood and grass stay closed. The same iteration re-authors the near-field patch boundary:
+macro heights snap to the fine skin's quantized top across a feather band, so there is
+no step where the patches meet.
+
 ## Status
 
 | Milestone | Status | Gate | Notes |

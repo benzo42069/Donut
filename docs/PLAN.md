@@ -1,7 +1,7 @@
 # Build Plan
 
-The execution plan for a fresh Claude Code session, started with
-`prompts/KICKOFF_PROMPT.md`. Every visual milestone ends with a **graphics gate**
+The execution plan. Each milestone runs in its own fresh Claude Code thread, started with
+`prompts/KICKOFF_PROMPT.md`, and each thread hands off to the next. Every visual milestone ends with a **graphics gate**
 (`docs/AGENTIC_LOOP.md`). Work on a milestone is not done until its gate passes.
 
 ## 1. Tech stack
@@ -155,4 +155,7 @@ mini-game. Each one goes through the same gate process.
 3. The `shots/` PNGs for the passing iteration are committed under `shots/<gate>/final/`
    (older iterations are git-ignored).
 4. `docs/PROGRESS.md` is updated with the score table and known follow-ups.
-5. Commit and push to the working branch.
+5. RF items for this milestone are ticked in `docs/REFERENCE_FIXES.md`.
+6. Commit and push to the working branch.
+7. **Hand off to a new thread** (procedure in `prompts/KICKOFF_PROMPT.md`), except at
+   the user check-in points (after M2, after M10, on escalation).

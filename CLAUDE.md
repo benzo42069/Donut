@@ -9,7 +9,9 @@ voxels in a toy-diorama look, not Minecraft.
 - `docs/PLAN.md`: stack, architecture, milestones
 - `docs/AGENTIC_LOOP.md`: the graphics gate process
 - `docs/PROGRESS.md`: current status (create it at M0, update it after every milestone)
-- `art/reference/`: reference images the gates are judged against
+- `art/reference/`: reference images the gates are judged against (see `NOTES.md` there)
+- `docs/REFERENCE_FIXES.md`: fixes and ignores against the references, tagged by milestone
+- `prompts/KICKOFF_PROMPT.md`: the per-thread prompt and the handoff procedure
 
 ## Rules
 - Every visual milestone must pass the graphics gate (`graphics-reviewer` subagent).
@@ -19,3 +21,6 @@ voxels in a toy-diorama look, not Minecraft.
 - `npm run lint && npm test && npm run build` must be clean before review or commit.
 - Commit the review reports (`reviews/`) and the final gate shots (`shots/*/final/`).
   Iteration shots are git-ignored.
+- **One milestone per thread.** When a milestone is done, write the handoff note in
+  `docs/PROGRESS.md`, push, and start a new thread with the kickoff prompt
+  (`prompts/KICKOFF_PROMPT.md`). Pause for the user after M2, after M10, and on any escalation.

@@ -96,7 +96,8 @@ export function createMilk(opts: MilkOptions): Milk {
   };
 
   const material = new MeshStandardMaterial({
-    color: new Color(VOXEL_PALETTE.milk.hex),
+    // Below white: milk in full golden sun must not clip (art bible §10.7).
+    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.74),
     roughness: 0.16,
     metalness: 0,
     envMapIntensity: 0.4,

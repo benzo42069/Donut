@@ -31,13 +31,15 @@ export function buildLighthouse(): VoxelGrid {
           : P.doughToasted
         : 0;
 
-    // Tower: tapering, hollow, candy-cane spiral stripes.
+    // Tower: tapering, solid (a hollow shell shows its dark inside through any
+    // sub-pixel crack), candy-cane spiral stripes; recessed door and portholes.
     if (y < GALLERY) {
       const R = 17 - (y - 6) * 0.045;
-      if (r < R && r >= R - 3) {
+      if (r < R - 3) return P.candyCream;
+      if (r < R) {
         // Door facing +x (toward the lagoon), arched.
         if (dx > 0 && Math.abs(dz) < 5 && (y < 26 || Math.hypot(dz, y - 26) < 5)) {
-          return r < R - 1.5 ? P.woodDark : 0;
+          return r < R - 1.5 ? P.woodDark : 0; // 1.5-voxel recess, solid behind
         }
         // Two porthole windows.
         for (const wy of [62, 100]) {
@@ -62,7 +64,7 @@ export function buildLighthouse(): VoxelGrid {
 
     // Lantern room: cream drum with a glowing band.
     if (y >= GALLERY + 4 && y < GALLERY + 24 && r < 11) {
-      if (r < 8) return 0;
+      if (r < 8) return P.lampGlow;
       if (y >= GALLERY + 9 && y < GALLERY + 19) {
         const mullion = ((a / (Math.PI * 2)) * 8 + 8) % 1 < 0.14;
         return mullion ? P.candyCream : P.lampGlow;

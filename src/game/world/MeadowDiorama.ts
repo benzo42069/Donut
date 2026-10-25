@@ -107,7 +107,7 @@ export async function buildMeadowDiorama(
   const low = quality.tier === 'low';
 
   // --- Light (art bible §6): golden key, cool sky fill, warm bounce. ---
-  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 6.4);
+  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 5.6);
   sun.position.copy(SUN_DIR).multiplyScalar(60);
   sun.target.position.set(0, 0, 0);
   sun.castShadow = true;
@@ -361,14 +361,13 @@ export async function buildMeadowDiorama(
   // Clouds around and below the island (RF-03).
   const clouds: [number, number, number, number][] = [
     [-18.6, 1, -22.9, 1.0],
-    [28, 0.5, -13.6, 1.0],
-    [-19, -2, 9, 1.1],
-    [19, -2.5, 9, 1.1],
+    [22, 1.5, -17, 0.85],
+    [-13, -2.5, 4, 0.8],
+    [14.5, -3, 7, 0.9],
     [-1.6, -4, -38, 0.9],
-    [-22.5, -2, -6.5, 0.9],
-    [25, -2.5, 3, 0.9],
+    [17.5, -3, -1, 0.75],
     // Distant clouds in the ground-level view's sky.
-    [26, 7, -19, 1.2],
+    [21, 10, -25, 1.1],
     [17, 9.5, -27, 1.0],
     // A soft cloud bed under the island, so it floats on something (RF-03).
     [-5, -7, 2, 1.4],

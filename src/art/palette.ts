@@ -65,7 +65,7 @@ export const VOXEL_PALETTE = {
   eyeDark: entry('#3A2230', MAT.gloss, 0.02),
   eyeGlint: entry('#FFF9F0', MAT.emissive, 0),
   // Meadow
-  grassMint: entry('#8ED092', MAT.matte, 0.06),
+  grassMint: entry('#84C890', MAT.matte, 0.06),
   grassDeep: entry('#78B868', MAT.matte, 0.06),
   wood: entry('#9A5E36'),
   // Sprinkles: the only near-neon colors, small amounts only
@@ -76,7 +76,7 @@ export const VOXEL_PALETTE = {
   sprinkleBlue: entry('#4AA8F0', MAT.emissive, 0.03),
   sprinkleViolet: entry('#A66CF0', MAT.emissive, 0.03),
   // M2 Glaze Meadows diorama
-  grassLight: entry('#A6DEA6', MAT.matte, 0.06),
+  grassLight: entry('#98D6AA', MAT.matte, 0.06),
   leafMint: entry('#8FD6A0', MAT.gloss, 0.05),
   leafGreen: entry('#7CC775', MAT.gloss, 0.05),
   leafDeep: entry('#5AA866', MAT.gloss, 0.05),

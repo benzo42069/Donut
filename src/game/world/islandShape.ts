@@ -171,7 +171,9 @@ export class IslandShape {
       const d = Math.hypot(x - m.x, z - m.z);
       if (d > m.radius * 1.6) continue;
       const n = fbm3(x / 1.3 + m.x, 3, z / 1.3, 3, 11) - 0.5;
-      const t = d / m.radius + n * (m.kind === 'sugar' ? 0.6 : 0.35);
+      // Sugar noise scales the falloff instead of offsetting it, so the dome
+      // rises monotonically to its apex (an offset carved a pit near the top).
+      const t = m.kind === 'sugar' ? (d / m.radius) * (1 + n * 0.9) : d / m.radius + n * 0.35;
       if (m.kind === 'sugar') {
         // Rounded mountain: soft cone with a bulging middle.
         const h = m.height * Math.pow(Math.max(0, 1 - t * t), 1.5);
@@ -212,7 +214,9 @@ export class IslandShape {
       if (u < f.channel && along < w) {
         zone = Zone.Syrup;
         zoneDepth = w - along;
-        ground -= 0.05 * Math.min(1, zoneDepth / 0.06);
+        // Liquid finds its level: a flat syrup surface sunk into its channel
+        // (following the rolling meadow made a faceted, tilted sheet).
+        ground = Math.min(ground, TOP_BASE - 0.12) - 0.03 * Math.min(1, zoneDepth / 0.06);
       }
     }
     if (sugar > 0.05) {

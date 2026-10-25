@@ -47,7 +47,7 @@ export function buildLighthouse(): VoxelGrid {
           if (dx > 0 && Math.hypot(dz, y - wy) < 5) return P.candyCream;
         }
         const turn = a / (Math.PI * 2) + y / 34;
-        return turn - Math.floor(turn) < 0.5 ? P.candyRed : P.candyCream;
+        return turn - Math.floor(turn) < 0.5 ? P.towerRed : P.towerCream;
       }
       return 0;
     }

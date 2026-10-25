@@ -51,15 +51,40 @@ if (MILK_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
   throw new Error('Water.ts: three.js lighting chunk changed; update SPEC_LINE');
 }
 
-/** Milk scatters light under its surface: shadows on it are softened to 55 %. */
+/**
+ * Milk scatters light under its surface: shadows on it are softened to 55 % and
+ * blurred over a wide 9-tap footprint (penumbrae ~3× the meadow's).
+ */
 const SHADOW_LINE = 'directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
 const MILK_LIGHTS_BEGIN = ShaderChunk.lights_fragment_begin.replace(
   `directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, ${SHADOW_LINE}`,
-  `directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ), 0.55 ) : 1.0;`,
+  `directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, milkShadow( directionalShadowMap[ i ], directionalLightShadow, vDirectionalShadowCoord[ i ] ), 0.55 ) : 1.0;`,
 );
 if (MILK_LIGHTS_BEGIN === ShaderChunk.lights_fragment_begin) {
   throw new Error('Water.ts: three.js shadow line changed; update SHADOW_LINE');
 }
+
+const MILK_SHADOW = /* glsl */ `#include <shadowmap_pars_fragment>
+#if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
+#ifdef SHADOWMAP_TYPE_PCF
+#define MILK_SHADOW_MAP sampler2DShadow
+#else
+#define MILK_SHADOW_MAP sampler2D
+#endif
+float milkShadow(MILK_SHADOW_MAP map, DirectionalLightShadow s, vec4 coord) {
+  float sum = 0.0;
+  vec2 texel = 6.0 / s.shadowMapSize;
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      vec4 c = coord;
+      c.xy += vec2(float(i), float(j)) * texel * c.w;
+      sum += getShadow(map, s.shadowMapSize, s.shadowIntensity, s.shadowBias, s.shadowRadius, c);
+    }
+  }
+  return sum / 9.0;
+}
+#endif
+`;
 
 export interface Milk {
   mesh: Mesh;
@@ -97,7 +122,7 @@ export function createMilk(opts: MilkOptions): Milk {
 
   const material = new MeshStandardMaterial({
     // Below white: milk in full golden sun must not clip (art bible §10.7).
-    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.66),
+    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.5),
     roughness: 0.16,
     metalness: 0,
     envMapIntensity: 0.4,
@@ -227,13 +252,14 @@ if (uReflect > 0.0) {
   }
   r /= 15.0;
   float fres = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  float k = clamp((0.3 + fres) * uReflect, 0.0, 0.75) * r.a;
+  float k = clamp((0.45 + fres) * uReflect, 0.0, 0.75) * r.a;
   outgoingLight = mix(outgoingLight, r.rgb / max(r.a, 1e-3), k);
 }
 #include <opaque_fragment>`,
       )
       .replace('#include <lights_physical_pars_fragment>', MILK_LIGHTS)
       .replace('#include <lights_fragment_begin>', MILK_LIGHTS_BEGIN)
+      .replace('#include <shadowmap_pars_fragment>', MILK_SHADOW)
       .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
@@ -241,7 +267,7 @@ if (uReflect > 0.0) {
 totalEmissiveRadiance += diffuseColor.rgb * 0.03 + uDeep * 0.07;`,
       );
   };
-  material.customProgramCacheKey = () => 'milk-v4';
+  material.customProgramCacheKey = () => 'milk-v5';
 
   const geo = new CircleGeometry(opts.radius, 128);
   geo.rotateX(-Math.PI / 2);

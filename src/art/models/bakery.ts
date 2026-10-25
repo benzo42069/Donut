@@ -25,8 +25,18 @@ const MID_X = 50;
 const HALF = (X1 - X0) / 2;
 const ROOF_T = 5;
 const OVERHANG = 8;
-/** Underside of the roof at x. */
-const roofUnder = (x: number): number => TOP + (HALF - Math.abs(x + 0.5 - MID_X));
+/**
+ * Handmade sag (art bible §2 "wobbly roofs"): the ridge dips up to 3 voxels
+ * toward the middle and the eaves wander by a voxel, so nothing is ruler-straight.
+ */
+const sag = (x: number, z: number): number => {
+  const t = Math.min(1, Math.max(0, (z + 0.5 - (Z0 - OVERHANG)) / (Z1 - Z0 + 2 * OVERHANG)));
+  const eave = Math.abs(x + 0.5 - MID_X) / (HALF + OVERHANG);
+  return Math.round(3 * Math.sin(Math.PI * t) * (1 - 0.6 * eave) + Math.sin(z * 0.21) * eave);
+};
+/** Underside of the roof at (x, z). */
+const roofUnder = (x: number, z: number): number =>
+  TOP + (HALF - Math.abs(x + 0.5 - MID_X)) - sag(x, z);
 const RIDGE = TOP + HALF;
 
 const inBox = (
@@ -103,7 +113,7 @@ function wallVoxel(
   }
   // Vertical studs between the panels (clean timber, no jagged diagonals).
   if (!front && (u % 21 === 0 || u % 21 === 1) && u > 6 && u < uMax - 6) return P.chocolate;
-  return hash3(u, y, depth, 61) > 0.92 ? P.doughCrumb : P.creamWall;
+  return hash3(u, y, depth, 61) > 0.975 ? P.doughCrumb : P.creamWall;
 }
 
 export function buildBakery(): VoxelGrid {
@@ -123,9 +133,9 @@ export function buildBakery(): VoxelGrid {
     }
 
     // Roof slabs with shingles, overhanging the walls.
-    const ru = roofUnder(x);
+    const ru = roofUnder(x, z);
     if (x >= X0 - OVERHANG && x < X1 + OVERHANG && z >= Z0 - OVERHANG && z < Z1 + OVERHANG) {
-      const down = RIDGE - ru; // distance down the slope from the ridge
+      const down = RIDGE - ru - sag(x, z); // distance down the slope from the ridge
       const row = Math.floor(down / 5);
       const lip = down % 5 >= 4 ? 1 : 0; // each shingle row overlaps the next
       if (y >= ru && y < ru + ROOF_T + lip) {
@@ -147,7 +157,7 @@ export function buildBakery(): VoxelGrid {
     }
     {
       const dx = x + 0.5 - MID_X;
-      const dy = y + 0.5 - (RIDGE + ROOF_T + 1);
+      const dy = y + 0.5 - (RIDGE + ROOF_T + 1 - sag(MID_X, z));
       if (z >= Z0 - OVERHANG && z < Z1 + OVERHANG && Math.hypot(dx, dy) < 4.2) {
         const ph = Math.atan2(dy, dx) + z * 0.42;
         return Math.sin(ph * 2) > 0 ? P.doughGolden : P.doughToasted;
@@ -178,7 +188,7 @@ export function buildBakery(): VoxelGrid {
     // Front and back gables (triangles under the roof).
     const gable = y >= TOP && y < ru && x >= X0 && x < X1;
     if (gable && ((z >= Z1 - 3 && z < Z1) || (z >= Z0 && z < Z0 + 3))) {
-      return hash3(x, y, z, 61) > 0.93 ? P.doughCrumb : P.creamWall;
+      return hash3(x, y, z, 61) > 0.975 ? P.doughCrumb : P.creamWall;
     }
 
     // Walls: a 3-voxel shell; depth 0 is the outer face.

@@ -58,6 +58,7 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 | 2 | 5.8 | 6.1 | FAIL |
 | 3 | 6.0 | 6.2 | FAIL |
 | 4 | 6.1 | 6.2 | FAIL |
+| 5 | 6.2 | 6.3 | FAIL |
 
 **Plateau (AGENTIC_LOOP §5), before iter 4.** The gate mean rose by only about 0.15 from iter 2 to iter 3
 after a 0.7 jump, and both reviewers name the same residual: terraced icing on donuts
@@ -86,6 +87,26 @@ shades as a continuous surface without facet lattices or glints.
 (3) **Material re-authoring.** The path has a smooth dirt sub-layer, so relaxation is not
 pinned at its steps. Drips are tapered drops with beads. Roofs use matte shingles, and the
 bakery is solid. The key is less saturated, so strawberry frosting stays pink instead of coral.
+
+**Plateau a third time, before iter 6.** Iter 5 fixed what it set out to fix: the pinholes are gone
+and so are the milk clipping and the path contour lines. The mean still rose only 0.1 (6.2/6.3). Both
+reviewers now point at the same residuals, and each one needed a diagnosis, not a parameter change:
+(1) **Candy hue hold.** The frosting is coral or mauve because warm key, lavender fill, warm
+bounce and the orange wrap tint all multiply into a hue-shifted albedo. A new `MAT.candy` flag
+keeps the diffuse light's brightness but swaps in the albedo's own hue (75 %), so strawberry stays
+strawberry in every shot. The single broad glaze lobe becomes a tight sun streak plus a soft
+clearcoat with a Fresnel lift.
+(2) **The pit is geometry, not AO.** A height probe found a 0.2 m hollow near the sugar apex: mound
+noise was added to the falloff distance. It now scales the distance, so the dome rises
+monotonically. The syrup channel follows the meadow's roll, which made a tilted, faceted sheet,
+so it now sits at a flat liquid level.
+(3) **Relaxation as an authoring tool.** Grass blades and the lighthouse stripes get smooth
+palette twins (`blade*`, `tower*`). The relaxation pinches 1-voxel blade columns into pointed blades
+and smooths the tapering tower's stair steps, which printed AO veins.
+(4) **Milk and framing.** The milk has a lower albedo, a stronger mirror term and a 9-tap soft
+shadow. Frames wider than 16:9 keep the 16:9 horizontal coverage, so props no longer get cut. The
+lagoon-edge camera is yawed to keep the bakery out of frame. Floaters use close-up density, the
+ground DoF is gentle, and the bakery roof sags.
 
 ## Status
 

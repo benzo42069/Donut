@@ -21,6 +21,11 @@ export const MAT = {
   lit: 1 << 6,
   /** Smooth-shaded, relaxed geometry without gloss (sugar, gingerbread rock). */
   smooth: 1 << 7,
+  /**
+   * Candy color (frosting): warm key and fill light change its value, not its
+   * hue, so strawberry stays pink at golden hour instead of drifting to coral.
+   */
+  candy: 1 << 8,
 } as const;
 
 export interface PaletteEntry {
@@ -45,9 +50,9 @@ export const VOXEL_PALETTE = {
   doughCrust: entry('#7A3E1D', MAT.soft),
   doughCrumb: entry('#F2CF94', MAT.soft, 0.06),
   // Strawberry frosting
-  frostingPinkLight: entry('#F7A6C1', MAT.gloss | MAT.soft, 0.015),
-  frostingPink: entry('#F27BA5', MAT.gloss | MAT.soft, 0.015),
-  frostingPinkShadow: entry('#C9507E', MAT.gloss | MAT.soft, 0.015),
+  frostingPinkLight: entry('#F7A6C1', MAT.gloss | MAT.soft | MAT.candy, 0.015),
+  frostingPink: entry('#F27BA5', MAT.gloss | MAT.soft | MAT.candy, 0.015),
+  frostingPinkShadow: entry('#C9507E', MAT.gloss | MAT.soft | MAT.candy, 0.015),
   // Chocolate
   chocolate: entry('#6B3A2A', MAT.gloss, 0.015),
   chocolateDark: entry('#4A2418', MAT.gloss, 0.015),
@@ -103,6 +108,15 @@ export const VOXEL_PALETTE = {
   pathDirt: entry('#F2CF94', MAT.soft | MAT.smooth, 0.05),
   pathPebble: entry('#D9B48C', MAT.soft | MAT.smooth, 0.05),
   gingerbreadDark: entry('#7E4220', MAT.soft | MAT.smooth, 0.04),
+  // Near-field grass blades: the meadow greens, relaxed so 1-voxel columns
+  // pinch into tapered blades with pointed tips instead of square pegs.
+  bladeDeep: entry('#78B868', MAT.smooth, 0.06),
+  bladeMint: entry('#84C890', MAT.smooth, 0.06),
+  bladeLight: entry('#98D6AA', MAT.smooth, 0.06),
+  // Lighthouse shell stripes: relaxed, so the tapering cylinder's voxel steps
+  // don't print baked-AO vein lines down the tower.
+  towerRed: entry('#E0555E', MAT.smooth, 0.03),
+  towerCream: entry('#FFF0E0', MAT.smooth, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
 
 export type VoxelColorName = keyof typeof VOXEL_PALETTE;

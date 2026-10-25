@@ -293,7 +293,7 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
         const h = hRand < 0.4 ? 2 : hRand < 0.82 ? 3 : 4;
         for (let k = 0; k < h; k++) {
           const tip = k === h - 1;
-          put(fyTop + k, tip ? P.grassLight : k === 0 ? P.grassDeep : P.grassMint);
+          put(fyTop + k, tip ? P.bladeLight : k === 0 ? P.grassDeep : P.bladeMint);
         }
       }
     }
@@ -377,7 +377,12 @@ function buildMacro(
       const y0 = Math.floor((top - MACRO_SKIN - FINE) / MACRO);
       const yTop = Math.round(blended / MACRO);
       const frosting = c.zone === Zone.Frosting;
-      const surface = frosting ? P.frostingPinkLight : surfaceColor(c, x, z, 128, 0);
+      // Under macro grass the ground is the deep green (no teal between blades).
+      const surface = frosting
+        ? P.frostingPinkLight
+        : c.zone === Zone.Meadow
+          ? P.grassDeep
+          : surfaceColor(c, x, z, 128, 0);
       for (let y = y0; y < yTop; y++) {
         const below = top - (y + 0.5) * MACRO;
         let v: number;
@@ -416,15 +421,14 @@ function buildMacro(
         const ldx = a === 0 ? 1 : a === 1 ? -1 : 0;
         const ldz = a === 2 ? 1 : a === 3 ? -1 : 0;
         const every = 3 + Math.floor(hash3(mx, 10, mz, 71) * 3);
-        // Tapered: a 2-voxel-wide base (across the lean) for the lower third.
-        const wide = Math.ceil(h / 3);
+        // Relaxed blade voxels pinch to a pointed tip; a 2-voxel root keeps it planted.
         for (let k = 0; k < h; k++) {
           const t = k / h;
-          const color = t > 0.75 ? P.grassLight : t > 0.3 ? P.grassMint : P.grassDeep;
+          const color = t > 0.75 ? P.bladeLight : t > 0.3 ? P.bladeMint : P.bladeDeep;
           const shift = Math.floor(k / every);
           if (shift === 0) put(yTop + k, color);
           else leans.push([mx + ldx * shift, yTop + k, mz + ldz * shift, color]);
-          if (k < wide) leans.push([mx + ldz, yTop + k, mz + ldx, P.grassDeep]);
+          if (k === 0) leans.push([mx + ldz, yTop, mz + ldx, P.bladeDeep]);
         }
       } else if (g > 0.9985) {
         // A sprinkle flower: stem, leaves and a 5-petal bloom (art bible §3 scale).

@@ -91,7 +91,8 @@ const PLANS = {
           aoRadius: 0.2,
           aoFalloff: 0.25,
           aoIntensity: 2.2,
-          dof: { focusDistance: eye.distanceTo(donut), focusRange: 1.6, bokehScale: 1.8 },
+          // Gentle: the bakery (the subject) stays readable behind the donut.
+          dof: { focusDistance: eye.distanceTo(donut), focusRange: 5, bokehScale: 1.1 },
         },
       };
     },
@@ -115,7 +116,8 @@ const PLANS = {
         { x: d.x + CLOSEUP_DIR.x * CLOSEUP_DIST, z: d.z + CLOSEUP_DIR.z * CLOSEUP_DIST },
         1.0,
       );
-      const target = d.clone().add(new Vector3(0, 0.1, 0));
+      // Aimed at the donut's base: the out-of-focus gingerbread mass stays above the frame.
+      const target = d.clone().add(new Vector3(0, 0.02, 0));
       return {
         eye,
         target,
@@ -132,8 +134,9 @@ const PLANS = {
   /** Low over the milk, looking at the pier and lighthouse against the sun. */
   lagoonEdge: {
     frame: () => ({
+      // Yawed so the bakery stays out of frame instead of being cut at the left edge.
       eye: new Vector3(-4.0, 0.55, 1.7),
-      target: new Vector3(4.0, 2.0, -1.3),
+      target: new Vector3(4.34, 2.0, -0.15),
       fov: 50,
       post: { aoRadius: 0.3, aoFalloff: 0.35, aoIntensity: 2.0 },
     }),
@@ -148,7 +151,13 @@ export function m2Shot(name: M2Framing) {
     const world = await buildMeadowDiorama(quality, { detail: plan.detail });
     const f = plan.frame(world);
     if (plan.fog) world.scene.fog = new Fog(new Color(LIGHT_PALETTE.fog), plan.fog[0], plan.fog[1]);
-    const camera = new PerspectiveCamera(f.fov, aspect, 0.03, 900);
+    // Wider than 16:9 (phones in landscape): keep the 16:9 horizontal coverage,
+    // so nothing composed for the hero frame slides in at the edges and gets cut.
+    const fov =
+      aspect > 16 / 9
+        ? (2 * Math.atan((Math.tan((f.fov * Math.PI) / 360) * (16 / 9)) / aspect) * 180) / Math.PI
+        : f.fov;
+    const camera = new PerspectiveCamera(fov, aspect, 0.03, 900);
     camera.position.copy(f.eye);
     camera.lookAt(f.target);
     console.log('[m2]', JSON.stringify(world.stats));

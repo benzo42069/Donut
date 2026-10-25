@@ -342,10 +342,11 @@ export async function buildMeadowDiorama(
   floaters.forEach(([deg, r, flavor], i) => {
     const p = polar(deg, r);
     milkContacts.push([p.x, p.z, 0.36]);
+    // Floaters pass close to the low lagoon-edge lens: author them at close-up density.
     placed.push({
-      grid: buildDonut(flavor, i + 11),
-      voxel: DONUT_VOXEL,
-      pivot: donutPivot,
+      grid: buildDonut(flavor, i + 11, DONUT_HERO_VOXEL),
+      voxel: DONUT_HERO_VOXEL,
+      pivot: [hs[0] / 2, 0, hs[2] / 2],
       pos: new Vector3(p.x, MILK_LEVEL - 0.075, p.z),
       rotY: hash3(i, 3, 2, 7) * Math.PI * 2,
       tiltX: 0.08,

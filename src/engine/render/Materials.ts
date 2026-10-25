@@ -35,8 +35,12 @@ export interface VoxelMaterialTuning {
   rim: number;
   /** Wrap-lighting amount of `MAT.soft` entries (0 = Lambert). */
   wrap: number;
-  /** Strength of the broad glaze sheen on `MAT.gloss` entries. */
+  /** Strength of the glaze highlight (tight sun streak) on `MAT.gloss` entries. */
   glaze: number;
+  /** Strength of the broad clearcoat sheen under the streak. */
+  clearcoat: number;
+  /** How much `MAT.candy` entries keep their own hue under tinted light (0–1). */
+  hueHold: number;
   /** How far gloss voxels bend their shading normal toward the smooth normal. */
   smooth: number;
   /** 0 = no baked AO, 1 = AO level 0 is black. */
@@ -50,14 +54,16 @@ export interface VoxelMaterialTuning {
 
 export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughMatte: 0.82,
-  roughGloss: 0.26,
+  roughGloss: 0.2,
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,
   lit: 0.45,
   rim: 0.35,
   wrap: 0.45,
-  glaze: 0.7,
+  glaze: 1.6,
+  clearcoat: 0.22,
+  hueHold: 0.75,
   smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,
@@ -66,7 +72,10 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
 /** Added to `.w` (wrap) of smooth-normal entries (gloss, lit); see mesh.ts SMOOTH. */
 const SMOOTH_FLAG = 10;
 
-/** Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap + smooth flag). */
+/**
+ * Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap +
+ * smooth flag). A negative rim slot is the hue hold of `MAT.candy` entries.
+ */
 export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
   colors: Vector4[];
   materials: Vector4[];
@@ -82,7 +91,7 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
     materials[i + 1]?.set(
       rough,
       e.mat & MAT.glow ? t.glow : e.mat & MAT.lit ? t.lit : e.mat & MAT.emissive ? t.emissive : 0,
-      e.mat & MAT.translucent ? t.rim : 0,
+      e.mat & MAT.translucent ? t.rim : e.mat & MAT.candy ? -t.hueHold : 0,
       (e.mat & MAT.soft ? t.wrap : 0) +
         (e.mat & (MAT.gloss | MAT.lit | MAT.smooth) ? SMOOTH_FLAG : 0),
     );
@@ -140,6 +149,7 @@ uniform float uSmooth;
 varying vec3 vSNormal;
 uniform vec3 uSssTint;
 uniform float uGlaze;
+uniform float uClearcoat;
 flat varying vec4 vPal;
 flat varying vec4 vVoxelMat;
 varying vec3 vCell;
@@ -177,7 +187,7 @@ const FRAGMENT_EMISSIVE = /* glsl */ `
 #include <emissivemap_fragment>
 {
   float fres = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0);
-  totalEmissiveRadiance += diffuseColor.rgb * (vVoxelMat.y + vVoxelMat.z * fres);
+  totalEmissiveRadiance += diffuseColor.rgb * (vVoxelMat.y + max(vVoxelMat.z, 0.0) * fres);
 }
 `;
 
@@ -196,20 +206,38 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
     float wrapNL = saturate( ( nlRaw + wrapW ) / ( 1.0 + wrapW ) );
     vec3 wrapIrr = directLight.color * ( nl + max( wrapNL - nl, 0.0 ) * uSssTint );
     reflectedLight.directDiffuse += wrapIrr * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
-    // Glaze sheen for gloss voxels: a broad candy highlight plus a Fresnel lift.
-    // Flat voxel faces rarely hit the narrow GGX lobe, so frosting needs this to
-    // read as glossy (art bible §5).
+    // Glaze for gloss voxels (art bible §5): a tight sun streak over a broad
+    // clearcoat sheen, both lifted at grazing angles. The streak follows the
+    // smooth normal, so relaxed icing gets one clean highlight, not glitter.
     if ( vVoxelMat.x < 0.4 ) {
       vec3 R = reflect( - geometryViewDir, geometryNormal );
-      float lobe = pow( saturate( dot( R, directLight.direction ) ), 9.0 );
-      float fres = 0.3 + 0.7 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
-      reflectedLight.directSpecular += directLight.color * lobe * fres * uGlaze * saturate( nlRaw + 0.35 );
+      float rl = saturate( dot( R, directLight.direction ) );
+      float lobe = pow( rl, 90.0 ) * uGlaze + pow( rl, 8.0 ) * uClearcoat;
+      float fres = 0.35 + 0.65 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
+      reflectedLight.directSpecular += directLight.color * lobe * fres * saturate( nlRaw * 2.0 + 0.2 );
     }
   }`,
 );
 if (WRAP_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
   throw new Error('Materials.ts: three.js lighting chunk changed; update LAMBERT_LINE');
 }
+
+/**
+ * Candy hue hold: diffuse light keeps its brightness but takes the albedo's own
+ * hue, so golden key, lavender fill and warm bounce cannot turn strawberry
+ * frosting coral or mauve. Specular and the env sheen stay tinted.
+ */
+const HUE_HOLD = /* glsl */ `#include <lights_fragment_end>
+if ( vVoxelMat.z < 0.0 ) {
+  const vec3 LUM = vec3( 0.2126, 0.7152, 0.0722 );
+  vec3 a = material.diffuseContribution;
+  float la = max( dot( a, LUM ), 1e-4 );
+  vec3 dd = reflectedLight.directDiffuse;
+  vec3 id = reflectedLight.indirectDiffuse;
+  reflectedLight.directDiffuse = mix( dd, a * ( dot( dd, LUM ) / la ), - vVoxelMat.z );
+  reflectedLight.indirectDiffuse = mix( id, a * ( dot( id, LUM ) / la ), - vVoxelMat.z );
+}
+`;
 
 export function createVoxelMaterial(
   params: MeshStandardMaterialParameters = {},
@@ -224,6 +252,7 @@ export function createVoxelMaterial(
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
     shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.72, 0.52) };
     shader.uniforms.uGlaze = { value: tuning.glaze };
+    shader.uniforms.uClearcoat = { value: tuning.clearcoat };
     shader.uniforms.uSmooth = { value: tuning.smooth };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERTEX_PARS}`)
@@ -245,8 +274,9 @@ if (vVoxelMat.w >= 5.0) {
   normal = normalize(mix(normal, sn, uSmooth));
 }`,
       )
-      .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS);
+      .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
+      .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v6';
+  mat.customProgramCacheKey = () => 'voxel-v7';
   return mat;
 }

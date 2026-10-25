@@ -73,7 +73,7 @@ const MILK_SHADOW = /* glsl */ `#include <shadowmap_pars_fragment>
 #endif
 float milkShadow(MILK_SHADOW_MAP map, DirectionalLightShadow s, vec4 coord) {
   float sum = 0.0;
-  vec2 texel = 6.0 / s.shadowMapSize;
+  vec2 texel = 14.0 / s.shadowMapSize;
   for (int i = -1; i <= 1; i++) {
     for (int j = -1; j <= 1; j++) {
       vec4 c = coord;
@@ -122,7 +122,7 @@ export function createMilk(opts: MilkOptions): Milk {
 
   const material = new MeshStandardMaterial({
     // Below white: milk in full golden sun must not clip (art bible §10.7).
-    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.4),
+    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.45),
     roughness: 0.16,
     metalness: 0,
     envMapIntensity: 0.4,
@@ -201,7 +201,7 @@ float shoreDist(vec2 p) {
   vec2 p = vWorldPos.xz;
   float d = shoreDist(p);
   // Depth tint: a touch warmer and creamier away from the shore.
-  diffuseColor.rgb = mix(diffuseColor.rgb, uDeep, smoothstep(0.15, 2.5, d) * 0.7);
+  diffuseColor.rgb = mix(diffuseColor.rgb, uDeep, smoothstep(0.15, 2.5, d) * 0.3);
   // Foam line hugging the shore, breathing slowly.
   float n = milkNoise(p * 6.0 + vec2(uTime * 0.3, -uTime * 0.2));
   float foamW = 0.2 + 0.1 * n;
@@ -252,7 +252,7 @@ if (uReflect > 0.0) {
   }
   r /= 15.0;
   float fres = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  float k = clamp((0.45 + fres) * uReflect, 0.0, 0.75) * r.a;
+  float k = clamp((0.6 + fres) * uReflect, 0.0, 0.8) * r.a;
   outgoingLight = mix(outgoingLight, r.rgb / max(r.a, 1e-3), k);
 }
 #include <opaque_fragment>`,
@@ -267,7 +267,7 @@ if (uReflect > 0.0) {
 totalEmissiveRadiance += diffuseColor.rgb * 0.03 + uDeep * 0.07;`,
       );
   };
-  material.customProgramCacheKey = () => 'milk-v5';
+  material.customProgramCacheKey = () => 'milk-v6';
 
   const geo = new CircleGeometry(opts.radius, 128);
   geo.rotateX(-Math.PI / 2);

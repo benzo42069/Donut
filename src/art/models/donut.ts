@@ -76,8 +76,11 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
   const frost = tube(RING / v, (TUBE_A + FROST) / v, (TUBE_B + FROST) / v);
 
   // Drip line (height, in voxels relative to the tube center, below which there
-  // is no frosting): a wavy edge just above the waist, with U-shaped tongues.
-  const dripLine = (angle: number, outer: boolean): number => {
+  // is no frosting): a wavy edge just above the waist, with tapered tongues.
+  // `bead` is the extra frosting thickness (voxels) at height py: each tongue
+  // swells into a rounded bead just above its tip, so drips stand proud of the
+  // dough instead of reading as flat painted tabs.
+  const drip = (angle: number, outer: boolean): { line: number; bead: (py: number) => number } => {
     const segs = outer ? 14 : 8;
     const t = ((angle / (Math.PI * 2) + 1) % 1) * segs;
     const k = Math.floor(t);
@@ -86,19 +89,33 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
       (0.022 - 0.01 * Math.sin(angle * 3 + seed) + 0.005 * Math.sin(angle * 11 + seed * 2)) / v;
     const s = seed * 13 + (outer ? 0 : 101);
     const len = hash3(k, s, 1, 3) < 0.25 ? 0 : (0.5 + hash3(k, s, 2, 3)) * look.drip;
-    const half = 0.18 + hash3(k, s, 3, 3) * 0.2;
+    const half = 0.2 + hash3(k, s, 3, 3) * 0.2;
     const dx = Math.abs(f - 0.5) / half;
-    if (dx < 1 && len > 0) {
-      // A U-shaped tongue: straight sides, then a semicircular tip as wide as the drip.
-      // Tapered drop: full at the frosting edge, narrowing to a rounded tip.
-      d -= (len * Math.pow(1 - dx * dx, 0.6)) / v;
-    }
-    return d;
+    if (dx >= 1 || len === 0) return { line: d, bead: () => 0 };
+    // Tapered drop: full at the frosting edge, pinching toward a rounded tip.
+    const tip = d - len / v;
+    d -= (len * Math.pow(1 - dx * dx, 1.4)) / v;
+    const r = 0.014 / v;
+    const across = Math.max(0, 1 - dx / 0.55);
+    return {
+      line: d,
+      bead: (py: number) => {
+        const u = (py - (tip + r)) / r;
+        return u > -1 && u < 1.6 ? (0.009 / v) * Math.sqrt(1 - Math.min(1, u * u)) * across : 0;
+      },
+    };
   };
 
   voxelize(
     grid,
-    (x, y, z) => frost(x - cx, y - cy, z - cz),
+    (x, y, z) => {
+      const py = y - cy;
+      if (flavor === 'powdered' || py > 0) return frost(x - cx, py, z - cz);
+      const px = x - cx;
+      const pz = z - cz;
+      const outer = Math.hypot(px, pz) > RING / v;
+      return frost(px, py, pz) - drip(Math.atan2(pz, px), outer).bead(py);
+    },
     [0, 0, 0],
     size,
     (x, y, z) => {
@@ -111,7 +128,7 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
       if (flavor === 'powdered') {
         // Sugar dusts the top faces only.
         if (!inDough) return py > 0.2 * (TUBE_B / v) ? PALETTE_INDEX.powderedSugar : 0;
-      } else if (py > dripLine(Math.atan2(pz, px), outer)) {
+      } else if (py > drip(Math.atan2(pz, px), outer).line) {
         const exposedTop = py > (TUBE_B - 0.03) / v || !inDough;
         return PALETTE_INDEX[exposedTop && py > 0 ? look.top : look.side];
       }

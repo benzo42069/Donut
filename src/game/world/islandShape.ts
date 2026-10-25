@@ -176,8 +176,13 @@ export class IslandShape {
       const t = m.kind === 'sugar' ? (d / m.radius) * (1 + n * 0.9) : d / m.radius + n * 0.35;
       if (m.kind === 'sugar') {
         // Rounded mountain: soft cone with a bulging middle.
-        const h = m.height * Math.pow(Math.max(0, 1 - t * t), 1.5);
-        ground += h;
+        let h = m.height * Math.pow(Math.max(0, 1 - t * t), 1.5);
+        const f = h / m.height;
+        // Powdered drifts: soft raised lumps only (never hollows) on the cap,
+        // and a craggy gingerbread skirt where the sugar thins out.
+        h += m.height * 0.14 * Math.max(0, fbm3(x * 1.6, 5, z * 1.6, 2, 23) - 0.45) * f;
+        h += (valueNoise3(x * 3.5, 7, z * 3.5, 29) - 0.35) * 0.22 * Math.min(1, f * 3) * (1 - f);
+        ground += Math.max(0, h);
         sugar = Math.max(sugar, h / m.height);
       } else {
         ground += m.height * Math.pow(Math.max(0, 1 - t * t), 2);

@@ -2,6 +2,7 @@
 /**
  * Look-dev diagnostics (not a gate tool): renders one shot at 1920×1080 with
  * debug query flags, e.g. `node scripts/diag.mjs m2-hero out.png noao nomsaa`.
+ * Set DIAG_SIZE=844x390 for another viewport.
  */
 import { launchBrowser, openShot, startServer } from './harness.mjs';
 const [id, out, ...flags] = process.argv.slice(2);
@@ -13,7 +14,7 @@ const page = await openShot(
   ctx,
   server.url,
   id,
-  { w: 1920, h: 1080 },
+  (([w, h]) => ({ w, h }))((process.env.DIAG_SIZE ?? '1920x1080').split('x').map(Number)),
   [],
   flags.map((f) => `&${f}=1`).join(''),
 );

@@ -54,7 +54,7 @@ export interface VoxelMaterialTuning {
 
 export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughMatte: 0.82,
-  roughGloss: 0.2,
+  roughGloss: 0.15,
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,
@@ -62,7 +62,7 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   rim: 0.35,
   wrap: 0.45,
   glaze: 1.6,
-  clearcoat: 0.22,
+  clearcoat: 0.4,
   hueHold: 0.75,
   smooth: 1.0,
   aoStrength: 0.42,
@@ -212,7 +212,7 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
     if ( vVoxelMat.x < 0.4 ) {
       vec3 R = reflect( - geometryViewDir, geometryNormal );
       float rl = saturate( dot( R, directLight.direction ) );
-      float lobe = pow( rl, 90.0 ) * uGlaze + pow( rl, 8.0 ) * uClearcoat;
+      float lobe = pow( rl, 90.0 ) * uGlaze + pow( rl, 20.0 ) * uClearcoat;
       float fres = 0.35 + 0.65 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
       reflectedLight.directSpecular += directLight.color * lobe * fres * saturate( nlRaw * 2.0 + 0.2 );
     }
@@ -250,7 +250,7 @@ export function createVoxelMaterial(
     shader.uniforms.uVoxelMat = { value: materials };
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
-    shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.72, 0.52) };
+    shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.82, 0.68) };
     shader.uniforms.uGlaze = { value: tuning.glaze };
     shader.uniforms.uClearcoat = { value: tuning.clearcoat };
     shader.uniforms.uSmooth = { value: tuning.smooth };
@@ -277,6 +277,6 @@ if (vVoxelMat.w >= 5.0) {
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
       .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v7';
+  mat.customProgramCacheKey = () => 'voxel-v8';
   return mat;
 }

@@ -22,8 +22,9 @@ export const MAT = {
   /** Smooth-shaded, relaxed geometry without gloss (sugar, gingerbread rock). */
   smooth: 1 << 7,
   /**
-   * Candy color (frosting): warm key and fill light change its value, not its
-   * hue, so strawberry stays pink at golden hour instead of drifting to coral.
+   * Candy color (frosting, candy grass): warm key and fill light change its
+   * value, not its hue, so strawberry stays pink and mint grass stays mint at
+   * golden hour instead of drifting to coral or grey-teal.
    */
   candy: 1 << 8,
 } as const;
@@ -70,8 +71,8 @@ export const VOXEL_PALETTE = {
   eyeDark: entry('#3A2230', MAT.gloss, 0.02),
   eyeGlint: entry('#FFF9F0', MAT.emissive, 0),
   // Meadow
-  grassMint: entry('#84C890', MAT.matte, 0.06),
-  grassDeep: entry('#78B868', MAT.matte, 0.06),
+  grassMint: entry('#84C890', MAT.matte | MAT.candy, 0.06),
+  grassDeep: entry('#78B868', MAT.matte | MAT.candy, 0.06),
   wood: entry('#9A5E36'),
   // Sprinkles: the only near-neon colors, small amounts only
   sprinkleRed: entry('#F2484E', MAT.emissive, 0.03),
@@ -81,7 +82,7 @@ export const VOXEL_PALETTE = {
   sprinkleBlue: entry('#4AA8F0', MAT.emissive, 0.03),
   sprinkleViolet: entry('#A66CF0', MAT.emissive, 0.03),
   // M2 Glaze Meadows diorama
-  grassLight: entry('#98D6AA', MAT.matte, 0.06),
+  grassLight: entry('#98D6AA', MAT.matte | MAT.candy, 0.06),
   leafMint: entry('#8FD6A0', MAT.gloss, 0.05),
   leafGreen: entry('#7CC775', MAT.gloss, 0.05),
   leafDeep: entry('#5AA866', MAT.gloss, 0.05),
@@ -110,15 +111,19 @@ export const VOXEL_PALETTE = {
   gingerbreadDark: entry('#7E4220', MAT.soft | MAT.smooth, 0.04),
   // Near-field grass blades: the meadow greens, relaxed so 1-voxel columns
   // pinch into tapered blades with pointed tips instead of square pegs.
-  bladeDeep: entry('#78B868', MAT.smooth, 0.06),
-  bladeMint: entry('#84C890', MAT.smooth, 0.06),
-  bladeLight: entry('#98D6AA', MAT.smooth, 0.06),
+  bladeDeep: entry('#78B868', MAT.smooth | MAT.candy, 0.06),
+  bladeMint: entry('#84C890', MAT.smooth | MAT.candy, 0.06),
+  bladeLight: entry('#98D6AA', MAT.smooth | MAT.candy, 0.06),
   // Lighthouse shell stripes: relaxed, so the tapering cylinder's voxel steps
   // don't print baked-AO vein lines down the tower.
   towerRed: entry('#E0555E', MAT.smooth, 0.03),
   towerCream: entry('#FFF0E0', MAT.smooth, 0.03),
   // Still syrup pooled in its channel: crisp flat voxels (no relaxation, which
   // facets a level sheet), self-lit a touch like the falling syrup.
+  // Craggy gingerbread skirt under the sugar cap: crisp ledges (not relaxed,
+  // which melted it into a mud-like lump).
+  gingerCrag: entry('#94562F', MAT.soft, 0.05),
+  gingerCragDark: entry('#7E4220', MAT.soft, 0.05),
   syrupPool: entry('#F6BA5A', MAT.emissive | MAT.translucent, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
 

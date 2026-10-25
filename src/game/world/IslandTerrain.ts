@@ -6,6 +6,7 @@ import {
   INNER_BASE,
   LAGOON_FLOOR,
   MILK_LEVEL,
+  TOP_BASE,
   Zone,
   dripBulb,
   dripDepth,
@@ -146,7 +147,7 @@ function surfaceColor(c: Column, x: number, z: number, res: number, slope: numbe
     case Zone.Rock:
       // A clean powdered-sugar cap on a gingerbread mountain (ref 01): no dither.
       void slope;
-      return c.zone === Zone.Sugar ? P.powderedSugar : P.gingerbread;
+      return c.zone === Zone.Sugar ? P.powderedSugar : P.gingerCrag;
     default:
       return meadowColor(x, z, res);
   }
@@ -229,6 +230,8 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     let yLow = top - 1.0;
     if (belly) yLow = c.bottom;
     if (r < ri + 0.7) yLow = Math.min(yLow, -0.9);
+    // Fill the mountain down to the meadow, so steep flanks never show a hollow arch.
+    if (c.zone === Zone.Sugar || c.zone === Zone.Rock) yLow = Math.min(yLow, TOP_BASE - 0.6);
     if (r > ro - 0.3) yLow = Math.min(yLow, top - dOut - 0.1);
     const fy0 = Math.floor(yLow / FINE);
     const fyTop = Math.ceil(surf / FINE - 0.5); // first voxel whose center is above surf
@@ -277,7 +280,7 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       } else if (c.zone === Zone.Sugar || c.zone === Zone.Rock) {
         // Gingerbread with broad, soft darker bands.
         const band = Math.sin(y * 5 + valueNoise3(x * 0.8, y * 0.5, z * 0.8, 39) * 4);
-        color = band > 0.55 ? P.gingerbreadDark : P.gingerbread;
+        color = band > 0.55 ? P.gingerCragDark : P.gingerCrag;
       } else {
         color = doughColor(x, y, z, theta, y - c.bottom);
       }

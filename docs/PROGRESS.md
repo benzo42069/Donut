@@ -59,6 +59,7 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 | 3 | 6.0 | 6.2 | FAIL |
 | 4 | 6.1 | 6.2 | FAIL |
 | 5 | 6.2 | 6.3 | FAIL |
+| 6 | 6.5 | 6.5 | FAIL (0 blockers) |
 
 **Plateau (AGENTIC_LOOP §5), before iter 4.** The gate mean rose by only about 0.15 from iter 2 to iter 3
 after a 0.7 jump, and both reviewers name the same residual: terraced icing on donuts

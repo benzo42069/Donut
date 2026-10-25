@@ -19,6 +19,13 @@ interface ShotPlan {
   detail?: DetailPatch[];
   /** Aerial perspective for this view: fog near and far (meters). */
   fog?: [number, number];
+  /**
+   * Frames wider than 16:9 (phones in landscape) cannot keep both the 16:9
+   * width and height. 'height' keeps the vertical framing, 'width' the horizontal
+   * one, 'mean' splits the difference (default). `yaw` / `pitch` (radians) then
+   * re-aim so a prop near the new edges falls wholly out of or into frame.
+   */
+  wide?: { keep?: 'height' | 'width' | 'mean'; yaw?: number; pitch?: number };
   frame(w: Diorama): Framing;
 }
 
@@ -57,7 +64,7 @@ const onGround = (w: Diorama, p: { x: number; z: number }, lift: number): Vector
 const CLOSEUP_DIR = new Vector3(SPOTS.bakery.x - HERO_DONUT.x, 0, SPOTS.bakery.z - HERO_DONUT.z)
   .normalize()
   .applyAxisAngle(new Vector3(0, 1, 0), 0.6);
-const CLOSEUP_DIST = 3.2;
+const CLOSEUP_DIST = 2.4;
 
 /** M2 gate cameras (PLAN M2). */
 const PLANS = {
@@ -72,6 +79,9 @@ const PLANS = {
   },
   /** Donut height on the meadow, looking down the path at the backlit bakery (K-04). */
   ground: {
+    // Yaw so the lighthouse and its gallery (33–39° right) stay wholly out, and
+    // tilt up so the chimney and its steam clear the top edge.
+    wide: { keep: 'height', yaw: (5.5 * Math.PI) / 180, pitch: (2.5 * Math.PI) / 180 },
     detail: nearField(
       GROUND_EYE,
       { x: GROUND_AIM.x - GROUND_EYE.x, z: GROUND_AIM.z - GROUND_EYE.z },
@@ -133,6 +143,8 @@ const PLANS = {
   },
   /** Low over the milk, looking at the pier and lighthouse against the sun. */
   lagoonEdge: {
+    // Sides are solved at 16:9 (keep them); tilt up a little to keep the lamp.
+    wide: { keep: 'width', pitch: (3 * Math.PI) / 180 },
     frame: () => ({
       // Solved for clean edges: bakery, lighthouse, pier and trees are either
       // wholly in frame or wholly out (≥ 3° margin at 16:9), none cut.
@@ -152,15 +164,22 @@ export function m2Shot(name: M2Framing) {
     const world = await buildMeadowDiorama(quality, { detail: plan.detail });
     const f = plan.frame(world);
     if (plan.fog) world.scene.fog = new Fog(new Color(LIGHT_PALETTE.fog), plan.fog[0], plan.fog[1]);
-    // Wider than 16:9 (phones in landscape): keep the 16:9 horizontal coverage,
-    // so nothing composed for the hero frame slides in at the edges and gets cut.
-    const fov =
-      aspect > 16 / 9
-        ? (2 * Math.atan((Math.tan((f.fov * Math.PI) / 360) * (16 / 9)) / aspect) * 180) / Math.PI
-        : f.fov;
+    let fov = f.fov;
+    const wide = aspect > 16 / 9 ? (plan.wide ?? {}) : null;
+    if (wide) {
+      const keep = wide.keep ?? 'mean';
+      const k =
+        keep === 'height' ? 1 : keep === 'width' ? 16 / 9 / aspect : Math.sqrt(16 / 9 / aspect);
+      fov = (2 * Math.atan(Math.tan((f.fov * Math.PI) / 360) * k) * 180) / Math.PI;
+    }
     const camera = new PerspectiveCamera(fov, aspect, 0.03, 900);
     camera.position.copy(f.eye);
     camera.lookAt(f.target);
+    if (wide) {
+      // Positive yaw turns left, positive pitch tilts up (camera-local).
+      camera.rotateOnWorldAxis(new Vector3(0, 1, 0), wide.yaw ?? 0);
+      camera.rotateX(wide.pitch ?? 0);
+    }
     console.log('[m2]', JSON.stringify(world.stats));
     return {
       scene: world.scene,

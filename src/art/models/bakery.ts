@@ -101,10 +101,8 @@ function wallVoxel(
     }
     if (frame) return P.chocolate;
   }
-  // Diagonal braces in the lower panels.
-  const panel = y < 33;
-  if (panel && !front && Math.abs((u % 24) - (y - FLOOR) * 0.85) < 1.4 && u > 8 && u < uMax - 8)
-    return P.chocolate;
+  // Vertical studs between the panels (clean timber, no jagged diagonals).
+  if (!front && (u % 21 === 0 || u % 21 === 1) && u > 6 && u < uMax - 6) return P.chocolate;
   return hash3(u, y, depth, 61) > 0.92 ? P.doughCrumb : P.creamWall;
 }
 
@@ -218,14 +216,18 @@ export function buildBakery(): VoxelGrid {
 
   // Striped awning over the door, sloping out and down, with a scalloped edge.
   for (let x = X0 + DOOR.u0 - 6; x < X0 + DOOR.u1 + 6; x++) {
-    for (let k = 0; k < 10; k++) {
+    const stripe = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPinkLight : P.candyCream;
+    for (let k = 0; k < 15; k++) {
       const z = Z1 + k;
-      const y = DOOR.y1 + 6 - Math.floor(k * 0.6);
-      const stripe = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPinkLight : P.candyCream;
+      const y = DOOR.y1 + 8 - Math.floor(k * 0.55);
       grid.set(x, y, z, stripe);
       grid.set(x, y + 1, z, stripe);
-      if (k === 9 && (x - X0) % 4 !== 0) grid.set(x, y - 1, z, stripe);
     }
+    // Scalloped valance hanging from the front edge.
+    const sc = (x - X0) % 4;
+    const hang = sc === 1 || sc === 2 ? 4 : 2;
+    for (let d = 1; d <= hang; d++)
+      grid.set(x, DOOR.y1 + 8 - Math.floor(14 * 0.55) - d + 1, Z1 + 14, stripe);
   }
 
   // Donut emblem on the front gable (RF-08: an icon, never text).

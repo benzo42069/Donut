@@ -22,16 +22,23 @@ export const SPOTS = {
 };
 
 /** The ground-level camera (K-04): on the path, looking toward the backlit bakery. */
-export const GROUND_EYE = band(-140, 0.5);
-export const GROUND_AIM = band(-62, 0.42);
-
-/** The hero wild donut: in front of the ground camera, the close-up subject. */
-export const HERO_DONUT = (() => {
+export const GROUND_EYE = band(-140, 0.6);
+export const GROUND_AIM = band(-72, 0.7);
+const groundFwd = (() => {
   const dx = GROUND_AIM.x - GROUND_EYE.x;
   const dz = GROUND_AIM.z - GROUND_EYE.z;
   const l = Math.hypot(dx, dz);
-  return { x: GROUND_EYE.x + (dx / l) * 1.7, z: GROUND_EYE.z + (dz / l) * 1.7 };
+  return { x: dx / l, z: dz / l };
 })();
+
+/** A point `ahead` meters in front of the ground camera and `left` meters to its left. */
+export const groundAhead = (ahead: number, left = 0): { x: number; z: number } => ({
+  x: GROUND_EYE.x + groundFwd.x * ahead + groundFwd.z * left,
+  z: GROUND_EYE.z + groundFwd.z * ahead - groundFwd.x * left,
+});
+
+/** The hero wild donut: on the left third in front of the ground camera; the close-up subject. */
+export const HERO_DONUT = groundAhead(2.2, 0.42);
 
 export const MEADOW_LAYOUT: IslandLayout = {
   pads: [
@@ -44,4 +51,5 @@ export const MEADOW_LAYOUT: IslandLayout = {
     { ...band(48, 0.5), radius: 1.7, height: 0.4, kind: 'meadow' },
     { ...band(-100, 0.7), radius: 1.6, height: 0.35, kind: 'meadow' },
   ],
+  falls: [{ deg: -112, halfWidth: 0.45, channel: 0.36 }],
 };

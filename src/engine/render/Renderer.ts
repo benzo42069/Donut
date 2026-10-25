@@ -137,8 +137,8 @@ export class Renderer {
     if (q.bloom) {
       effects.push(
         new BloomEffect({
-          luminanceThreshold: post.bloomThreshold ?? 0.85,
-          luminanceSmoothing: 0.15,
+          luminanceThreshold: post.bloomThreshold ?? 1.3,
+          luminanceSmoothing: 0.3,
           intensity: post.bloomIntensity ?? 0.45,
           mipmapBlur: true,
         }),

@@ -30,9 +30,15 @@ export interface VoxelMaterialTuning {
   emissive: number;
   /** Emissive strength of `MAT.glow` entries (lamps, lit windows). */
   glow: number;
+  /** Self-light of `MAT.lit` entries (clouds, steam). */
+  lit: number;
   rim: number;
   /** Wrap-lighting amount of `MAT.soft` entries (0 = Lambert). */
   wrap: number;
+  /** Strength of the broad glaze sheen on `MAT.gloss` entries. */
+  glaze: number;
+  /** How far gloss voxels bend their shading normal toward the smooth normal. */
+  smooth: number;
   /** 0 = no baked AO, 1 = AO level 0 is black. */
   aoStrength: number;
   /**
@@ -48,8 +54,11 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,
+  lit: 0.45,
   rim: 0.35,
   wrap: 0.45,
+  glaze: 0.55,
+  smooth: 0.75,
   aoStrength: 0.42,
   crackEps: 5e-5,
 };
@@ -69,7 +78,7 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
       e.mat & MAT.gloss ? t.roughGloss : e.mat & MAT.rough ? t.roughRough : t.roughMatte;
     materials[i + 1]?.set(
       rough,
-      e.mat & MAT.glow ? t.glow : e.mat & MAT.emissive ? t.emissive : 0,
+      e.mat & MAT.glow ? t.glow : e.mat & MAT.lit ? t.lit : e.mat & MAT.emissive ? t.emissive : 0,
       e.mat & MAT.translucent ? t.rim : 0,
       e.mat & MAT.soft ? t.wrap : 0,
     );
@@ -79,6 +88,8 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
 
 const VERTEX_PARS = /* glsl */ `
 attribute vec2 voxel;
+attribute vec3 snormal;
+varying vec3 vSNormal;
 uniform float uCrackEps;
 uniform vec4 uPalette[${PALETTE_SIZE}];
 uniform vec4 uVoxelMat[${PALETTE_SIZE}];
@@ -98,6 +109,11 @@ const VERTEX_MAIN = /* glsl */ `
   // Nudge inward from the face so floor() lands in the owning voxel.
   vCell = position - normal * 0.5;
   vAO = float(packed & 3) / 3.0;
+  vec3 sn = snormal;
+  #ifdef USE_INSTANCING
+    sn = mat3(instanceMatrix) * sn;
+  #endif
+  vSNormal = normalMatrix * sn;
 
   // Grow the quad outward in its plane by a sub-pixel amount (T-junction cracks).
   vec3 an = abs(normal);
@@ -116,7 +132,10 @@ const VERTEX_MAIN = /* glsl */ `
 
 const FRAGMENT_PARS = /* glsl */ `
 uniform float uAoStrength;
+uniform float uSmooth;
+varying vec3 vSNormal;
 uniform vec3 uSssTint;
+uniform float uGlaze;
 flat varying vec4 vPal;
 flat varying vec4 vVoxelMat;
 varying vec3 vCell;
@@ -170,6 +189,15 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
     float wrapNL = saturate( ( nlRaw + vVoxelMat.w ) / ( 1.0 + vVoxelMat.w ) );
     vec3 wrapIrr = directLight.color * ( nl + max( wrapNL - nl, 0.0 ) * uSssTint );
     reflectedLight.directDiffuse += wrapIrr * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
+    // Glaze sheen for gloss voxels: a broad candy highlight plus a Fresnel lift.
+    // Flat voxel faces rarely hit the narrow GGX lobe, so frosting needs this to
+    // read as glossy (art bible §5).
+    if ( vVoxelMat.x < 0.4 ) {
+      vec3 R = reflect( - geometryViewDir, geometryNormal );
+      float lobe = pow( saturate( dot( R, directLight.direction ) ), 14.0 );
+      float fres = 0.3 + 0.7 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
+      reflectedLight.directSpecular += directLight.color * lobe * fres * uGlaze * saturate( nlRaw + 0.35 );
+    }
   }`,
 );
 if (WRAP_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
@@ -188,6 +216,8 @@ export function createVoxelMaterial(
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
     shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.72, 0.52) };
+    shader.uniforms.uGlaze = { value: tuning.glaze };
+    shader.uniforms.uSmooth = { value: tuning.smooth };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERTEX_PARS}`)
       .replace('#include <begin_vertex>', VERTEX_MAIN);
@@ -199,8 +229,17 @@ export function createVoxelMaterial(
         '#include <roughnessmap_fragment>\nroughnessFactor = vVoxelMat.x;',
       )
       .replace('#include <emissivemap_fragment>', FRAGMENT_EMISSIVE)
+      .replace(
+        '#include <normal_fragment_maps>',
+        /* glsl */ `#include <normal_fragment_maps>
+// Gloss voxels shade with the smooth occupancy normal (rounded icing).
+if (vVoxelMat.x < 0.4) {
+  vec3 sn = normalize(vSNormal) * (gl_FrontFacing ? 1.0 : -1.0);
+  normal = normalize(mix(normal, sn, uSmooth));
+}`,
+      )
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS);
   };
-  mat.customProgramCacheKey = () => 'voxel-v3';
+  mat.customProgramCacheKey = () => 'voxel-v4';
   return mat;
 }

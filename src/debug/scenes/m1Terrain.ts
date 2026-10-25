@@ -9,7 +9,7 @@ import {
 } from 'three';
 import { LIGHT_PALETTE, PALETTE_INDEX, hash3 } from '../../art/palette';
 import { fbm3, valueNoise3 } from '../../art/sdf';
-import { DONUT_SIZE, DONUT_VOXEL, buildDonut, type DonutFlavor } from '../../art/models/donut';
+import { DONUT_VOXEL, buildDonut, donutSize, type DonutFlavor } from '../../art/models/donut';
 import { TUFT_SIZE, buildGrassTuft } from '../../art/models/grassTuft';
 import { createVoxelMaterial } from '../../engine/render/Materials';
 import { createSky } from '../../engine/render/Sky';
@@ -191,7 +191,8 @@ export async function buildTerrainScene(aspect: number): Promise<ShotScene> {
 
   const { donuts, tufts } = placements(col, grid);
   const flavors: DonutFlavor[] = ['strawberry', 'chocolate', 'glazed'];
-  const donutPivot = [DONUT_SIZE[0] / 2, 0, DONUT_SIZE[2] / 2] as const;
+  const ds = donutSize(DONUT_VOXEL);
+  const donutPivot = [ds[0] / 2, 0, ds[2] / 2] as const;
   flavors.forEach((f, k) => {
     scene.add(
       createPropInstances(buildDonut(f, k), DONUT_VOXEL, donutPivot, material, donuts[k] ?? []),

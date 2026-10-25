@@ -18,6 +18,7 @@ self.onmessage = (e: MessageEvent<MeshRequest>): void => {
   self.postMessage({ id, data, ms, padded }, [
     data.positions.buffer,
     data.normals.buffer,
+    data.snormals.buffer,
     data.voxel.buffer,
     data.indices.buffer,
     padded.buffer,

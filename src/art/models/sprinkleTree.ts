@@ -144,6 +144,11 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
       oz + (along === 2 ? k : 0),
     ]);
     if (cells.some(([a, b, c]) => grid.get(a, b, c) !== 0)) continue;
+    // Every cell must rest on the crown (no sprinkles hovering like hairs).
+    const sx = step[0] ?? 0;
+    const sy = step[1] ?? 0;
+    const sz = step[2] ?? 0;
+    if (cells.some(([a, b, c]) => grid.get(a - sx, b - sy, c - sz) === 0)) continue;
     for (const [a, b, c] of cells) grid.set(a, b, c, color);
     placed++;
   }

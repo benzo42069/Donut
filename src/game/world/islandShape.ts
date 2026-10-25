@@ -12,7 +12,7 @@ import { hash3 } from '../../art/palette';
 
 export const MILK_LEVEL = 0;
 /** Base meadow height above the milk. */
-export const TOP_BASE = 2.3;
+export const TOP_BASE = 1.6;
 /** Lagoon floor under the milk. */
 export const LAGOON_FLOOR = -1.1;
 
@@ -65,6 +65,28 @@ export interface Mound {
 export interface IslandLayout {
   pads: Pad[];
   mounds: Mound[];
+  falls: SyrupFall[];
+}
+
+/** Signed smallest difference between two angles (radians). */
+export const angleDiff = (a: number, b: number): number => {
+  let d = (a - b) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+};
+
+/** Outer wall radius at height y: the dough side bows out like a fat donut, with crumb. */
+export function outerWall(ro: number, theta: number, y: number, top: number): number {
+  const t = (y + 1.2) / (top + 1.2);
+  const bulge = t > 0 && t < 1 ? 0.34 * Math.sin(Math.PI * Math.pow(t, 0.8)) : 0;
+  const crumb = (valueNoise3(theta * ro * 2.6, y * 2.6, 0, 61) - 0.5) * 0.2;
+  return ro + bulge + crumb;
+}
+
+/** Inner (lagoon) wall radius at height y, with a little crumb. */
+export function innerWall(ri: number, theta: number, y: number): number {
+  return ri + (valueNoise3(theta * ri * 5, y * 5, 0, 63) - 0.5) * 0.07;
 }
 
 /** Ground material zones on top of the ring. */
@@ -74,6 +96,16 @@ export const enum Zone {
   Path = 2,
   Sugar = 3,
   Rock = 4,
+  Syrup = 5,
+}
+
+/** A syrup fall: an amber stream from a channel on the rim down into the milk (K-03). */
+export interface SyrupFall {
+  deg: number;
+  /** Half width of the stream at the rim (meters). */
+  halfWidth: number;
+  /** How far the channel runs back from the rim (fraction of the band). */
+  channel: number;
 }
 
 export interface Column {
@@ -174,6 +206,15 @@ export class IslandShape {
       zone = Zone.Path;
       zoneDepth = pathDepth;
       ground -= 0.03 * Math.min(1, pathDepth / 0.1);
+    }
+    for (const f of this.layout.falls) {
+      const along = Math.abs(angleDiff(theta, (f.deg * Math.PI) / 180)) * r;
+      const w = f.halfWidth * (0.75 + 0.25 * Math.sin(u * 23));
+      if (u < f.channel && along < w) {
+        zone = Zone.Syrup;
+        zoneDepth = w - along;
+        ground -= 0.05 * Math.min(1, zoneDepth / 0.06);
+      }
     }
     if (sugar > 0.05) {
       zone =

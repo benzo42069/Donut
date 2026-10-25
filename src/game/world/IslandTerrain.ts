@@ -9,11 +9,13 @@ import {
   Zone,
   dripBulb,
   dripDepth,
+  innerWall,
+  outerWall,
   type Column,
 } from './islandShape';
 
 /**
- * Voxelizes the island at two resolutions (art bible §3):
+ * Voxelizes the island at up to three resolutions (art bible §3):
  *
  * - **coarse** (1/8 m): the dough body, outer strata cliffs, underside and
  *   lagoon floor. Big, mostly hidden or seen from afar.
@@ -21,125 +23,142 @@ import {
  *   whole top (meadow, path, frosting rims, hills), the inner lagoon cliffs, and
  *   the frosting coat that drips over the outer cliff (K-02, RF-05). Micro-voxel
  *   grass blades grow out of it (RF-04).
+ * - **macro** (1/128 m, optional): near-field patches around a ground-level
+ *   camera, where the top few centimeters of meadow and path and their grass are
+ *   rebuilt at close-up density, so nothing near the lens is Lego-sized.
  *
- * Both grids share the world origin, so 4 fine cells tile one coarse cell
- * exactly. The coarse body stops `SKIN` below the top and short of the inner
- * cliff; the fine grid fills exactly the solid space the coarse grid leaves, so
- * the two never overlap and never leave a gap.
+ * All grids share the world origin, so cells nest exactly (4 fine per coarse,
+ * 4 macro per fine). Each finer grid fills only the solid space the coarser one
+ * leaves, so they never leave a gap; overlaps are only ever hidden inside.
  */
 export const COARSE = 1 / 8;
 export const FINE = 1 / 32;
-const RATIO = COARSE / FINE;
+export const MACRO = 1 / 128;
 
 /** Half extent of the voxelized square (meters). */
 const EXTENT = 13;
 const C_N = Math.round((2 * EXTENT) / COARSE);
 const C_OFF = C_N / 2;
+const F_OFF = C_OFF * 4;
 
 /** The coarse body stops this far below the surface. */
 const SKIN = 0.3;
 /** ...and this far behind the inner cliff, above this height. */
 const INNER_SKIN = 0.3;
 const INNER_SKIN_FLOOR = -0.5;
-/** Frosting coat thickness over the outer cliff (outside the continuous radius). */
+/** Frosting coat thickness over the outer cliff (outside the dough wall). */
 const COAT_OUT = 0.15;
 const COAT_IN = 0.065;
+const SYRUP_SHEET = 0.11;
 const RIM_ROUND = 0.2;
+/** Macro patches replace this much of the top. */
+const MACRO_SKIN = 0.09;
 
-export interface TerrainOptions {
-  /** Fraction of meadow cells with a grass blade. */
-  grassDensity: number;
-  /** Near-field patch where instanced 1/64 m decor replaces the voxel blades. */
-  detail?: DetailPatch;
-}
-
+/** A disc of near-field detail (macro resolution) around a close camera. */
 export interface DetailPatch {
   x: number;
   z: number;
   radius: number;
 }
 
-/** 1 outside the detail patch, fading to 0 inside it. */
-export function outsideDetail(d: DetailPatch | undefined, x: number, z: number): number {
-  if (!d) return 1;
-  const t = (Math.hypot(x - d.x, z - d.z) - d.radius) / 0.8;
-  return Math.min(1, Math.max(0, t));
+export interface TerrainOptions {
+  /** Fraction of meadow cells with a 1/32 m grass blade. */
+  grassDensity: number;
+  /** Near-field macro patches (ground-level shots only). */
+  detail?: readonly DetailPatch[];
+  /** Spots kept clear of macro grass (e.g. under a donut): x, z, radius. */
+  clear?: readonly (readonly [number, number, number])[];
 }
 
 export interface IslandTerrain {
   coarse: VoxelGrid;
   fine: VoxelGrid;
-  stats: { coarseMs: number; fineMs: number };
+  macro: VoxelGrid | null;
+  stats: { coarseMs: number; fineMs: number; macroMs: number };
+}
+
+/** True inside any detail patch. */
+export function inDetail(d: readonly DetailPatch[] | undefined, x: number, z: number): boolean {
+  if (!d) return false;
+  for (const p of d) if (Math.hypot(x - p.x, z - p.z) < p.radius) return true;
+  return false;
 }
 
 const P = PALETTE_INDEX;
 
-/** Baked dough strata (K-02): wavy layers of golden, crumb and toasted; crust underneath. */
+/**
+ * Baked dough (K-02): golden body with wobbling toasted strata of varying
+ * thickness, crumb flecks, and a fried gradient toward the crusty underside.
+ */
 function doughColor(x: number, y: number, z: number, theta: number, aboveBottom: number): number {
-  if (aboveBottom < 0.14) return P.doughCrust;
-  if (aboveBottom < 0.45)
-    return hash3(Math.floor(x * 16), Math.floor(y * 16), Math.floor(z * 16), 4) > 0.5
-      ? P.doughToasted
-      : P.doughCrust;
-  const wave =
-    Math.sin(theta * 7 + y * 0.8) * 0.09 +
-    (valueNoise3(x * 0.9, y * 0.4, z * 0.9, 31) - 0.5) * 0.35;
-  const b = (y + wave + 8) / 0.62;
-  const f = b - Math.floor(b);
-  if (f < 0.17) return P.doughToasted;
-  if (f < 0.3) return P.doughCrumb;
-  if (aboveBottom < 0.9) return P.doughToasted;
+  const h = hash3(Math.floor(x * 64), Math.floor(y * 64), Math.floor(z * 64), 4);
+  if (aboveBottom < 0.16) return h > 0.3 ? P.doughCrust : P.doughToasted;
+  // Fried gradient: more toasted voxels the closer to the bottom.
+  if (aboveBottom < 0.9 && h < 0.85 - aboveBottom) return P.doughToasted;
+  const n = valueNoise3(x * 0.7, y * 0.6, z * 0.7, 31);
+  const wave = Math.sin(theta * 5 + y * 0.9 + n * 2.5) * 0.13 + (n - 0.5) * 0.45;
+  const b = (y + wave + 8) / 0.72;
+  const band = Math.floor(b);
+  const f = b - band;
+  const thick = 0.07 + 0.1 * valueNoise3(theta * 2.5, band * 1.7, 0.5, 33);
+  if (f < thick) return h > 0.15 ? P.doughToasted : P.doughGolden;
+  if (f < thick + 0.07) return h > 0.4 ? P.doughCrumb : P.doughGolden;
+  if (h > 0.95) return P.doughCrumb;
+  if (h < 0.03) return P.doughToasted;
   return P.doughGolden;
 }
 
-function meadowColor(x: number, z: number): number {
+function meadowColor(x: number, z: number, res: number): number {
   const patch =
     valueNoise3(x * 0.8, 0, z * 0.8, 17) + (valueNoise3(x * 3, 1, z * 3, 18) - 0.5) * 0.35;
-  const h = hash3(Math.floor(x * 32), 0, Math.floor(z * 32), 19);
+  const h = hash3(Math.floor(x * res), 0, Math.floor(z * res), 19);
   if (patch > 0.62 || h > 0.93) return P.grassLight;
   if (patch < 0.27 || h < 0.05) return P.grassDeep;
   return P.grassMint;
 }
 
-function surfaceColor(c: Column, x: number, z: number): number {
+function surfaceColor(c: Column, x: number, z: number, res: number, slope: number): number {
   switch (c.zone) {
     case Zone.Frosting:
       return P.frostingPinkLight;
-    case Zone.Path:
-      return hash3(Math.floor(x * 32), 1, Math.floor(z * 32), 23) > 0.86
-        ? P.pebble
-        : c.zoneDepth < 0.05
-          ? P.doughGolden
-          : P.doughCrumb;
+    case Zone.Path: {
+      const h = hash3(Math.floor(x * res), 1, Math.floor(z * res), 23);
+      if (h > 0.9) return P.pebble;
+      if (c.zoneDepth < 0.05) return P.doughGolden;
+      return h < 0.12 ? P.butter : P.doughCrumb;
+    }
+    case Zone.Syrup:
+      return P.syrupLight;
     case Zone.Sugar:
-      return P.powderedSugar;
     case Zone.Rock:
-      return hash3(Math.floor(x * 32), 2, Math.floor(z * 32), 29) > 0.8
+      // Powdered sugar settles on the flat tops only; steep faces show gingerbread.
+      if (slope < 0.9 && c.zone === Zone.Sugar) return P.powderedSugar;
+      if (slope < 0.55) return P.powderedSugar;
+      return hash3(Math.floor(x * res), 2, Math.floor(z * res), 29) > 0.75
         ? P.doughToasted
         : P.doughGolden;
     default:
-      return meadowColor(x, z);
+      return meadowColor(x, z, res);
   }
 }
+
+/** Amber syrup with vertical flow streaks. */
+const syrupColor = (theta: number, r: number, y: number): number =>
+  (Math.floor(theta * r * 40 + Math.sin(y * 9) * 0.6) & 3) === 0 ? P.syrupLight : P.syrup;
 
 export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): IslandTerrain {
   const coarse = new VoxelGrid();
   const fine = new VoxelGrid();
-
-  // Coarse filled ranges per coarse column (voxel y, half-open), two runs each:
-  // run A is the main body, run B a lower part under the inner skin.
-  const aMin = new Int16Array(C_N * C_N);
-  const aMax = new Int16Array(C_N * C_N);
   const t0 = performance.now();
 
+  // --- Coarse body: per-voxel walls so the dough side bows out and crumbles. ---
   coarse.generateColumns(-C_OFF, -C_OFF, C_OFF, C_OFF, (ix, iz, put) => {
     const x = (ix + 0.5) * COARSE;
     const z = (iz + 0.5) * COARSE;
     const r = Math.hypot(x, z);
     if (r > EXTENT) return;
     const c = shape.column(x, z);
-    const ci = ix + C_OFF + (iz + C_OFF) * C_N;
-    if (r > c.ro) return;
+    if (r > c.ro + 0.5) return;
     let yTop: number;
     if (r < c.ri) {
       yTop = LAGOON_FLOOR;
@@ -149,27 +168,20 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     }
     const y0 = Math.ceil(c.bottom / COARSE - 0.5);
     const y1 = Math.ceil(yTop / COARSE - 0.5); // centers strictly below yTop
-    aMin[ci] = y0;
-    aMax[ci] = y1;
     for (let iy = y0; iy < y1; iy++) {
       const y = (iy + 0.5) * COARSE;
+      if (r > c.ri && r > outerWall(c.ro, c.theta, y, c.top)) continue;
       if (r < c.ri && iy === y1 - 1) put(iy, P.milkFloor);
       else put(iy, doughColor(x, y, z, c.theta, y - c.bottom));
     }
   });
   const coarseMs = performance.now() - t0;
+  const coarseFilled = (fx: number, fy: number, fz: number): boolean =>
+    coarse.get(fx >> 2, fy >> 2, fz >> 2) !== 0;
 
-  const coarseFilled = (fx: number, fy: number, fz: number): boolean => {
-    const cx = (fx >> 2) + C_OFF;
-    const cz = (fz >> 2) + C_OFF;
-    if (cx < 0 || cz < 0 || cx >= C_N || cz >= C_N) return false;
-    const ci = cx + cz * C_N;
-    const cy = fy >> 2;
-    return cy >= (aMin[ci] ?? 0) && cy < (aMax[ci] ?? 0);
-  };
-
+  // --- Fine skin ---
   const t1 = performance.now();
-  const F_OFF = C_OFF * RATIO;
+  const falls = shape.layout.falls.map((f) => ({ ...f, theta: (f.deg * Math.PI) / 180 }));
   fine.generateColumns(-F_OFF, -F_OFF, F_OFF, F_OFF, (fx, fz, put) => {
     const x = (fx + 0.5) * FINE;
     const z = (fz + 0.5) * FINE;
@@ -177,22 +189,38 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     if (r < INNER_BASE - 0.7 || r > EXTENT) return;
     const c = shape.column(x, z);
     const { ri, ro, top, theta } = c;
-    if (r < ri - 0.12 || r > ro + COAT_OUT + 0.04) return;
+    if (r < ri - 0.16 || r > ro + 0.4 + COAT_OUT + 0.06) return;
 
+    // Is this column the syrup fall's sheet over the inner wall?
+    let inFall = false;
+    for (const f of falls) {
+      const along = Math.abs(((theta - f.theta + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * ri;
+      if (along < f.halfWidth * 0.8 + 0.04 * Math.sin(r * 40)) inFall = true;
+    }
     const dOut = dripDepth(theta * ro, 1, 0.56, 1.9);
-    const dIn = dripDepth(theta * ri, 2, 0.22, 1.7);
+    const dIn = inFall ? top - MILK_LEVEL + 0.05 : dripDepth(theta * ri, 2, 0.22, 1.5);
+    const coatInT = inFall ? SYRUP_SHEET : COAT_IN;
+
     // Rim corners: rounded where the frosting coat meets the top.
     const cornerOut = ro + COAT_OUT - RIM_ROUND;
-    const cornerIn = ri - COAT_IN + RIM_ROUND;
+    const cornerIn = ri - coatInT + RIM_ROUND;
     let drop = 0;
     if (r > cornerOut) {
       const d = Math.min(RIM_ROUND, r - cornerOut);
       drop = RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
-    } else if (r < cornerIn) {
+    } else if (r < cornerIn && !inFall) {
       const d = Math.min(RIM_ROUND, cornerIn - r);
       drop = RIM_ROUND - Math.sqrt(RIM_ROUND * RIM_ROUND - d * d);
     }
     const surf = top - drop;
+    const macro = inDetail(opts.detail, x, z) && (c.zone === Zone.Meadow || c.zone === Zone.Path);
+
+    let slope = 0;
+    if (c.zone === Zone.Sugar || c.zone === Zone.Rock) {
+      const tx = shape.surface(x + FINE, z);
+      const tz = shape.surface(x, z + FINE);
+      slope = Math.hypot(tx - top, tz - top) / FINE;
+    }
 
     let yLow = top - 1.0;
     if (r < ri + 0.7) yLow = Math.min(yLow, -0.9);
@@ -205,18 +233,23 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       if (y < c.bottom) continue;
       if (coarseFilled(fx, fy, fz)) continue;
       const below = top - y;
-      // Coat: frosting outside the dough radius, down to the drip line.
+      if (macro && below < MACRO_SKIN) continue;
+      const wallO = outerWall(ro, theta, y, top);
+      const wallI = innerWall(ri, theta, y);
+      // Coat: frosting (or the syrup sheet) outside the dough wall, down to the drip line.
       const coatOut = below < dOut;
       const coatIn = below < dIn && y > MILK_LEVEL + 0.03;
-      if (r > (coatOut ? ro + COAT_OUT + dripBulb(below, dOut) : ro)) continue;
-      if (r < (coatIn ? ri - COAT_IN - dripBulb(below, dIn) : ri)) continue;
-      const isCoat = r > ro || r < ri || (coatOut && r > ro - 0.2 && below > SKIN - 0.05);
+      if (r > (coatOut ? wallO + COAT_OUT + dripBulb(below, dOut) : wallO)) continue;
+      if (r < (coatIn ? wallI - coatInT - (inFall ? 0 : dripBulb(below, dIn)) : wallI)) continue;
+      const isCoat = r > wallO || r < wallI || (coatOut && r > wallO - 0.2 && below > SKIN - 0.05);
       const fineZone = below < 1.0 || (r < ri + 0.7 && y > -0.9) || isCoat;
       if (!fineZone) continue;
 
       let color: number;
       const topVoxel = fy === fyTop - 1;
-      if (isCoat) {
+      if (isCoat && inFall && r < wallI + 0.02) {
+        color = syrupColor(theta, ri, y);
+      } else if (isCoat) {
         color = topVoxel || below < drop + 0.05 ? P.frostingPinkLight : P.frostingPink;
       } else if (c.zone === Zone.Frosting && below < 0.24) {
         color = topVoxel
@@ -224,11 +257,13 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
           : below < 0.1
             ? P.frostingPink
             : P.frostingPinkShadow;
+      } else if (c.zone === Zone.Syrup && below < 0.06) {
+        color = topVoxel ? P.syrupLight : P.syrup;
       } else if (topVoxel) {
-        color = surfaceColor(c, x, z);
+        color = surfaceColor(c, x, z, 32, slope);
       } else if (c.zone === Zone.Meadow && below < 0.07) {
         color = P.grassDeep;
-      } else if (c.zone === Zone.Sugar && below < 0.12) {
+      } else if (c.zone === Zone.Sugar && below < 0.12 && slope < 0.9) {
         color = P.powderedSugar;
       } else {
         color = doughColor(x, y, z, theta, y - c.bottom);
@@ -237,10 +272,10 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     }
 
     // Micro-voxel grass blades on the meadow (RF-04).
-    if (c.zone === Zone.Meadow && c.zoneDepth > 0.04 && drop === 0) {
+    if (!macro && c.zone === Zone.Meadow && c.zoneDepth > 0.04 && drop === 0) {
       const g = hash3(fx, 7, fz, 37);
       const lush = valueNoise3(x * 1.3, 2, z * 1.3, 41);
-      if (g < opts.grassDensity * (0.55 + lush) * outsideDetail(opts.detail, x, z)) {
+      if (g < opts.grassDensity * (0.55 + lush)) {
         const hRand = hash3(fx, 8, fz, 37);
         // Thin blades, not bumps: 2–4 voxels tall, dark base to light tip.
         const h = hRand < 0.4 ? 2 : hRand < 0.82 ? 3 : 4;
@@ -252,5 +287,107 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     }
   });
   const fineMs = performance.now() - t1;
-  return { coarse, fine, stats: { coarseMs, fineMs } };
+
+  const t2 = performance.now();
+  const macro = opts.detail?.length ? buildMacro(shape, opts.detail, opts.clear ?? []) : null;
+  return {
+    coarse,
+    fine,
+    macro,
+    stats: { coarseMs, fineMs, macroMs: performance.now() - t2 },
+  };
+}
+
+/** The 1/128 m near-field patches: the top `MACRO_SKIN` of meadow and path, plus grass. */
+function buildMacro(
+  shape: IslandShape,
+  patches: readonly DetailPatch[],
+  clear: readonly (readonly [number, number, number])[],
+): VoxelGrid {
+  const grid = new VoxelGrid();
+  const leans: [number, number, number, number][] = [];
+  for (const p of patches) {
+    const x0 = Math.floor((p.x - p.radius) / MACRO);
+    const x1 = Math.ceil((p.x + p.radius) / MACRO);
+    const z0 = Math.floor((p.z - p.radius) / MACRO);
+    const z1 = Math.ceil((p.z + p.radius) / MACRO);
+    grid.generateColumns(x0, z0, x1, z1, (mx, mz, put) => {
+      const x = (mx + 0.5) * MACRO;
+      const z = (mz + 0.5) * MACRO;
+      if (Math.hypot(x - p.x, z - p.z) >= p.radius) return;
+      // Earlier patches own their area (no double fill where patches overlap).
+      for (const q of patches) {
+        if (q === p) break;
+        if (Math.hypot(x - q.x, z - q.z) < q.radius) return;
+      }
+      const c = shape.column(x, z);
+      if (c.zone !== Zone.Meadow && c.zone !== Zone.Path) return;
+      const top = c.top;
+      const y0 = Math.floor((top - MACRO_SKIN - FINE) / MACRO);
+      const yTop = Math.ceil(top / MACRO - 0.5);
+      const surface = surfaceColor(c, x, z, 128, 0);
+      for (let y = y0; y < yTop; y++) {
+        const below = top - (y + 0.5) * MACRO;
+        put(
+          y,
+          y === yTop - 1
+            ? surface
+            : c.zone === Zone.Meadow && below < 0.03
+              ? P.grassDeep
+              : P.doughCrumb,
+        );
+      }
+      if (c.zone !== Zone.Meadow || c.zoneDepth < 0.03) return;
+      if (clear.some(([cx, cz, cr]) => Math.hypot(x - cx, z - cz) < cr)) return;
+      // Grass: thin blades 3–10 cm, leaning a step every few voxels.
+      const lush = valueNoise3(x * 1.3, 2, z * 1.3, 41);
+      const g = hash3(mx, 7, mz, 71);
+      if (g < 0.07 + lush * 0.1) {
+        const h = 4 + Math.floor(hash3(mx, 8, mz, 71) * 9);
+        const a = Math.floor(hash3(mx, 9, mz, 71) * 4);
+        const ldx = a === 0 ? 1 : a === 1 ? -1 : 0;
+        const ldz = a === 2 ? 1 : a === 3 ? -1 : 0;
+        const every = 3 + Math.floor(hash3(mx, 10, mz, 71) * 3);
+        for (let k = 0; k < h; k++) {
+          const t = k / h;
+          const color = t > 0.7 ? P.grassLight : t > 0.3 ? P.grassMint : P.grassDeep;
+          const shift = Math.floor(k / every);
+          if (shift === 0) put(yTop + k, color);
+          else leans.push([mx + ldx * shift, yTop + k, mz + ldz * shift, color]);
+        }
+      } else if (g > 0.9985) {
+        // A sprinkle flower: stem, leaves and a 5-petal bloom (art bible §3 scale).
+        const h = 8 + Math.floor(hash3(mx, 11, mz, 71) * 7);
+        for (let k = 0; k < h; k++) put(yTop + k, P.grassDeep);
+        const petals = [
+          P.sprinkleRed,
+          P.butter,
+          P.lavender,
+          P.candyCream,
+          P.frostingPinkLight,
+          P.sprinkleBlue,
+        ];
+        const petal = petals[Math.floor(hash3(mx, 12, mz, 71) * petals.length)] ?? P.butter;
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+          [1, 1],
+          [-1, -1],
+          [1, -1],
+          [-1, 1],
+          [2, 0],
+          [-2, 0],
+          [0, 2],
+          [0, -2],
+        ] as const)
+          leans.push([mx + dx, yTop + h, mz + dz, petal]);
+        leans.push([mx, yTop + h, mz, P.sprinkleOrange]);
+        leans.push([mx + 1, yTop + 3, mz, P.grassMint], [mx - 1, yTop + 5, mz, P.grassMint]);
+      }
+    });
+  }
+  for (const [x, y, z, v] of leans) if (grid.get(x, y, z) === 0) grid.set(x, y, z, v);
+  return grid;
 }

@@ -15,8 +15,10 @@ export const MAT = {
   rough: 1 << 3,
   /** Strong emissive (lamps, lit windows): the only things that bloom hard. */
   glow: 1 << 4,
-  /** Soft wrap lighting, the "subsurface feel" of dough and clouds (art bible §5). */
+  /** Soft wrap lighting, the "subsurface feel" of dough (art bible §5). */
   soft: 1 << 5,
+  /** Self-lit (clouds, steam): bright and soft from every side. */
+  lit: 1 << 6,
 } as const;
 
 export interface PaletteEntry {
@@ -85,11 +87,11 @@ export const VOXEL_PALETTE = {
   windowGlow: entry('#FFCF7E', MAT.glow, 0.03),
   lavender: entry('#C9A7E8', MAT.gloss),
   lavenderDeep: entry('#A887D6', MAT.gloss),
-  syrup: entry('#D98A2B', MAT.gloss | MAT.translucent, 0.03),
-  syrupLight: entry('#F0AE4A', MAT.gloss | MAT.translucent, 0.03),
-  cloud: entry('#FFF7F0', MAT.emissive, 0.02),
-  cloudShade: entry('#F0E2EE', MAT.emissive, 0.02),
-  steam: entry('#FFF4EC', MAT.soft, 0.02),
+  syrup: entry('#E0952F', MAT.gloss | MAT.translucent | MAT.emissive, 0.03),
+  syrupLight: entry('#F4B24E', MAT.gloss | MAT.translucent | MAT.emissive, 0.03),
+  cloud: entry('#FFF8F4', MAT.lit, 0.02),
+  cloudShade: entry('#E6DCF3', MAT.lit, 0.02),
+  steam: entry('#FFF4EC', MAT.lit, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),
 } as const satisfies Record<string, PaletteEntry>;
@@ -111,7 +113,7 @@ export function paletteEntryAt(index: number): PaletteEntry | undefined {
 
 /** Light, sky and fog colors (art bible §6). Not voxel colors, but palette-governed. */
 export const LIGHT_PALETTE = {
-  sunGolden: '#FFCF94',
+  sunGolden: '#FFC88A',
   skyFill: '#BFE0FF',
   groundBounce: '#F2C08A',
   skyZenith: '#8EC5F5',
@@ -120,6 +122,7 @@ export const LIGHT_PALETTE = {
   fog: '#F6DCCB',
   clearColor: '#A8D8FF',
   envZenith: '#CADBEE',
+  shadowFill: '#BCC4F2',
   skySea: '#B4D0F2',
   skySeaWarm: '#F8DCC6',
   lampLight: '#FFC46B',

@@ -1,4 +1,16 @@
-import { CHUNK, PAD, type VoxelGrid } from './VoxelGrid';
+import { MAT, PALETTE_NAMES, VOXEL_PALETTE } from '../../art/palette';
+import { CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
+
+/**
+ * Palette indices whose faces get smooth corner normals (glossy frosting, glaze,
+ * chocolate): they are emitted unmerged, and every vertex carries the normal of
+ * the occupancy field at its lattice corner, so highlights flow over the rounded
+ * form while the silhouette stays voxel (art bible §2, §5).
+ */
+const SMOOTH = new Uint8Array(256);
+PALETTE_NAMES.forEach((n, i) => {
+  if (VOXEL_PALETTE[n].mat & MAT.gloss) SMOOTH[i + 1] = 1;
+});
 
 /**
  * Greedy chunk mesher with per-vertex voxel AO (PLAN M1, art bible §6).
@@ -24,6 +36,8 @@ import { CHUNK, PAD, type VoxelGrid } from './VoxelGrid';
 export interface MeshData {
   positions: Float32Array;
   normals: Int8Array;
+  /** Smooth (occupancy-gradient) normals, Int8 ×3; equal to `normals` on matte faces. */
+  snormals: Int8Array;
   voxel: Uint8Array;
   indices: Uint16Array | Uint32Array;
   quads: number;
@@ -51,6 +65,7 @@ export function meshChunk(
   let cap = 4096;
   let positions = new Float32Array(cap * 12);
   let normals = new Int8Array(cap * 12);
+  let snormals = new Int8Array(cap * 12);
   let voxel = new Uint8Array(cap * 8);
   let quads = 0;
   let flips = new Uint8Array(cap);
@@ -63,6 +78,9 @@ export function meshChunk(
     const n = new Int8Array(cap * 12);
     n.set(normals);
     normals = n;
+    const sn = new Int8Array(cap * 12);
+    sn.set(snormals);
+    snormals = sn;
     const v = new Uint8Array(cap * 8);
     v.set(voxel);
     voxel = v;
@@ -71,6 +89,7 @@ export function meshChunk(
     flips = f;
   };
 
+  const lattice = [0, 0, 0];
   // mask[u + v*size]: 0 = no face, else pal | ao0<<8 | ao1<<10 | ao2<<12 | ao3<<14.
   const mask = new Uint32Array(size * size);
 
@@ -118,10 +137,11 @@ export function meshChunk(
               i++;
               continue;
             }
+            const smooth = SMOOTH[key & 255] === 1;
             let w = 1;
-            while (i + w < size && mask[j * size + i + w] === key) w++;
+            while (!smooth && i + w < size && mask[j * size + i + w] === key) w++;
             let h = 1;
-            grow: while (j + h < size) {
+            grow: while (!smooth && j + h < size) {
               for (let k = 0; k < w; k++) if (mask[(j + h) * size + i + k] !== key) break grow;
               h++;
             }
@@ -143,6 +163,15 @@ export function meshChunk(
               positions[o + u] = (hiU ? i + w : i) + (origin[u] ?? 0);
               positions[o + v] = (hiV ? j + h : j) + (origin[v] ?? 0);
               normals[o + d] = sign * 127;
+              snormals[o + d] = sign * 127;
+              snormals[o + u] = 0;
+              snormals[o + v] = 0;
+              if (smooth) {
+                lattice[d] = plane;
+                lattice[u] = hiU ? i + w : i;
+                lattice[v] = hiV ? j + h : j;
+                cornerNormal(padded, lattice, snormals, o);
+              }
               voxel[vb + c * 2] = key & 255;
               voxel[vb + c * 2 + 1] = ((key >> (8 + cc * 2)) & 3) | (hiU ? 4 : 0) | (hiV ? 8 : 0);
             }
@@ -178,10 +207,40 @@ export function meshChunk(
   return {
     positions: positions.slice(0, quads * 12),
     normals: normals.slice(0, quads * 12),
+    snormals: snormals.slice(0, quads * 12),
     voxel: voxel.slice(0, quads * 8),
     indices,
     quads,
   };
+}
+
+/**
+ * Normal of the occupancy field at a lattice corner (local voxel coords), from
+ * the 8 voxels around it (as marching cubes does), written as Int8 ×3.
+ */
+function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, o: number): void {
+  let gx = 0;
+  let gy = 0;
+  let gz = 0;
+  const x0 = l[0] ?? 0;
+  const y0 = l[1] ?? 0;
+  const z0 = l[2] ?? 0;
+  for (let c = 0; c < 8; c++) {
+    const dx = c & 1;
+    const dy = (c >> 1) & 1;
+    const dz = (c >> 2) & 1;
+    if ((padded[paddedIndex(x0 - 1 + dx, y0 - 1 + dy, z0 - 1 + dz)] ?? 0) === 0) continue;
+    gx += dx ? 1 : -1;
+    gy += dy ? 1 : -1;
+    gz += dz ? 1 : -1;
+  }
+  // Solid → empty points outward: the normal is minus the occupancy gradient.
+  // A degenerate corner (no gradient) keeps the face normal already written.
+  const len = Math.hypot(gx, gy, gz);
+  if (len === 0) return;
+  out[o] = Math.round((-gx / len) * 127);
+  out[o + 1] = Math.round((-gy / len) * 127);
+  out[o + 2] = Math.round((-gz / len) * 127);
 }
 
 /** Concatenates several meshes into one (e.g. all chunks of a small prop). */
@@ -189,17 +248,19 @@ export function mergeMeshData(parts: readonly MeshData[]): MeshData {
   const quads = parts.reduce((n, p) => n + p.quads, 0);
   const positions = new Float32Array(quads * 12);
   const normals = new Int8Array(quads * 12);
+  const snormals = new Int8Array(quads * 12);
   const voxel = new Uint8Array(quads * 8);
   const indices = quads * 4 > 65535 ? new Uint32Array(quads * 6) : new Uint16Array(quads * 6);
   let q = 0;
   for (const p of parts) {
     positions.set(p.positions, q * 12);
     normals.set(p.normals, q * 12);
+    snormals.set(p.snormals, q * 12);
     voxel.set(p.voxel, q * 8);
     for (let k = 0; k < p.indices.length; k++) indices[q * 6 + k] = (p.indices[k] ?? 0) + q * 4;
     q += p.quads;
   }
-  return { positions, normals, voxel, indices, quads };
+  return { positions, normals, snormals, voxel, indices, quads };
 }
 
 /** Meshes every chunk of a (small) grid on the calling thread, e.g. a prop model. */

@@ -1,4 +1,4 @@
-import type { Camera, Scene } from 'three';
+import type { Camera, Scene, WebGLRenderer } from 'three';
 import type { PostSettings } from '../engine/render/Renderer';
 import type { QualitySettings, QualityTier } from '../engine/quality';
 
@@ -10,6 +10,8 @@ export interface ShotScene {
   update?(t: number): void;
   /** Times (seconds) of the 3-frame motion strip. */
   readonly stripTimes?: readonly number[];
+  /** Called before each frame is composed (planar reflections and the like). */
+  prerender?(gl: WebGLRenderer, camera: Camera): void;
   /** Look-dev post settings for this shot. */
   readonly post?: PostSettings;
   /** Scene pre-filtered into `scene.environment` (glossy reflections, sky fill). */

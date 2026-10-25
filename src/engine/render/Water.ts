@@ -1,4 +1,14 @@
-import { CircleGeometry, Color, Mesh, MeshStandardMaterial, Vector3, type IUniform } from 'three';
+import {
+  CircleGeometry,
+  Color,
+  Matrix4,
+  Mesh,
+  MeshStandardMaterial,
+  Vector2,
+  Vector3,
+  type IUniform,
+  type Texture,
+} from 'three';
 import { LIGHT_PALETTE, VOXEL_PALETTE } from '../../art/palette';
 
 /**
@@ -19,12 +29,15 @@ export interface MilkOptions {
   waves: readonly (readonly [number, number, number])[];
   /** Extra round shores (e.g. pier posts): x, z, radius. */
   posts?: readonly (readonly [number, number, number])[];
+  /** Planar reflection (see Reflection.ts); omitted on low tiers. */
+  reflection?: { texture: Texture; textureMatrix: Matrix4; strength: number };
 }
 
 const MAX_POSTS = 16;
 
 export interface Milk {
   mesh: Mesh;
+  setReflectionSize(w: number, h: number): void;
   setTime(t: number): void;
 }
 
@@ -40,6 +53,10 @@ export function createMilk(opts: MilkOptions): Milk {
         return new Vector3(w?.[0] ?? 0, w?.[1] ?? 0, w?.[2] ?? 0);
       }),
     },
+    tReflect: { value: opts.reflection?.texture ?? null },
+    uTexMatrix: { value: opts.reflection?.textureMatrix ?? new Matrix4() },
+    uReflect: { value: opts.reflection?.strength ?? 0 },
+    uReflectTexel: { value: new Vector2(1 / 960, 1 / 540) },
     uPosts: {
       value: Array.from({ length: MAX_POSTS }, (_, i) => {
         const p = opts.posts?.[i];
@@ -52,21 +69,29 @@ export function createMilk(opts: MilkOptions): Milk {
     color: new Color(VOXEL_PALETTE.milk.hex),
     roughness: 0.16,
     metalness: 0,
-    envMapIntensity: 0.55,
+    envMapIntensity: 0.4,
   });
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vWorldPos;')
+      .replace(
+        '#include <common>',
+        '#include <common>\nvarying vec3 vWorldPos;\nvarying vec4 vReflUv;\nuniform mat4 uTexMatrix;',
+      )
       .replace(
         '#include <worldpos_vertex>',
-        '#include <worldpos_vertex>\nvWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;',
+        '#include <worldpos_vertex>\nvWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvReflUv = uTexMatrix * vec4(transformed, 1.0);',
       );
     shader.fragmentShader = shader.fragmentShader
       .replace(
         '#include <common>',
         /* glsl */ `#include <common>
 varying vec3 vWorldPos;
+varying vec4 vReflUv;
+uniform sampler2D tReflect;
+uniform float uReflect;
+uniform vec2 uReflectTexel;
+vec3 milkNW = vec3(0.0, 1.0, 0.0);
 uniform float uTime;
 uniform vec3 uDeep;
 uniform vec3 uFoam;
@@ -127,13 +152,33 @@ float shoreDist(vec2 p) {
   float e = 0.02;
   float h0 = milkHeight(p);
   vec3 nW = normalize(vec3(-(milkHeight(p + vec2(e, 0.0)) - h0) / e, 1.0, -(milkHeight(p + vec2(0.0, e)) - h0) / e));
+  milkNW = nW;
   normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);
 }`,
       )
       .replace(
+        '#include <opaque_fragment>',
+        /* glsl */ `
+if (uReflect > 0.0) {
+  // Soft, ripple-distorted mirror image, Fresnel-weighted (milk is no mirror).
+  vec2 ruv = vReflUv.xy / vReflUv.w + milkNW.xz * 0.06;
+  vec4 r = vec4(0.0);
+  for (int i = -2; i <= 2; i++) {
+    for (int j = -1; j <= 1; j++) {
+      r += texture2D(tReflect, ruv + vec2(float(i), float(j) * 1.5) * uReflectTexel * 1.5);
+    }
+  }
+  r /= 15.0;
+  float fres = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
+  float k = clamp(fres * uReflect, 0.0, 0.75) * r.a;
+  outgoingLight = mix(outgoingLight, r.rgb / max(r.a, 1e-3), k);
+}
+#include <opaque_fragment>`,
+      )
+      .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
-totalEmissiveRadiance += diffuseColor.rgb * 0.06;`,
+totalEmissiveRadiance += diffuseColor.rgb * 0.1;`,
       );
   };
   material.customProgramCacheKey = () => 'milk-v1';
@@ -144,6 +189,9 @@ totalEmissiveRadiance += diffuseColor.rgb * 0.06;`,
   mesh.receiveShadow = true;
   return {
     mesh,
+    setReflectionSize(w: number, h: number) {
+      (uniforms.uReflectTexel as IUniform<Vector2>).value.set(1 / w, 1 / h);
+    },
     setTime(t: number) {
       (uniforms.uTime as IUniform<number>).value = t;
     },

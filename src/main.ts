@@ -77,6 +77,7 @@ async function boot(): Promise<void> {
   fitCamera(shot, w, h);
   if (shot.environment) renderer.setEnvironment(shot.scene, shot.environment);
   renderer.setScene(shot.scene, shot.camera, shot.post);
+  if (shot.prerender) renderer.beforeRender = (gl) => shot.prerender?.(gl, shot.camera);
   await renderer.gl.compileAsync(shot.scene, shot.camera);
 
   if (shotId) {

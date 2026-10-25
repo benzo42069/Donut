@@ -58,6 +58,8 @@ export class Renderer {
   private aoPass: N8AOPostPass | null = null;
   private width = 1;
   private height = 1;
+  /** Called before each composed frame (e.g. planar reflections). */
+  beforeRender: ((gl: WebGLRenderer) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement, quality: QualitySettings) {
     this.quality = quality;
@@ -159,6 +161,7 @@ export class Renderer {
   }
 
   render(deltaSeconds: number): void {
+    this.beforeRender?.(this.gl);
     this.composer?.render(deltaSeconds);
   }
 

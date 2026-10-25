@@ -2,6 +2,7 @@
 import { chromium } from 'playwright';
 import { build, createServer, preview } from 'vite';
 import { dirname, resolve } from 'node:path';
+import { rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -73,9 +74,23 @@ export async function startServer(dev) {
     await server.listen();
     return { url: server.resolvedUrls.local[0], close: () => server.close() };
   }
-  await build({ root: ROOT, logLevel: 'warn' });
-  const server = await preview({ root: ROOT, preview: { port: 4199 }, logLevel: 'warn' });
-  return { url: server.resolvedUrls.local[0], close: () => server.close() };
+  // A build directory per process, so two harness runs (e.g. the two reviewers
+  // of a double gate) can work at the same time; preview picks a free port.
+  const outDir = `node_modules/.shots-build/${process.pid}`;
+  await build({ root: ROOT, logLevel: 'warn', build: { outDir, emptyOutDir: true } });
+  const server = await preview({
+    root: ROOT,
+    build: { outDir },
+    preview: { port: 4199, strictPort: false },
+    logLevel: 'warn',
+  });
+  return {
+    url: server.resolvedUrls.local[0],
+    close: async () => {
+      await server.close();
+      await rm(resolve(ROOT, outDir), { recursive: true, force: true });
+    },
+  };
 }
 
 export async function openShot(context, url, id, vp, log, query = '') {

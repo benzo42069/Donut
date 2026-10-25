@@ -13,5 +13,8 @@ export const SHOTS: Record<string, ShotDefinition> = {
   'm1-terrain': { build: buildTerrainScene },
   'm1-low-tier': { build: buildTerrainScene, tier: 'low' },
   'm2-hero': { build: m2Shot('hero') },
+  'm2-ground': { build: m2Shot('ground') },
+  'm2-closeup-donut': { build: m2Shot('closeupDonut') },
+  'm2-lagoon-edge': { build: m2Shot('lagoonEdge') },
   'm2-low-tier': { build: m2Shot('hero'), tier: 'low' },
 };

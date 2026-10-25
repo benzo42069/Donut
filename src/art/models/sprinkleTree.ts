@@ -87,7 +87,7 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
       if (crown(px, py, pz) <= 0) {
         const n = fbm3(x / 9 + seed * 3, y / 9, z / 9, 2, 17);
         const h = hash3(x, y, z, seed + 31);
-        if (h > 0.94) return PALETTE_INDEX[leafC];
+        if (h > 0.975) return PALETTE_INDEX[leafC];
         // Darker underside, lighter crown top.
         return PALETTE_INDEX[n + py / 60 < 0.42 ? leafB : leafA];
       }
@@ -137,7 +137,7 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
     const oz = z + (step[2] ?? 0);
     // Lay the capsule along one of the two axes tangent to the surface.
     const along = (ax + 1 + (hash3(i, seed, 3, 47) > 0.5 ? 1 : 0)) % 3;
-    const color = PALETTE_INDEX[SPRINKLES[(i * 7 + seed) % SPRINKLES.length] ?? 'sprinkleRed'];
+    const color = PALETTE_INDEX[SPRINKLES[(i * 3 + seed) % SPRINKLES.length] ?? 'sprinkleRed'];
     const cells: [number, number, number][] = [-1, 0, 1].map((k) => [
       ox + (along === 0 ? k : 0),
       oy + (along === 1 ? k : 0),

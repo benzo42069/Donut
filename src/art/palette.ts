@@ -87,8 +87,8 @@ export const VOXEL_PALETTE = {
   lavenderDeep: entry('#A887D6', MAT.gloss),
   syrup: entry('#D98A2B', MAT.gloss | MAT.translucent, 0.03),
   syrupLight: entry('#F0AE4A', MAT.gloss | MAT.translucent, 0.03),
-  cloud: entry('#FFF7F0', MAT.soft, 0.02),
-  cloudShade: entry('#EEDFEC', MAT.soft, 0.02),
+  cloud: entry('#FFF7F0', MAT.emissive, 0.02),
+  cloudShade: entry('#F0E2EE', MAT.emissive, 0.02),
   steam: entry('#FFF4EC', MAT.soft, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),
@@ -111,7 +111,7 @@ export function paletteEntryAt(index: number): PaletteEntry | undefined {
 
 /** Light, sky and fog colors (art bible §6). Not voxel colors, but palette-governed. */
 export const LIGHT_PALETTE = {
-  sunGolden: '#FFD9A8',
+  sunGolden: '#FFCF94',
   skyFill: '#BFE0FF',
   groundBounce: '#F2C08A',
   skyZenith: '#8EC5F5',
@@ -119,6 +119,7 @@ export const LIGHT_PALETTE = {
   skySunGlow: '#FFD3A1',
   fog: '#F6DCCB',
   clearColor: '#A8D8FF',
+  envZenith: '#CADBEE',
   skySea: '#B4D0F2',
   skySeaWarm: '#F8DCC6',
   lampLight: '#FFC46B',

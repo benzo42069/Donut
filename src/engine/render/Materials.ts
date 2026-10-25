@@ -44,7 +44,7 @@ export interface VoxelMaterialTuning {
 
 export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughMatte: 0.82,
-  roughGloss: 0.3,
+  roughGloss: 0.22,
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,

@@ -6,17 +6,23 @@ import { LIGHT_PALETTE } from '../../art/palette';
  * horizon it fades into a lavender "sky sea" so a floating island seen from
  * above sits in haze, warmer toward the sun. Dithered against banding (§10.7).
  */
-export function createSky(sunDirection: Vector3, radius = 400): Mesh {
+export interface SkyColors {
+  zenith?: string;
+  sea?: string;
+  seaWarm?: string;
+}
+
+export function createSky(sunDirection: Vector3, radius = 400, colors: SkyColors = {}): Mesh {
   const material = new ShaderMaterial({
     side: BackSide,
     depthWrite: false,
     fog: false,
     uniforms: {
-      zenith: { value: new Color(LIGHT_PALETTE.skyZenith) },
+      zenith: { value: new Color(colors.zenith ?? LIGHT_PALETTE.skyZenith) },
       horizon: { value: new Color(LIGHT_PALETTE.skyHorizon) },
       glow: { value: new Color(LIGHT_PALETTE.skySunGlow) },
-      sea: { value: new Color(LIGHT_PALETTE.skySea) },
-      seaWarm: { value: new Color(LIGHT_PALETTE.skySeaWarm) },
+      sea: { value: new Color(colors.sea ?? LIGHT_PALETTE.skySea) },
+      seaWarm: { value: new Color(colors.seaWarm ?? LIGHT_PALETTE.skySeaWarm) },
       sunDir: { value: sunDirection.clone().normalize() },
     },
     vertexShader: /* glsl */ `

@@ -134,6 +134,7 @@ export class IslandShape {
     let zone = Zone.Meadow;
     let zoneDepth = 1;
     let sugar = 0;
+    let mounded = false;
     for (const m of this.layout.mounds) {
       const d = Math.hypot(x - m.x, z - m.z);
       if (d > m.radius * 1.6) continue;
@@ -146,6 +147,7 @@ export class IslandShape {
         sugar = Math.max(sugar, h / m.height);
       } else {
         ground += m.height * Math.pow(Math.max(0, 1 - t * t), 2);
+        if (t < 1) mounded = true;
         if (m.kind === 'frosting' && t < 0.85) {
           zone = Zone.Frosting;
           zoneDepth = Math.min(zoneDepth, (0.85 - t) * m.radius);
@@ -181,7 +183,14 @@ export class IslandShape {
     }
 
     // Rim corners are rounded by the terrain builder, where the frosting coat is.
-    const top = ground + (zone === Zone.Frosting ? frostingProfile(frostDepth) : 0);
+    // Poured icing levels itself: away from its edge the frosting top relaxes
+    // toward a smoothed height, so it reads as a glossy pour, not terraces.
+    let top = ground;
+    if (zone === Zone.Frosting) {
+      const level = smoothstep(0.1, 0.6, frostDepth) * 0.75;
+      const smooth = TOP_BASE + (fbm3(x / 11, 0, z / 11, 2, 7) - 0.5) * 0.35;
+      top = ground + (smooth - ground) * level * (mounded ? 0 : 1) + frostingProfile(frostDepth);
+    }
 
     // Underside: a rounded donut belly (superellipse cross-section).
     const rc = (ri + ro) / 2;

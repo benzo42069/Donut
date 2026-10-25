@@ -7,12 +7,15 @@ import {
   PointLight,
   Scene,
   Vector3,
+  type Camera,
   type Material,
+  type WebGLRenderer,
 } from 'three';
+import { PlanarReflection } from '../../engine/render/Reflection';
 import { LIGHT_PALETTE, PALETTE_INDEX, hash3 } from '../../art/palette';
 import { valueNoise3 } from '../../art/sdf';
 import { BAKERY_CHIMNEY, BAKERY_SIZE, buildBakery } from '../../art/models/bakery';
-import { DONUT_SIZE, buildDonut, type DonutFlavor } from '../../art/models/donut';
+import { DONUT_SIZE, DONUT_VOXEL, buildDonut, type DonutFlavor } from '../../art/models/donut';
 import { LIGHTHOUSE_LAMP, LIGHTHOUSE_SIZE, buildLighthouse } from '../../art/models/lighthouse';
 import { PIER_WIDTH, buildPier, buildRubberRing, pierPostXs } from '../../art/models/pier';
 import {
@@ -24,6 +27,8 @@ import {
   stamp,
 } from '../../art/models/smallProps';
 import { TREE_SIZE, buildSprinkleTree, type TreeLeaf } from '../../art/models/sprinkleTree';
+import { FINE_DECOR_VOXEL, TUFT_SIZE, buildGrassTuft } from '../../art/models/grassTuft';
+import { createPropInstances, type PropPlacement } from '../../engine/voxel/PropInstances';
 import type { QualitySettings } from '../../engine/quality';
 import { createVoxelMaterial } from '../../engine/render/Materials';
 import { createSky } from '../../engine/render/Sky';
@@ -31,7 +36,7 @@ import { createMilk, type Milk } from '../../engine/render/Water';
 import { MesherPool } from '../../engine/voxel/MesherPool';
 import type { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 import { VoxelObject } from '../../engine/voxel/VoxelObject';
-import { COARSE, FINE, buildIslandTerrain } from './IslandTerrain';
+import { COARSE, FINE, buildIslandTerrain, outsideDetail } from './IslandTerrain';
 import {
   INNER_AMP,
   INNER_BASE,
@@ -41,10 +46,10 @@ import {
   Zone,
   innerRadius,
 } from './islandShape';
-import { MEADOW_LAYOUT, SPOTS, band, polar } from './meadowLayout';
+import { HERO_DONUT, MEADOW_LAYOUT, SPOTS, band, polar } from './meadowLayout';
 
 /** Direction toward the golden-hour sun: upper right of the hero view (K-01). */
-export const SUN_DIR = new Vector3(0.8, 0.48, -0.22).normalize();
+export const SUN_DIR = new Vector3(0.8, 0.56, -0.26).normalize();
 /** Where the hero camera sits (props that "face the viewer" turn toward it). */
 export const HERO_EYE = new Vector3(-8, 23, 32.5);
 
@@ -59,6 +64,7 @@ export interface Diorama {
   /** Named world positions for cameras. */
   spots: Record<string, Vector3>;
   update(t: number): void;
+  prerender(gl: WebGLRenderer, camera: Camera): void;
   stats: Record<string, number>;
 }
 
@@ -82,7 +88,7 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
   const low = quality.tier === 'low';
 
   // --- Light (art bible §6): golden key, cool sky fill, warm bounce. ---
-  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 3.4);
+  const sun = new DirectionalLight(new Color(LIGHT_PALETTE.sunGolden), 5.0);
   sun.position.copy(SUN_DIR).multiplyScalar(60);
   sun.target.position.set(0, 0, 0);
   sun.castShadow = true;
@@ -100,16 +106,29 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
     new HemisphereLight(
       new Color(LIGHT_PALETTE.skyFill),
       new Color(LIGHT_PALETTE.groundBounce),
-      0.35,
+      0.2,
     ),
   );
-  scene.add(createSky(SUN_DIR));
+  // The environment map is fill and gloss, not the key: keep it soft.
+  scene.environmentIntensity = 0.6;
+  const sky = createSky(SUN_DIR);
+  scene.add(sky);
   const environment = new Scene();
-  environment.add(createSky(SUN_DIR, 50));
+  // Reflections see a warm studio-like world: sky above, toasty bounce below,
+  // so glossy chocolate and frosting don't turn blue.
+  environment.add(
+    createSky(SUN_DIR, 50, {
+      zenith: LIGHT_PALETTE.envZenith,
+      sea: LIGHT_PALETTE.groundBounce,
+      seaWarm: LIGHT_PALETTE.skySunGlow,
+    }),
+  );
 
   // --- Terrain ---
   const shape = new IslandShape(MEADOW_LAYOUT);
-  const terrain = buildIslandTerrain(shape, { grassDensity: low ? 0.1 : 0.24 });
+  // Near-field detail around the hero donut (the ground and close-up shots).
+  const detail = low ? undefined : { ...HERO_DONUT, radius: 2.8 };
+  const terrain = buildIslandTerrain(shape, { grassDensity: low ? 0.08 : 0.16, detail });
   const fineGrid = terrain.fine;
   const groundVoxel = (x: number, z: number): number => Math.ceil(shape.surface(x, z) / FINE - 0.5);
 
@@ -126,6 +145,7 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
       if (hash3(i, k, 3, 51) > (drift - 0.35) * (low ? 0.6 : 1.3)) continue;
       const c = shape.column(x, z);
       if (c.zone !== Zone.Meadow || c.zoneDepth < 0.12 || c.u < 0.05 || c.u > 0.95) continue;
+      if (hash3(i, k, 8, 51) > outsideDetail(detail, x, z)) continue;
       stamp(
         fineGrid,
         flowerStamp(i * 131 + k),
@@ -197,7 +217,7 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
     voxel: PROP,
     pivot: [BAKERY_SIZE[0] / 2, 0, BAKERY_SIZE[2] / 2],
     pos: at(SPOTS.bakery, -0.03),
-    rotY: faceToward(SPOTS.bakery, { x: 0, z: 0 }) + 0.25,
+    rotY: faceToward(SPOTS.bakery, { x: -3.5, z: -1 }),
   });
 
   // Lighthouse, lamp turned toward the hero view.
@@ -224,9 +244,9 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
 
   // Sprinkle-ball trees (RF-06).
   const trees: [number, number, TreeLeaf, number][] = [
-    [-150, 0.38, 'green', 1.0],
-    [-166, 0.74, 'mint', 0.9],
-    [176, 0.56, 'green', 1.1],
+    [-128, 0.8, 'green', 1.0],
+    [-150, 0.84, 'mint', 0.9],
+    [168, 0.3, 'green', 1.1],
     [160, 0.27, 'pink', 0.85],
     [-44, 0.72, 'green', 1.05],
     [-104, 0.8, 'mint', 0.95],
@@ -268,30 +288,35 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
     [122, 0.68, 'chocolate'],
     [136, 0.31, 'glazed'],
     [84, 0.7, 'powdered'],
-    [-74, 0.2, 'strawberry'],
-    [-140, 0.8, 'chocolate'],
+    [-131, 0.3, 'strawberry'],
+    [-116, 0.38, 'chocolate'],
   ];
+  const spots: Record<string, Vector3> = {};
   grassDonuts.forEach(([deg, u, flavor], i) => {
-    const p = offPath(band(deg, u));
+    const p = i === 4 ? HERO_DONUT : offPath(band(deg, u));
+    spots[`donut${i}`] = at(p);
     placed.push({
       grid: buildDonut(flavor, i + 1),
-      voxel: PROP,
+      voxel: DONUT_VOXEL,
       pivot: donutPivot,
       pos: at(p, -0.03),
       rotY: hash3(i, 2, 2, 7) * Math.PI * 2,
     });
   });
   const floaters: [number, number, DonutFlavor][] = [
-    [150, 2.5, 'strawberry'],
+    [120, 1.6, 'strawberry'],
     [-150, 3.3, 'glazed'],
     [-50, 2.2, 'chocolate'],
     [70, 3.4, 'glazed'],
   ];
+  /** Things standing in the milk get a foam ring (x, z, radius). */
+  const milkContacts: [number, number, number][] = [];
   floaters.forEach(([deg, r, flavor], i) => {
     const p = polar(deg, r);
+    milkContacts.push([p.x, p.z, 0.34]);
     placed.push({
       grid: buildDonut(flavor, i + 11),
-      voxel: PROP,
+      voxel: DONUT_VOXEL,
       pivot: donutPivot,
       pos: new Vector3(p.x, MILK_LEVEL - 0.1, p.z),
       rotY: hash3(i, 3, 2, 7) * Math.PI * 2,
@@ -299,6 +324,7 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
     });
   });
   const ringSpot = polar(24, 3.4);
+  milkContacts.push([ringSpot.x, ringSpot.z, 0.3]);
   placed.push({
     grid: buildRubberRing(),
     voxel: PROP,
@@ -332,6 +358,52 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
 
   // --- Meshing ---
   const material = createVoxelMaterial();
+
+  // Instanced 1/64 m grass tufts and flowers in the near-field patch.
+  if (detail) {
+    const variants = [0, 1, 2, 3, 4].map((v) => ({
+      grid: buildGrassTuft(v, v >= 3),
+      list: [] as PropPlacement[],
+    }));
+    const dStep = 0.05;
+    const donutsNear = grassDonuts.map((_, i) => spots[`donut${i}`]).filter((v) => v !== undefined);
+    for (
+      let gx = detail.x - detail.radius - 0.8;
+      gx < detail.x + detail.radius + 0.8;
+      gx += dStep
+    ) {
+      for (
+        let gz = detail.z - detail.radius - 0.8;
+        gz < detail.z + detail.radius + 0.8;
+        gz += dStep
+      ) {
+        const i = Math.round(gx / dStep);
+        const k = Math.round(gz / dStep);
+        const x = gx + (hash3(i, k, 1, 57) - 0.5) * dStep;
+        const z = gz + (hash3(i, k, 2, 57) - 0.5) * dStep;
+        const lush = valueNoise3(x * 1.3, 2, z * 1.3, 41);
+        const want = (1 - outsideDetail(detail, x, z)) * (0.35 + lush * 0.6);
+        if (hash3(i, k, 3, 57) > want) continue;
+        if (donutsNear.some((d) => Math.hypot(d.x - x, d.z - z) < 0.36)) continue;
+        const c = shape.column(x, z);
+        if (c.zone !== Zone.Meadow || c.zoneDepth < 0.03) continue;
+        const flower =
+          hash3(i, k, 4, 57) < 0.05 + (valueNoise3(x * 0.45, 0, z * 0.45, 52) - 0.4) * 0.1;
+        const v = flower ? 3 + (i & 1) : (i + k) % 3;
+        variants[v]?.list.push({
+          x,
+          y: groundVoxel(x, z) * FINE,
+          z,
+          rotY: hash3(i, k, 5, 57) * Math.PI * 2,
+        });
+      }
+    }
+    const pivot = [(TUFT_SIZE[0] - 1) / 2, 0, (TUFT_SIZE[2] - 1) / 2] as const;
+    for (const { grid, list } of variants) {
+      if (list.length)
+        scene.add(createPropInstances(grid, FINE_DECOR_VOXEL, pivot, material, list));
+    }
+  }
   const pool = new MesherPool();
   const t0 = performance.now();
   const coarse = new VoxelObject(terrain.coarse, COARSE, material, pool);
@@ -390,12 +462,16 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
   }
 
   // --- Milk lagoon (RF-02, RF-07) ---
+  const reflection = low ? null : new PlanarReflection(MILK_LEVEL, 0.5);
   const milk: Milk = createMilk({
+    reflection: reflection
+      ? { texture: reflection.target.texture, textureMatrix: reflection.textureMatrix, strength: 1 }
+      : undefined,
     radius: INNER_BASE + 1.2,
     shoreBase: INNER_BASE,
     shoreAmp: INNER_AMP,
     waves: RING_WAVES,
-    posts: pierPosts(rim, pierTheta, pierTop),
+    posts: [...pierPosts(rim, pierTheta, pierTop), ...milkContacts],
   });
   milk.mesh.position.y = MILK_LEVEL;
   scene.add(milk.mesh);
@@ -408,10 +484,15 @@ export async function buildMeadowDiorama(quality: QualitySettings): Promise<Dior
     environment,
     shape,
     sun,
-    spots: {},
+    spots,
     update(t: number) {
       milk.setTime(t);
       poseSteam(t);
+    },
+    prerender(gl, camera) {
+      if (!reflection) return;
+      reflection.render(gl, scene, camera, milk.mesh, [milk.mesh, sky]);
+      milk.setReflectionSize(reflection.target.width, reflection.target.height);
     },
     stats: {
       coarseGenMs: terrain.stats.coarseMs,

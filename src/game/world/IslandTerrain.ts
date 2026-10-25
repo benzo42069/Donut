@@ -49,6 +49,21 @@ const RIM_ROUND = 0.2;
 export interface TerrainOptions {
   /** Fraction of meadow cells with a grass blade. */
   grassDensity: number;
+  /** Near-field patch where instanced 1/64 m decor replaces the voxel blades. */
+  detail?: DetailPatch;
+}
+
+export interface DetailPatch {
+  x: number;
+  z: number;
+  radius: number;
+}
+
+/** 1 outside the detail patch, fading to 0 inside it. */
+export function outsideDetail(d: DetailPatch | undefined, x: number, z: number): number {
+  if (!d) return 1;
+  const t = (Math.hypot(x - d.x, z - d.z) - d.radius) / 0.8;
+  return Math.min(1, Math.max(0, t));
 }
 
 export interface IslandTerrain {
@@ -71,8 +86,8 @@ function doughColor(x: number, y: number, z: number, theta: number, aboveBottom:
     (valueNoise3(x * 0.9, y * 0.4, z * 0.9, 31) - 0.5) * 0.35;
   const b = (y + wave + 8) / 0.62;
   const f = b - Math.floor(b);
-  if (f < 0.13) return P.doughToasted;
-  if (f < 0.25) return P.doughCrumb;
+  if (f < 0.17) return P.doughToasted;
+  if (f < 0.3) return P.doughCrumb;
   if (aboveBottom < 0.9) return P.doughToasted;
   return P.doughGolden;
 }
@@ -225,15 +240,13 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     if (c.zone === Zone.Meadow && c.zoneDepth > 0.04 && drop === 0) {
       const g = hash3(fx, 7, fz, 37);
       const lush = valueNoise3(x * 1.3, 2, z * 1.3, 41);
-      if (g < opts.grassDensity * (0.55 + lush)) {
+      if (g < opts.grassDensity * (0.55 + lush) * outsideDetail(opts.detail, x, z)) {
         const hRand = hash3(fx, 8, fz, 37);
-        const h = hRand < 0.55 ? 1 : hRand < 0.88 ? 2 : 3;
+        // Thin blades, not bumps: 2–4 voxels tall, dark base to light tip.
+        const h = hRand < 0.4 ? 2 : hRand < 0.82 ? 3 : 4;
         for (let k = 0; k < h; k++) {
           const tip = k === h - 1;
-          put(
-            fyTop + k,
-            tip && h > 1 ? P.grassLight : hash3(fx, k, fz, 43) > 0.5 ? P.grassMint : P.grassDeep,
-          );
+          put(fyTop + k, tip ? P.grassLight : k === 0 ? P.grassDeep : P.grassMint);
         }
       }
     }

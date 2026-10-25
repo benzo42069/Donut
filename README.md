@@ -3,7 +3,7 @@
 A silly, beautiful voxel game for kids aged 6+. Munch magical donuts, gain
 goofy powers, burp rainbows, and help the island celebrate Dunk Day.
 
-**Status:** planning complete. Implementation runs one milestone per thread (see `docs/PROGRESS.md`).
+**Status:** M0 (scaffold + screenshot harness) done. Implementation runs one milestone per thread (see `docs/PROGRESS.md`).
 
 | Doc | Purpose |
 |---|---|
@@ -18,3 +18,12 @@ goofy powers, burp rainbows, and help the island celebrate Dunk Day.
 
 ## Getting started
 Reference images are in `art/reference/`. To start or resume, paste the kickoff prompt into a new Claude Code thread. Each thread hands off to the next on its own.
+
+## Commands
+```
+npm install
+npm run dev                         # http://localhost:5173 (?shot=<id>, ?quality=low|medium|high)
+npm run lint && npm test && npm run build
+npm run shots -- --gate M0 --iter 1 # → shots/M0/1/*.png
+npm run perf -- --gate M0
+```

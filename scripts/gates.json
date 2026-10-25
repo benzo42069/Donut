@@ -1,0 +1,6 @@
+{
+  "M0": {
+    "shots": ["m0-test-cube", "m0-low-tier"],
+    "strips": ["m0-test-cube"]
+  }
+}

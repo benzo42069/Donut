@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vite/
+*.log
+# Gate iteration shots are ignored; only shots/<gate>/final/ is committed.
+shots/*/*
+!shots/*/final/

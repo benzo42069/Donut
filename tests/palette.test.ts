@@ -71,10 +71,15 @@ describe('voxel material palette uniforms', () => {
   it('fits the shader uniform array', async () => {
     const { PALETTE_SIZE, paletteUniforms } = await import('../src/engine/render/Materials');
     expect(PALETTE_NAMES.length + 1).toBeLessThanOrEqual(PALETTE_SIZE);
-    const { colors } = paletteUniforms();
-    const coral = colors[PALETTE_INDEX.glazeyCoral];
-    const s = hexToSrgb(VOXEL_PALETTE.glazeyCoral.hex);
-    expect(coral?.x).toBeCloseTo(s.r);
-    expect(coral?.w).toBe(VOXEL_PALETTE.glazeyCoral.jitter);
+    const colors = paletteUniforms();
+    for (const name of PALETTE_NAMES) {
+      const e = VOXEL_PALETTE[name];
+      const c = colors[PALETTE_INDEX[name]];
+      const s = hexToSrgb(e.hex);
+      expect(c?.x).toBeCloseTo(s.r);
+      // Flags are the integer part, jitter the fraction (unpacked in the vertex shader).
+      expect(Math.floor((c?.w ?? 0) + 1e-3)).toBe(e.mat);
+      expect((c?.w ?? 0) - e.mat).toBeCloseTo(e.jitter, 6);
+    }
   });
 });

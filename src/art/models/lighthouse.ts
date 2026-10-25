@@ -15,7 +15,8 @@ const C = 28;
 const GALLERY = 132;
 export const LIGHTHOUSE_LAMP = [C, 178, C] as const;
 
-export function buildLighthouse(): VoxelGrid {
+/** `lamp: false` leaves the top empty for a separate 1/64 m Moon Donut (M3). */
+export function buildLighthouse({ lamp = true }: { lamp?: boolean } = {}): VoxelGrid {
   const grid = new VoxelGrid();
   grid.generate(0, 0, 0, LIGHTHOUSE_SIZE[0], LIGHTHOUSE_SIZE[1], LIGHTHOUSE_SIZE[2], (x, y, z) => {
     const dx = x + 0.5 - C;
@@ -79,6 +80,7 @@ export function buildLighthouse(): VoxelGrid {
 
     // Donut lamp standing on top (torus in the XY plane).
     const [lx, ly, lz] = LIGHTHOUSE_LAMP;
+    if (!lamp) return y >= GALLERY + 31 && y < ly - 18 && r < 4 ? P.doughToasted : 0;
     const q = Math.hypot(x + 0.5 - lx, y + 0.5 - ly) - 10;
     const t = Math.hypot(q, z + 0.5 - lz);
     if (t < 5) {

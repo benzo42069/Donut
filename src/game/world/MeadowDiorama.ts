@@ -8,7 +8,6 @@ import {
   Scene,
   Vector3,
   type Camera,
-  type Material,
   type WebGLRenderer,
 } from 'three';
 import { PlanarReflection } from '../../engine/render/Reflection';
@@ -38,8 +37,8 @@ import { createVoxelMaterial } from '../../engine/render/Materials';
 import { createSky } from '../../engine/render/Sky';
 import { createMilk, type Milk } from '../../engine/render/Water';
 import { MesherPool } from '../../engine/voxel/MesherPool';
-import type { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 import { VoxelObject } from '../../engine/voxel/VoxelObject';
+import { placeModel, type Placed } from '../../engine/voxel/placeModel';
 import {
   COARSE,
   FINE,
@@ -77,16 +76,6 @@ export interface Diorama {
   update(t: number): void;
   prerender(gl: WebGLRenderer, camera: Camera): void;
   stats: Record<string, number>;
-}
-
-interface Placed {
-  grid: VoxelGrid;
-  voxel: number;
-  pivot: readonly [number, number, number];
-  pos: Vector3;
-  rotY: number;
-  tiltX?: number;
-  shadow?: boolean;
 }
 
 /** Turns local +z toward a world direction. */
@@ -513,21 +502,4 @@ function pierPosts(
     }
   }
   return out;
-}
-
-function placeModel(
-  p: Placed,
-  material: Material,
-  pool: MesherPool,
-): { group: Group; ready: Promise<unknown> } {
-  const group = new Group();
-  group.position.copy(p.pos);
-  group.rotation.set(p.tiltX ?? 0, p.rotY, 0, 'YXZ');
-  // Model builders hand back clean grids; mesh every chunk.
-  for (const c of p.grid.chunkCoords()) p.grid.markDirty(c.cx, c.cy, c.cz);
-  const obj = new VoxelObject(p.grid, p.voxel, material, pool);
-  obj.castsShadow = p.shadow ?? true;
-  obj.position.set(-p.pivot[0] * p.voxel, -p.pivot[1] * p.voxel, -p.pivot[2] * p.voxel);
-  group.add(obj);
-  return { group, ready: obj.update() };
 }

@@ -10,7 +10,8 @@ import { BORDER, CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
  */
 const SMOOTH = new Uint8Array(256);
 PALETTE_NAMES.forEach((n, i) => {
-  if (VOXEL_PALETTE[n].mat & (MAT.gloss | MAT.lit | MAT.smooth)) SMOOTH[i + 1] = 1;
+  const m = VOXEL_PALETTE[n].mat;
+  if (m & (MAT.gloss | MAT.lit | MAT.smooth) && !(m & MAT.crisp)) SMOOTH[i + 1] = 1;
 });
 /** Corner relaxation strength: voxels moved per unit of (solid fraction − ½). */
 const RELAX = 1.5;

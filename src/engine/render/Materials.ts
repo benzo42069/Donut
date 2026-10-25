@@ -20,8 +20,11 @@ import { MAT, PALETTE_NAMES, VOXEL_PALETTE, hexToSrgb } from '../../art/palette'
  * - Baked per-vertex AO darkens the albedo; N8AO adds the screen-space layer.
  */
 
-/** Uniform array length; the palette must fit (checked in tests). */
-export const PALETTE_SIZE = 64;
+/**
+ * Uniform array length; the palette must fit (checked in tests). One vec4 per
+ * entry keeps 128 entries inside WebGL2's minimum vertex uniform budget.
+ */
+export const PALETTE_SIZE = 128;
 
 export interface VoxelMaterialTuning {
   roughMatte: number;
@@ -69,35 +72,23 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   crackEps: 5e-5,
 };
 
-/** Added to `.w` (wrap) of smooth-normal entries (gloss, lit); see mesh.ts SMOOTH. */
-const SMOOTH_FLAG = 10;
-
 /**
- * Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap +
- * smooth flag). A negative rim slot is the hue hold of `MAT.candy` entries.
+ * Per palette index: (sRGB r, g, b, flags + jitter). The `MAT` flags are the
+ * integer part of `.w` and the jitter amplitude (< 1) its fraction; the vertex
+ * shader expands the flags into roughness, emissive, rim and wrap from the tuning.
  */
-export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
-  colors: Vector4[];
-  materials: Vector4[];
-} {
+export function paletteUniforms(): Vector4[] {
   const colors = Array.from({ length: PALETTE_SIZE }, () => new Vector4());
-  const materials = Array.from({ length: PALETTE_SIZE }, () => new Vector4(t.roughMatte, 0, 0, 0));
   PALETTE_NAMES.forEach((name, i) => {
     const e = VOXEL_PALETTE[name];
     const s = hexToSrgb(e.hex);
-    colors[i + 1]?.set(s.r, s.g, s.b, e.jitter);
-    const rough =
-      e.mat & MAT.gloss ? t.roughGloss : e.mat & MAT.rough ? t.roughRough : t.roughMatte;
-    materials[i + 1]?.set(
-      rough,
-      e.mat & MAT.glow ? t.glow : e.mat & MAT.lit ? t.lit : e.mat & MAT.emissive ? t.emissive : 0,
-      e.mat & MAT.translucent ? t.rim : e.mat & MAT.candy ? -t.hueHold : 0,
-      (e.mat & MAT.soft ? t.wrap : 0) +
-        (e.mat & (MAT.gloss | MAT.lit | MAT.smooth) ? SMOOTH_FLAG : 0),
-    );
+    colors[i + 1]?.set(s.r, s.g, s.b, e.mat + e.jitter);
   });
-  return { colors, materials };
+  return colors;
 }
+
+/** Added to the wrap slot of smooth-normal entries (gloss, lit, smooth); see mesh.ts SMOOTH. */
+const SMOOTH_FLAG = 10;
 
 const VERTEX_PARS = /* glsl */ `
 attribute vec2 voxel;
@@ -105,7 +96,10 @@ attribute vec3 snormal;
 varying vec3 vSNormal;
 uniform float uCrackEps;
 uniform vec4 uPalette[${PALETTE_SIZE}];
-uniform vec4 uVoxelMat[${PALETTE_SIZE}];
+// (roughMatte, roughGloss, roughRough, emissive), (glow, lit, rim, wrap), (hueHold, -, -, -)
+uniform vec4 uTune0;
+uniform vec4 uTune1;
+uniform vec4 uTune2;
 flat varying vec4 vPal;
 flat varying vec4 vVoxelMat;
 varying vec3 vCell;
@@ -117,8 +111,20 @@ const VERTEX_MAIN = /* glsl */ `
 {
   int pi = int(voxel.x + 0.5);
   int packed = int(voxel.y + 0.5);
-  vPal = uPalette[pi];
-  vVoxelMat = uVoxelMat[pi];
+  vec4 pal = uPalette[pi];
+  int flags = int(floor(pal.w + 1e-3));
+  vPal = vec4(pal.rgb, pal.w - float(flags));
+  // Expand the MAT flags (palette.ts) into (roughness, emissive, rim or -hue hold,
+  // wrap + smooth flag ${SMOOTH_FLAG}).
+  bool gloss = (flags & ${MAT.gloss}) != 0;
+  vVoxelMat = vec4(
+    gloss ? uTune0.y : (flags & ${MAT.rough}) != 0 ? uTune0.z : uTune0.x,
+    (flags & ${MAT.glow}) != 0 ? uTune1.x : (flags & ${MAT.lit}) != 0 ? uTune1.y
+      : (flags & ${MAT.emissive}) != 0 ? uTune0.w : 0.0,
+    (flags & ${MAT.translucent}) != 0 ? uTune1.z : (flags & ${MAT.candy}) != 0 ? -uTune2.x : 0.0,
+    ((flags & ${MAT.soft}) != 0 ? uTune1.w : 0.0)
+      + ((flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 && (flags & ${MAT.crisp}) == 0
+        ? ${SMOOTH_FLAG}.0 : 0.0));
   // Nudge inward from the face so floor() lands in the owning voxel.
   vCell = position - normal * 0.5;
   vAO = float(packed & 3) / 3.0;
@@ -244,10 +250,15 @@ export function createVoxelMaterial(
   tuning: VoxelMaterialTuning = DEFAULT_TUNING,
 ): MeshStandardMaterial {
   const mat = new MeshStandardMaterial({ roughness: 1, metalness: 0, ...params });
-  const { colors, materials } = paletteUniforms(tuning);
+  const colors = paletteUniforms();
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uPalette = { value: colors };
-    shader.uniforms.uVoxelMat = { value: materials };
+    const t = tuning;
+    shader.uniforms.uTune0 = {
+      value: new Vector4(t.roughMatte, t.roughGloss, t.roughRough, t.emissive),
+    };
+    shader.uniforms.uTune1 = { value: new Vector4(t.glow, t.lit, t.rim, t.wrap) };
+    shader.uniforms.uTune2 = { value: new Vector4(t.hueHold, 0, 0, 0) };
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
     shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.82, 0.68) };
@@ -277,6 +288,6 @@ if (vVoxelMat.w >= 5.0) {
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
       .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v8';
+  mat.customProgramCacheKey = () => 'voxel-v9';
   return mat;
 }

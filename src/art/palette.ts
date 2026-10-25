@@ -27,6 +27,8 @@ export const MAT = {
    * golden hour instead of drifting to coral or grey-teal.
    */
   candy: 1 << 8,
+  /** Keeps gloss voxels crisp: no relaxation, flat facets (craggy glazes). */
+  crisp: 1 << 9,
 } as const;
 
 export interface PaletteEntry {
@@ -60,15 +62,15 @@ export const VOXEL_PALETTE = {
   // Accents
   mint: entry('#9EE3C8'),
   butter: entry('#FFE29A'),
-  blueberry: entry('#7C8CE0', MAT.gloss),
+  blueberry: entry('#7C8CE0', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
   milk: entry('#FFF6E6', MAT.gloss | MAT.translucent, 0.02),
   powderedSugar: entry('#FBF3EA', MAT.rough | MAT.soft | MAT.smooth, 0.03),
-  classicGlaze: entry('#F6DDB4', MAT.gloss | MAT.translucent, 0.03),
+  classicGlaze: entry('#F8E2C0', MAT.gloss | MAT.translucent, 0.03),
   // Glazey (art bible §7, D-01)
   glazeyCoral: entry('#F28B6E'),
   glazeyBelly: entry('#F5E2A8'),
   glazeyBlush: entry('#F0728A'),
-  eyeDark: entry('#3A2230', MAT.gloss, 0.02),
+  eyeDark: entry('#3A2230', MAT.matte, 0.02),
   eyeGlint: entry('#FFF9F0', MAT.emissive, 0),
   // Meadow
   grassMint: entry('#84C890', MAT.matte | MAT.candy, 0.06),
@@ -125,6 +127,47 @@ export const VOXEL_PALETTE = {
   gingerCrag: entry('#94562F', MAT.soft, 0.05),
   gingerCragDark: entry('#7E4220', MAT.soft, 0.05),
   syrupPool: entry('#F6BA5A', MAT.emissive | MAT.translucent, 0.03),
+  // --- M3 asset library ---
+  // Blueberry old-fashioned (RF-15): soft periwinkle, never navy.
+  blueberryLight: entry('#9AA8EC', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
+  blueberryShadow: entry('#6878CC', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
+  // Jelly peeking out of the powdered donut.
+  jellyRed: entry('#D93A52', MAT.gloss | MAT.translucent, 0.03),
+  jellyDeep: entry('#A8263E', MAT.gloss | MAT.translucent, 0.03),
+  // Maple bar glaze (amber).
+  mapleGlaze: entry('#D98A2E', MAT.gloss | MAT.candy, 0.02),
+  mapleLight: entry('#EDA94E', MAT.gloss | MAT.candy, 0.02),
+  // Mystery donut pastel swirl.
+  pastelMint: entry('#AEE8D2', MAT.gloss | MAT.candy, 0.02),
+  pastelLavender: entry('#D2BDF2', MAT.gloss | MAT.candy, 0.02),
+  pastelButter: entry('#FFE6A6', MAT.gloss | MAT.candy, 0.02),
+  pastelSky: entry('#B4DAFA', MAT.gloss | MAT.candy, 0.02),
+  // Rainbow mega donut (RF-16): the one sanctioned neon item, softly glowing.
+  rainbowRed: entry('#F2606A', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  rainbowOrange: entry('#FF9F52', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  rainbowYellow: entry('#FFD95A', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  rainbowGreen: entry('#76D894', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  rainbowBlue: entry('#62B4F2', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  rainbowViolet: entry('#B486F0', MAT.gloss | MAT.emissive | MAT.candy, 0.02),
+  // Bitten crumb interior (K-07): airy crumb with darker pores.
+  crumbPore: entry('#DDAE6E', MAT.soft, 0.06),
+  // Glazey (D-01): a relaxed coral twin for the rounded body, face details.
+  glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  glazeyMouth: entry('#7E2A3A', MAT.matte, 0.02),
+  glazeyTongue: entry('#F2788C', MAT.soft, 0.02),
+  glazeyCheek: entry('#F4798F', MAT.soft | MAT.smooth | MAT.candy, 0.02),
+  // The Moon Donut on the lighthouse: a warm glowing glaze and golden sprinkles.
+  moonGlaze: entry('#FFE2A0', MAT.gloss | MAT.glow, 0.02),
+  goldSprinkle: entry('#FFC23C', MAT.emissive, 0.02),
+  // Candy-floss tree puffs.
+  flossPink: entry('#F9C4DA', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  flossBlue: entry('#C2DCF8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  // Rock candy crystals.
+  crystalLilac: entry('#CDB4F0', MAT.gloss | MAT.translucent, 0.03),
+  crystalMint: entry('#B2EAD6', MAT.gloss | MAT.translucent, 0.03),
+  // Classic glaze where it runs thin and the golden dough shows through.
+  classicGlazeThin: entry('#F0C68C', MAT.gloss | MAT.translucent, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
 
 export type VoxelColorName = keyof typeof VOXEL_PALETTE;
@@ -159,6 +202,11 @@ export const LIGHT_PALETTE = {
   lampLight: '#FFC46B',
   milkDeep: '#EAD6BC',
   milkFoam: '#FFFAF2',
+  // Studio sweep for the asset gallery (K-06): warm cream cloth.
+  studioCream: '#EEE5DA',
+  studioShade: '#DCC6AC',
+  studioKey: '#FFEAD4',
+  studioFill: '#DCE4F6',
 } as const;
 
 export type LightColorName = keyof typeof LIGHT_PALETTE;

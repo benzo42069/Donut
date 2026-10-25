@@ -1,6 +1,57 @@
 # Progress
 
-## Handoff → M2 (Beauty slice / look-dev ★)
+## Handoff → M3 (Procedural asset library ★)
+
+**M2 status: accepted by the user at iteration 8, gate NOT passed.** The ★ double
+gate ran 7 reviewed iterations (best mean 6.5 / 6.5 against the 9.0 bar, 0
+blockers since iter 6). At iteration 8, the escalation point under AGENTIC_LOOP §6,
+the user chose to accept the slice as it stands and come back to it later. Iter 8
+was captured with the gate harness (`shots/M2/final/`), but not reviewed. The bar
+and rubric are unchanged; the open reviewer findings are listed under follow-ups.
+
+**What was built (M2):** the Glaze Meadows beauty slice. A ring-shaped floating
+donut island with frosting rims dripping over dough cliffs, a meadow with micro
+grass and sprinkle flowers, a path, a sugar mountain, a syrup fall, a milk lagoon
+with a pier, the lighthouse, Granny's bakery, sprinkle-ball trees, wild and
+floating donuts, clouds, steam, and the five gate cameras.
+
+**Key files and APIs**
+- `src/game/world/islandShape.ts`: `IslandShape(layout)`, an analytic ring island. `column(x,z)` gives the zone (Meadow / Frosting / Path / Sugar / Rock / Syrup), the depth, the top and the inner and outer radii. `surface(x,z)`, `ringWave`, `outerWall` / `innerWall`, `dripDepth` / `dripBulb`. Mound noise *scales* the falloff (an offset carved pits).
+- `src/game/world/IslandTerrain.ts`: three resolutions. COARSE 1/8 m body, FINE 1/32 m skin, MACRO 1/128 m near-field `DetailPatch` discs (membership by parent fine column, heights feathered to the fine skin's quantized top). It also holds the zone colors and the grass blades.
+- `src/game/world/meadowLayout.ts` (spots, mounds, falls, the ground camera) and `MeadowDiorama.ts` (`buildMeadowDiorama(quality, {detail})`: lights, props, milk, clouds, `prerender` for reflections).
+- `src/debug/scenes/m2Meadow.ts`: the gate cameras. Each `ShotPlan` has `detail` (`nearField()` macro patches), `fog`, `frame()` and a **`wide` policy** for frames wider than 16:9 (keep height / width / mean, plus yaw and pitch). The lagoon-edge camera was solved numerically so no prop is cut by an edge.
+- `src/engine/voxel/mesh.ts`: smooth palette entries (`MAT.gloss | lit | smooth`) emit unmerged faces whose corners are **relaxed** (surface-nets style, `RELAX = 1.5`, pinned next to matte voxels). Normals come from a tent-weighted 4×4×4 occupancy window. `BORDER = 2` padding (`PAD = 36`). The AO lookup table keeps meshing at about 1.4 ms per chunk.
+- `src/engine/render/Materials.ts`: wrap lighting (`MAT.soft`); a two-lobe glaze (tight sun streak plus clearcoat, Fresnel-lifted); **`MAT.candy` hue hold** (diffuse light keeps its value but takes the albedo's hue, so frosting and grass don't drift to coral or teal); smooth normals; glow and lit emissive. `DEFAULT_TUNING` holds every knob.
+- `src/engine/render/Renderer.ts` + `ColorGrade.ts`: per-shot `PostSettings` (N8AO, DOF, tilt-shift, grade), `GamutEffect` → bloom → Neutral tone map → grade → SMAA. **MSAA is off on every tier** (it caused black pinholes).
+- `src/engine/render/Water.ts` + `Reflection.ts`: the milk (ripples and rings, foam, meniscus, depth tint, syrup swirl, sky Fresnel, blurred planar reflection, a 9-tap soft shadow).
+- Models in `src/art/models/`: `donut.ts` (meters-based, `DONUT_VOXEL` 1/64, `DONUT_HERO_VOXEL` 1/128, tapered and beaded drips), `sprinkleTree.ts`, `bakery.ts` (sagging roof), `lighthouse.ts`, `pier.ts`, `smallProps.ts`, `grassTuft.ts`.
+- Palette additions: blades, the tower stripes, the syrup pool, the gingerbread crag, and the `MAT.candy` / `MAT.smooth` flags.
+
+**Decisions**
+- Relaxation is an authoring tool: give an entry a `MAT.smooth` twin to pinch 1-voxel columns into blades, or to smooth tapering cylinders (the lighthouse). Keep crisp entries (shingles, crags, the syrup pool) unrelaxed.
+- Frosting colors stay exactly the art-bible hexes. The hue hold does the color fidelity, not palette edits.
+
+**Gotchas**
+- **Headless WebGL is SwiftShader** (GPU flags fall back). A full M2 capture takes about 7.5 min. `scripts/diag.mjs <id> <out.png> [noao] [nomsaa]` renders one shot (`DIAG_SIZE=844x390` for mobile). `scripts/harness.mjs` builds per PID, so two reviewers can capture at once.
+- An isolated grey spot on a smooth dome is more likely a geometric hollow than AO. Probe heights (`shape.surface`) first.
+- `tests/meshPerf.test.ts` (8 ms budget) is CPU-bound. It had started failing after the 2-voxel padding; the AO lookup and incremental indexing fixed it (1.4 ms).
+
+**Open follow-ups (reviewer findings not fixed at acceptance)**
+- Hero milk is still the brightest mass from above (luma about 165–180 against a target of ≤ 150). The low-tier milk is flat.
+- In the ground shot, sprinkles stay crisp over DOF-blurred surfaces, a sunlit gap reads as a line across the path, there is a trench in the right frosting field, and the frosting reads mauve in shade.
+- The lagoon-wall drips are flush and the dough looks like wood grain. The bakery is still basically a box (the awning and shingles are only lightly improved).
+- The sugar cap is a smooth dome (now with drifts and sprinkles); the syrup fall is small.
+- No category reached 8 in any reviewed iteration. The best per-shot scores are in `reviews/M2-iter6*.md` and `reviews/M2-iter7*.md`.
+- Real-GPU fps is still unverified (see M1).
+
+**First 3 steps for M3**
+1. Read PLAN M3 and RF-09–RF-16. Build the asset gallery scene (`?shot=m3-*`) with a studio turntable look (K-06), reusing `Renderer` post settings and the voxel material.
+2. Promote `donut.ts` to the full flavor library (blueberry `#7C8CE0` family, chocolate drips without artifacts, the rainbow mega donut as the one neon item) and model Glazey at character-sheet density (about 32 voxels tall, coral from every angle, belly stages 0–5).
+3. Consider re-authoring the M2 follow-ups that M3 touches anyway: the drip and dough modelling, the bakery form and the milk value. Then run the M3 gate per AGENTIC_LOOP.
+
+---
+
+## Handoff → M2 (Beauty slice / look-dev ★) (archived)
 
 **What was built (M1):** the voxel engine core. A sparse chunked grid, greedy
 meshing with per-vertex AO in Web Workers, per-voxel color jitter computed in the
@@ -50,7 +101,9 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 
 ---
 
-## M2 gate log (in progress)
+## M2 — Beauty slice ★ (DONE: accepted by user at iteration 8)
+
+### Gate score table (gate mean per reviewer)
 
 | iter | reviewer 1 | reviewer 2 | verdict |
 |---|---|---|---|
@@ -60,6 +113,8 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 | 4 | 6.1 | 6.2 | FAIL |
 | 5 | 6.2 | 6.3 | FAIL |
 | 6 | 6.5 | 6.5 | FAIL (0 blockers) |
+| 7 | 6.5 | 6.5 | FAIL (0 blockers) |
+| 8 | not reviewed | not reviewed | **accepted by the user** (escalation point, §6) |
 
 **Plateau (AGENTIC_LOOP §5), before iter 4.** The gate mean rose by only about 0.15 from iter 2 to iter 3
 after a 0.7 jump, and both reviewers name the same residual: terraced icing on donuts
@@ -109,13 +164,39 @@ shadow. Frames wider than 16:9 keep the 16:9 horizontal coverage, so props no lo
 lagoon-edge camera is yawed to keep the bakery out of frame. Floaters use close-up density, the
 ground DoF is gentle, and the bakery roof sags.
 
+**Iter 7 → 8.** Iter 7 was structural on the donut drips (tapered tongues with beads), the
+clearcoat, the candy hue hold for grass, the craggy gingerbread skirt and a per-plan phone-frame
+policy. The reviewers held it at 6.5 / 6.5. Iter 8, the last before escalation, re-authored:
+- the sugar cap (sprinkle dots and larger drifts)
+- the meadow value (mostly light mint)
+- the pink canopy (fine grain instead of blotches)
+- the milk reflection (weak from above, so there is no grey gable wedge)
+- the shingle courses and the awning
+
+It also placed the near floater by bearing so the 844×390 frames stay clean. The user then
+accepted M2 without a further review, so iteration 8 is unscored.
+
+**Final shots:** `shots/M2/final/`, captured with the gate harness at iteration 8 and not hand-picked.
+**RF proof shots:**
+- RF-01: `m2-hero`, the full ring.
+- RF-02, RF-07: `m2-hero` and `m2-lagoon-edge`, the milk lagoon with ripples, foam, reflections and depth tint.
+- RF-03: `m2-hero`, the fine-voxel clouds.
+- RF-04: `m2-closeup-donut` and `m2-ground`, micro grass blades and sprinkle flowers.
+- RF-05: `m2-hero`, frosting with relief, drips and swells.
+- RF-06: every shot, the sprinkle-ball trees.
+- RF-08: `m2-ground` and `m2-lagoon-edge`, the bakery donut emblem, with no text.
+**WebGL path:** SwiftShader (GPU flags fall back).
+**Checks:** `npm run lint && npm test && npm run build` clean (39 tests).
+**Kid-sense check** (GAME_DESIGN §2, §11): a cheerful candy island at golden hour, with no text, no
+threat and nothing scary.
+
 ## Status
 
 | Milestone | Status | Gate | Notes |
 |---|---|---|---|
 | M0 Scaffold and screenshot harness | **DONE** | none | `npm run shots -- --gate M0` produces lit test-cube PNGs (`shots/M0/final/`) |
 | M1 Voxel engine core | **DONE** | perf budget | remesh 1.4–2.7 ms/chunk (median, in-browser); real-GPU fps unverified (no GPU here) |
-| M2 Beauty slice ★ | next | double reviewer | user check-in after |
+| M2 Beauty slice ★ | **DONE (accepted by user, gate not passed)** | double reviewer | best reviewed mean 6.5 / 6.5 (bar 9.0); accepted at iter 8; final shots in `shots/M2/final/` |
 | M3–M10 | — | | |
 
 ## M0 — Scaffold and screenshot harness (DONE)

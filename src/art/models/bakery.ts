@@ -142,7 +142,9 @@ export function buildBakery(): VoxelGrid {
         const tile = Math.floor((z + (row % 2) * 3) / 6);
         const h = hash3(row, tile, x < MID_X ? 1 : 2, 13);
         if (y === ru) return P.woodLight; // soffit, warm so the eave underside reads lit
-        return h > 0.6 ? P.shingleDark : P.shingle;
+        // Each row's overlapping lip is dark, so the shingle courses read as lines.
+        if (lip && y === ru + ROOF_T) return P.shingleDark;
+        return h > 0.8 ? P.shingleDark : P.shingle;
       }
     }
 
@@ -227,7 +229,7 @@ export function buildBakery(): VoxelGrid {
 
   // Striped awning over the door, sloping out and down, with a scalloped edge.
   for (let x = X0 + DOOR.u0 - 6; x < X0 + DOOR.u1 + 6; x++) {
-    const stripe = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPinkLight : P.candyCream;
+    const stripe = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPink : P.candyCream;
     // A solid sheet three voxels thick; the underside is the darker stripe shade.
     const under = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPink : P.doughCrumb;
     for (let k = 0; k < 15; k++) {

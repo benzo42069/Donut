@@ -332,7 +332,7 @@ export async function buildMeadowDiorama(
     });
   });
   const floaters: [number, number, DonutFlavor][] = [
-    [40, 2.6, 'strawberry'],
+    [19, 2.4, 'strawberry'],
     [-150, 3.3, 'glazed'],
     [-50, 2.2, 'chocolate'],
     [70, 3.4, 'glazed'],

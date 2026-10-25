@@ -180,7 +180,7 @@ export class IslandShape {
         const f = h / m.height;
         // Powdered drifts: soft raised lumps only (never hollows) on the cap,
         // and a craggy gingerbread skirt where the sugar thins out.
-        h += m.height * 0.14 * Math.max(0, fbm3(x * 1.6, 5, z * 1.6, 2, 23) - 0.45) * f;
+        h += m.height * 0.22 * Math.max(0, fbm3(x * 1.1, 5, z * 1.1, 3, 23) - 0.42) * f;
         h += (valueNoise3(x * 3.5, 7, z * 3.5, 29) - 0.35) * 0.22 * Math.min(1, f * 3) * (1 - f);
         ground += Math.max(0, h);
         sugar = Math.max(sugar, h / m.height);

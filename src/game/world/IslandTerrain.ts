@@ -127,8 +127,10 @@ function meadowColor(x: number, z: number, res: number): number {
   const patch =
     valueNoise3(x * 0.8, 0, z * 0.8, 17) + (valueNoise3(x * 3, 1, z * 3, 18) - 0.5) * 0.35;
   const h = hash3(Math.floor(x * res), 0, Math.floor(z * res), 19);
-  if (patch > 0.62 || h > 0.93) return P.grassLight;
-  if (patch < 0.27 || h < 0.05) return P.grassDeep;
+  // Mostly light candy mint, with deep green only in small pockets (the hero
+  // meadow read as a dark carpet).
+  if (patch > 0.5 || h > 0.9) return P.grassLight;
+  if (patch < 0.18 || h < 0.03) return P.grassDeep;
   return P.grassMint;
 }
 
@@ -300,6 +302,18 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
           put(fyTop + k, tip ? P.bladeLight : k === 0 ? P.grassDeep : P.bladeMint);
         }
       }
+    }
+    // Rainbow sprinkles dusted over the powdered-sugar cap (ref 01): one-voxel
+    // candy dots that give the dome scale and detail from the hero distance.
+    if (c.zone === Zone.Sugar && drop === 0 && hash3(fx, 9, fz, 37) < 0.02) {
+      const dots = [
+        P.sprinkleRed,
+        P.sprinkleYellow,
+        P.sprinkleBlue,
+        P.sprinkleGreen,
+        P.sprinkleViolet,
+      ];
+      put(fyTop, dots[Math.floor(hash3(fx, 10, fz, 37) * dots.length)] ?? P.sprinkleRed);
     }
   });
   const fineMs = performance.now() - t1;

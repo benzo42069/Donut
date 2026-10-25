@@ -122,7 +122,7 @@ export function createMilk(opts: MilkOptions): Milk {
 
   const material = new MeshStandardMaterial({
     // Below white: milk in full golden sun must not clip (art bible §10.7).
-    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.45),
+    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.55),
     roughness: 0.16,
     metalness: 0,
     envMapIntensity: 0.4,
@@ -252,7 +252,7 @@ if (uReflect > 0.0) {
   }
   r /= 15.0;
   float fres = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  float k = clamp((0.6 + fres) * uReflect, 0.0, 0.8) * r.a;
+  float k = clamp((0.2 + fres) * uReflect, 0.0, 0.55) * r.a;
   outgoingLight = mix(outgoingLight, r.rgb / max(r.a, 1e-3), k);
 }
 #include <opaque_fragment>`,
@@ -267,7 +267,7 @@ if (uReflect > 0.0) {
 totalEmissiveRadiance += diffuseColor.rgb * 0.03 + uDeep * 0.07;`,
       );
   };
-  material.customProgramCacheKey = () => 'milk-v6';
+  material.customProgramCacheKey = () => 'milk-v7';
 
   const geo = new CircleGeometry(opts.radius, 128);
   geo.rotateX(-Math.PI / 2);

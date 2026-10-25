@@ -14,8 +14,7 @@ export type TreeLeaf = 'green' | 'mint' | 'pink';
 const LEAVES: Record<TreeLeaf, [VoxelColorName, VoxelColorName, VoxelColorName]> = {
   green: ['leafGreen', 'leafDeep', 'leafMint'],
   mint: ['leafMint', 'leafGreen', 'grassLight'],
-  // One pink with rare darker flecks: the light does the form (no camouflage split).
-  pink: ['frostingPinkLight', 'frostingPinkLight', 'frostingPink'],
+  pink: ['frostingPinkLight', 'frostingPink', 'frostingPinkShadow'],
 };
 
 const SPRINKLES: VoxelColorName[] = [
@@ -86,8 +85,14 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
       const py = y + 0.5 - crownY;
       const pz = z + 0.5 - cz;
       if (crown(px, py, pz) <= 0) {
-        const n = fbm3(x / 9 + seed * 3, y / 9, z / 9, 2, 17);
         const h = hash3(x, y, z, seed + 31);
+        if (leaf === 'pink') {
+          // Frosted crown: fine per-voxel grain darkening toward the underside,
+          // never big patches (two-tone blotches read as camouflage).
+          const k = py / 60 + (h - 0.5) * 0.9;
+          return PALETTE_INDEX[k < -0.55 ? leafC : k < 0.05 ? leafB : leafA];
+        }
+        const n = fbm3(x / 9 + seed * 3, y / 9, z / 9, 2, 17);
         if (h > 0.975) return PALETTE_INDEX[leafC];
         // Darker underside, lighter crown top.
         // Soft, dithered shading split (no hard two-tone band).

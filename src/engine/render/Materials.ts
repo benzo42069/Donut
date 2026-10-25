@@ -63,7 +63,7 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   wrap: 0.45,
   glaze: 1.6,
   clearcoat: 0.4,
-  hueHold: 0.75,
+  hueHold: 0.9,
   smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,

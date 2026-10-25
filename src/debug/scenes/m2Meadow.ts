@@ -144,7 +144,7 @@ const PLANS = {
   /** Low over the milk, looking at the pier and lighthouse against the sun. */
   lagoonEdge: {
     // Sides are solved at 16:9 (keep them); tilt up a little to keep the lamp.
-    wide: { keep: 'width', pitch: (3 * Math.PI) / 180 },
+    wide: { keep: 'width', pitch: (2 * Math.PI) / 180 },
     frame: () => ({
       // Solved for clean edges: bakery, lighthouse, pier and trees are either
       // wholly in frame or wholly out (≥ 3° margin at 16:9), none cut.

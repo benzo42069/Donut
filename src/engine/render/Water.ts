@@ -51,6 +51,16 @@ if (MILK_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
   throw new Error('Water.ts: three.js lighting chunk changed; update SPEC_LINE');
 }
 
+/** Milk scatters light under its surface: shadows on it are softened to 55 %. */
+const SHADOW_LINE = 'directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
+const MILK_LIGHTS_BEGIN = ShaderChunk.lights_fragment_begin.replace(
+  `directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, ${SHADOW_LINE}`,
+  `directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ), 0.55 ) : 1.0;`,
+);
+if (MILK_LIGHTS_BEGIN === ShaderChunk.lights_fragment_begin) {
+  throw new Error('Water.ts: three.js shadow line changed; update SHADOW_LINE');
+}
+
 export interface Milk {
   mesh: Mesh;
   setReflectionSize(w: number, h: number): void;
@@ -202,8 +212,8 @@ float shoreDist(vec2 p) {
   vec3 Rv = reflect(-normalize(vViewPosition), normal);
   vec3 Rw = normalize((vec4(Rv, 0.0) * viewMatrix).xyz);
   vec3 sky = mix(uSkyLow, uSkyTop, smoothstep(0.0, 0.8, Rw.y));
-  float fr = 0.07 + 0.93 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  outgoingLight = mix(outgoingLight, sky * 0.95, clamp(fr * 0.6, 0.0, 0.5));
+  float fr = 0.2 + 0.8 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
+  outgoingLight = mix(outgoingLight, sky * 0.9, clamp(fr * 0.6, 0.0, 0.5));
 }
 if (uReflect > 0.0) {
   // Soft, ripple-distorted mirror image, Fresnel-weighted (milk is no mirror).
@@ -216,20 +226,21 @@ if (uReflect > 0.0) {
   }
   r /= 15.0;
   float fres = 0.04 + 0.96 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  float k = clamp((0.14 + fres) * uReflect, 0.0, 0.75) * r.a;
+  float k = clamp((0.3 + fres) * uReflect, 0.0, 0.75) * r.a;
   outgoingLight = mix(outgoingLight, r.rgb / max(r.a, 1e-3), k);
 }
 #include <opaque_fragment>`,
       )
       .replace('#include <lights_physical_pars_fragment>', MILK_LIGHTS)
+      .replace('#include <lights_fragment_begin>', MILK_LIGHTS_BEGIN)
       .replace(
         '#include <emissivemap_fragment>',
         /* glsl */ `#include <emissivemap_fragment>
 // Milk scatters light: shaded milk stays warm cream, never neutral gray.
-totalEmissiveRadiance += diffuseColor.rgb * 0.08 + uDeep * 0.2;`,
+totalEmissiveRadiance += diffuseColor.rgb * 0.03 + uDeep * 0.07;`,
       );
   };
-  material.customProgramCacheKey = () => 'milk-v3';
+  material.customProgramCacheKey = () => 'milk-v4';
 
   const geo = new CircleGeometry(opts.radius, 128);
   geo.rotateX(-Math.PI / 2);

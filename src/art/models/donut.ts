@@ -86,10 +86,12 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
       (0.022 - 0.01 * Math.sin(angle * 3 + seed) + 0.005 * Math.sin(angle * 11 + seed * 2)) / v;
     const s = seed * 13 + (outer ? 0 : 101);
     const len = hash3(k, s, 1, 3) < 0.25 ? 0 : (0.5 + hash3(k, s, 2, 3)) * look.drip;
-    const half = 0.3 + hash3(k, s, 3, 3) * 0.12;
+    const half = 0.18 + hash3(k, s, 3, 3) * 0.2;
     const dx = Math.abs(f - 0.5) / half;
     if (dx < 1 && len > 0) {
-      const tip = 0.025;
+      // A U-shaped tongue: straight sides, then a semicircular tip as wide as the drip.
+      const segLen = (2 * Math.PI * (outer ? RING + TUBE_A : RING - TUBE_A)) / segs;
+      const tip = Math.min(len, half * segLen);
       d -= (Math.max(0, len - tip) + tip * Math.sqrt(1 - dx * dx)) / v;
     }
     return d;
@@ -120,8 +122,10 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
         return h > 0.3 ? PALETTE_INDEX.doughToasted : PALETTE_INDEX.doughCrust;
       }
       // Pale fried band around the waist (outer side only), then golden.
-      if (outer && Math.abs(py + 0.01 / v) < 0.022 / v && ring > (RING + TUBE_A - 0.05) / v) {
-        return h > 0.9 ? PALETTE_INDEX.doughGolden : PALETTE_INDEX.doughCrumb;
+      // Soft-edged: crumb fades into golden through a dither, so there is no hard patch.
+      const bandT = Math.abs(py + 0.01 / v) / (0.026 / v);
+      if (outer && bandT < 1 && ring > (RING + TUBE_A - 0.05) / v && h > bandT * bandT) {
+        return PALETTE_INDEX.doughCrumb;
       }
       return h > 0.88 ? PALETTE_INDEX.doughToasted : PALETTE_INDEX.doughGolden;
     },

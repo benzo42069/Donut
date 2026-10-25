@@ -217,9 +217,12 @@ export function buildBakery(): VoxelGrid {
   // Striped awning over the door, sloping out and down, with a scalloped edge.
   for (let x = X0 + DOOR.u0 - 6; x < X0 + DOOR.u1 + 6; x++) {
     const stripe = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPinkLight : P.candyCream;
+    // A solid sheet three voxels thick; the underside is the darker stripe shade.
+    const under = Math.floor((x - X0) / 4) % 2 === 0 ? P.frostingPink : P.doughCrumb;
     for (let k = 0; k < 15; k++) {
       const z = Z1 + k;
       const y = DOOR.y1 + 8 - Math.floor(k * 0.55);
+      grid.set(x, y - 1, z, under);
       grid.set(x, y, z, stripe);
       grid.set(x, y + 1, z, stripe);
     }

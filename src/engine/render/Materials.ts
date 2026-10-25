@@ -50,15 +50,15 @@ export interface VoxelMaterialTuning {
 
 export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughMatte: 0.82,
-  roughGloss: 0.22,
+  roughGloss: 0.16,
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,
   lit: 0.45,
   rim: 0.35,
   wrap: 0.45,
-  glaze: 0.55,
-  smooth: 0.75,
+  glaze: 0.9,
+  smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,
 };
@@ -83,7 +83,8 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
       rough,
       e.mat & MAT.glow ? t.glow : e.mat & MAT.lit ? t.lit : e.mat & MAT.emissive ? t.emissive : 0,
       e.mat & MAT.translucent ? t.rim : 0,
-      (e.mat & MAT.soft ? t.wrap : 0) + (e.mat & (MAT.gloss | MAT.lit) ? SMOOTH_FLAG : 0),
+      (e.mat & MAT.soft ? t.wrap : 0) +
+        (e.mat & (MAT.gloss | MAT.lit | MAT.smooth) ? SMOOTH_FLAG : 0),
     );
   });
   return { colors, materials };
@@ -200,7 +201,7 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
     // read as glossy (art bible §5).
     if ( vVoxelMat.x < 0.4 ) {
       vec3 R = reflect( - geometryViewDir, geometryNormal );
-      float lobe = pow( saturate( dot( R, directLight.direction ) ), 14.0 );
+      float lobe = pow( saturate( dot( R, directLight.direction ) ), 22.0 );
       float fres = 0.3 + 0.7 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
       reflectedLight.directSpecular += directLight.color * lobe * fres * uGlaze * saturate( nlRaw + 0.35 );
     }
@@ -246,6 +247,6 @@ if (vVoxelMat.w >= 5.0) {
       )
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS);
   };
-  mat.customProgramCacheKey = () => 'voxel-v5';
+  mat.customProgramCacheKey = () => 'voxel-v6';
   return mat;
 }

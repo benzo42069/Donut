@@ -19,6 +19,8 @@ export const MAT = {
   soft: 1 << 5,
   /** Self-lit (clouds, steam): bright and soft from every side. */
   lit: 1 << 6,
+  /** Smooth-shaded, relaxed geometry without gloss (sugar, gingerbread rock). */
+  smooth: 1 << 7,
 } as const;
 
 export interface PaletteEntry {
@@ -43,18 +45,18 @@ export const VOXEL_PALETTE = {
   doughCrust: entry('#7A3E1D', MAT.soft),
   doughCrumb: entry('#F2CF94', MAT.soft, 0.06),
   // Strawberry frosting
-  frostingPinkLight: entry('#F7A6C1', MAT.gloss),
-  frostingPink: entry('#F27BA5', MAT.gloss),
-  frostingPinkShadow: entry('#C9507E', MAT.gloss),
+  frostingPinkLight: entry('#F7A6C1', MAT.gloss | MAT.soft, 0.015),
+  frostingPink: entry('#F27BA5', MAT.gloss | MAT.soft, 0.015),
+  frostingPinkShadow: entry('#C9507E', MAT.gloss | MAT.soft, 0.015),
   // Chocolate
-  chocolate: entry('#6B3A2A', MAT.gloss, 0.035),
-  chocolateDark: entry('#4A2418', MAT.gloss, 0.035),
+  chocolate: entry('#6B3A2A', MAT.gloss, 0.015),
+  chocolateDark: entry('#4A2418', MAT.gloss, 0.015),
   // Accents
   mint: entry('#9EE3C8'),
   butter: entry('#FFE29A'),
   blueberry: entry('#7C8CE0', MAT.gloss),
   milk: entry('#FFF6E6', MAT.gloss | MAT.translucent, 0.02),
-  powderedSugar: entry('#FBF3EA', MAT.rough | MAT.soft, 0.03),
+  powderedSugar: entry('#FBF3EA', MAT.rough | MAT.soft | MAT.smooth, 0.03),
   classicGlaze: entry('#F6DDB4', MAT.gloss | MAT.translucent, 0.03),
   // Glazey (art bible §7, D-01)
   glazeyCoral: entry('#F28B6E'),
@@ -63,7 +65,7 @@ export const VOXEL_PALETTE = {
   eyeDark: entry('#3A2230', MAT.gloss, 0.02),
   eyeGlint: entry('#FFF9F0', MAT.emissive, 0),
   // Meadow
-  grassMint: entry('#A8DC8C', MAT.matte, 0.06),
+  grassMint: entry('#8ED092', MAT.matte, 0.06),
   grassDeep: entry('#78B868', MAT.matte, 0.06),
   wood: entry('#9A5E36'),
   // Sprinkles: the only near-neon colors, small amounts only
@@ -74,7 +76,7 @@ export const VOXEL_PALETTE = {
   sprinkleBlue: entry('#4AA8F0', MAT.emissive, 0.03),
   sprinkleViolet: entry('#A66CF0', MAT.emissive, 0.03),
   // M2 Glaze Meadows diorama
-  grassLight: entry('#C6E89C', MAT.matte, 0.06),
+  grassLight: entry('#A6DEA6', MAT.matte, 0.06),
   leafMint: entry('#8FD6A0', MAT.gloss, 0.05),
   leafGreen: entry('#7CC775', MAT.gloss, 0.05),
   leafDeep: entry('#5AA866', MAT.gloss, 0.05),
@@ -94,6 +96,10 @@ export const VOXEL_PALETTE = {
   steam: entry('#FFF4EC', MAT.lit, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),
+  gingerbread: entry('#94562F', MAT.soft | MAT.smooth, 0.04),
+  pathDirt: entry('#F2CF94', MAT.soft | MAT.smooth, 0.05),
+  pathPebble: entry('#D9B48C', MAT.soft | MAT.smooth, 0.05),
+  gingerbreadDark: entry('#7E4220', MAT.soft | MAT.smooth, 0.04),
 } as const satisfies Record<string, PaletteEntry>;
 
 export type VoxelColorName = keyof typeof VOXEL_PALETTE;
@@ -122,11 +128,11 @@ export const LIGHT_PALETTE = {
   fog: '#F6DCCB',
   clearColor: '#A8D8FF',
   envZenith: '#CADBEE',
-  shadowFill: '#BCC4F2',
+  shadowFill: '#D4CDEC',
   skySea: '#A6C0EA',
   skySeaWarm: '#F8DCC6',
   lampLight: '#FFC46B',
-  milkDeep: '#F5E4C8',
+  milkDeep: '#EAD6BC',
   milkFoam: '#FFFAF2',
 } as const;
 

@@ -362,8 +362,8 @@ export async function buildMeadowDiorama(
   const clouds: [number, number, number, number][] = [
     [-18.6, 1, -22.9, 1.0],
     [28, 0.5, -13.6, 1.0],
-    [-17.5, -3.5, 12.5, 1.3],
-    [15, -5, 17, 1.3],
+    [-19, -2, 9, 1.1],
+    [19, -2.5, 9, 1.1],
     [-1.6, -4, -38, 0.9],
     [-22.5, -2, -6.5, 0.9],
     [25, -2.5, 3, 0.9],
@@ -371,11 +371,10 @@ export async function buildMeadowDiorama(
     [26, 7, -19, 1.2],
     [17, 9.5, -27, 1.0],
     // A soft cloud bed under the island, so it floats on something (RF-03).
-    [-6, -7.5, 5, 1.5],
-    [7, -8, -3, 1.5],
-    [1, -8.5, 13, 1.6],
-    [-12, -7, -6, 1.4],
-    [13, -7.5, 8, 1.4],
+    [-5, -7, 2, 1.4],
+    [6, -7.5, -4, 1.4],
+    [-9, -6.5, -9, 1.3],
+    [10, -7, 4, 1.3],
   ];
   clouds.forEach(([x, y, z, s], i) => {
     placed.push({

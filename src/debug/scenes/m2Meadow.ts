@@ -4,7 +4,7 @@ import type { QualitySettings } from '../../engine/quality';
 import type { PostSettings } from '../../engine/render/Renderer';
 import type { DetailPatch } from '../../game/world/IslandTerrain';
 import { HERO_EYE, buildMeadowDiorama, type Diorama } from '../../game/world/MeadowDiorama';
-import { GROUND_AIM, GROUND_EYE, HERO_DONUT } from '../../game/world/meadowLayout';
+import { GROUND_AIM, GROUND_EYE, HERO_DONUT, SPOTS } from '../../game/world/meadowLayout';
 import type { ShotScene } from '../shotTypes';
 
 interface Framing {
@@ -50,10 +50,13 @@ const onGround = (w: Diorama, p: { x: number; z: number }, lift: number): Vector
   new Vector3(p.x, w.shape.surface(p.x, p.z) + lift, p.z);
 
 /**
- * The close-up camera looks along the meadow toward the low sun (side backlight:
- * rim light and glaze sheen on the frosting), with clear meadow behind the donut.
+ * The close-up camera stands between the donut and the bakery, looking away from
+ * the low sun across the meadow toward the sugar mountain and sprinkle trees:
+ * warm 3/4 front light on the frosting, nothing cut off behind the subject.
  */
-const CLOSEUP_DIR = new Vector3(-Math.cos(0.17), 0, Math.sin(0.17));
+const CLOSEUP_DIR = new Vector3(SPOTS.bakery.x - HERO_DONUT.x, 0, SPOTS.bakery.z - HERO_DONUT.z)
+  .normalize()
+  .applyAxisAngle(new Vector3(0, 1, 0), 0.35);
 const CLOSEUP_DIST = 3.2;
 
 /** M2 gate cameras (PLAN M2). */

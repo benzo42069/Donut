@@ -205,7 +205,6 @@ export class IslandShape {
     } else if (zone !== Zone.Frosting && pathDepth > 0) {
       zone = Zone.Path;
       zoneDepth = pathDepth;
-      ground -= 0.03 * Math.min(1, pathDepth / 0.1);
     }
     for (const f of this.layout.falls) {
       const along = Math.abs(angleDiff(theta, (f.deg * Math.PI) / 180)) * r;

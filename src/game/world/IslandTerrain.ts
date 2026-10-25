@@ -77,6 +77,16 @@ export interface IslandTerrain {
   stats: { coarseMs: number; fineMs: number; macroMs: number };
 }
 
+/** How far inside the union of detail patches a point is (meters; ≤ 0 outside). */
+export function detailDepth(d: readonly DetailPatch[] | undefined, x: number, z: number): number {
+  let best = -1e9;
+  for (const p of d ?? []) best = Math.max(best, p.radius - Math.hypot(x - p.x, z - p.z));
+  return best;
+}
+
+/** Width of the band where macro heights blend from the fine skin's steps to the true surface. */
+const FEATHER = 0.6;
+
 /** True inside any detail patch. */
 export function inDetail(d: readonly DetailPatch[] | undefined, x: number, z: number): boolean {
   if (!d) return false;
@@ -94,10 +104,10 @@ function doughColor(x: number, y: number, z: number, theta: number, aboveBottom:
   const h = hash3(Math.floor(x * 64), Math.floor(y * 64), Math.floor(z * 64), 4);
   // Fried underside: a smooth crust → toasted → golden gradient broken by soft
   // low-frequency patches (never a per-voxel checkerboard).
-  if (aboveBottom < 1.1) {
-    const t = aboveBottom / 1.1 + (valueNoise3(x * 1.2, y * 1.2, z * 1.2, 35) - 0.5) * 0.35;
-    if (t < 0.22) return P.doughCrust;
-    if (t < 0.62) return P.doughToasted;
+  if (aboveBottom < 0.7) {
+    const t = aboveBottom / 0.7 + (valueNoise3(x * 1.2, y * 1.2, z * 1.2, 35) - 0.5) * 0.35;
+    if (t < 0.2) return P.doughCrust;
+    if (t < 0.55) return P.doughToasted;
   }
   // Broad, soft toasted strata of varying thickness (K-02), dithered at their edges.
   const n = valueNoise3(x * 0.5, y * 0.45, z * 0.5, 31);
@@ -125,24 +135,18 @@ function surfaceColor(c: Column, x: number, z: number, res: number, slope: numbe
   switch (c.zone) {
     case Zone.Frosting:
       return P.frostingPinkLight;
-    case Zone.Path: {
-      const h = hash3(Math.floor(x * res), 1, Math.floor(z * res), 23);
-      if (h > 0.9) return P.pebble;
-      if (c.zoneDepth < 0.05) return P.doughGolden;
-      return h < 0.12 ? P.butter : P.doughCrumb;
-    }
+    case Zone.Path:
+      // Smooth-shaded packed crumb (relaxed geometry: no contour lines on slopes).
+      return hash3(Math.floor(x * res), 1, Math.floor(z * res), 23) > 0.9
+        ? P.pathPebble
+        : P.pathDirt;
     case Zone.Syrup:
       return P.syrupLight;
     case Zone.Sugar:
     case Zone.Rock:
-      // Powdered sugar dusts every upward face (the top voxel of each column);
-      // the steps' sides below show gingerbread. Higher up it is thicker.
-      if (
-        c.zone === Zone.Sugar ||
-        hash3(Math.floor(x * res), 2, Math.floor(z * res), 29) > 0.25 + slope * 0.2
-      )
-        return P.powderedSugar;
-      return P.doughToasted;
+      // A clean powdered-sugar cap on a gingerbread mountain (ref 01): no dither.
+      void slope;
+      return c.zone === Zone.Sugar ? P.powderedSugar : P.gingerbread;
     default:
       return meadowColor(x, z, res);
   }
@@ -264,11 +268,12 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
         color = surfaceColor(c, x, z, 32, slope);
       } else if (c.zone === Zone.Meadow && below < 0.07) {
         color = P.grassDeep;
-      } else if (c.zone === Zone.Sugar && below < 0.06 && slope < 0.9) {
+      } else if (c.zone === Zone.Sugar && below < 0.1) {
         color = P.powderedSugar;
-      } else if ((c.zone === Zone.Sugar || c.zone === Zone.Rock) && below < 0.5) {
-        // Gingerbread crags under the sugar.
-        color = hash3(fx, fy, fz, 29) > 0.7 ? P.doughCrust : P.doughToasted;
+      } else if (c.zone === Zone.Sugar || c.zone === Zone.Rock) {
+        // Gingerbread with broad, soft darker bands.
+        const band = Math.sin(y * 5 + valueNoise3(x * 0.8, y * 0.5, z * 0.8, 39) * 4);
+        color = band > 0.55 ? P.gingerbreadDark : P.gingerbread;
       } else {
         color = doughColor(x, y, z, theta, y - c.bottom);
       }
@@ -338,26 +343,36 @@ function buildMacro(
   const grid = new VoxelGrid();
   const leans: [number, number, number, number][] = [];
   for (const p of patches) {
-    const x0 = Math.floor((p.x - p.radius) / MACRO);
-    const x1 = Math.ceil((p.x + p.radius) / MACRO);
-    const z0 = Math.floor((p.z - p.radius) / MACRO);
-    const z1 = Math.ceil((p.z + p.radius) / MACRO);
+    const x0 = Math.floor((p.x - p.radius - FINE) / FINE) * 4;
+    const x1 = Math.ceil((p.x + p.radius + FINE) / FINE) * 4;
+    const z0 = Math.floor((p.z - p.radius - FINE) / FINE) * 4;
+    const z1 = Math.ceil((p.z + p.radius + FINE) / FINE) * 4;
     grid.generateColumns(x0, z0, x1, z1, (mx, mz, put) => {
       const x = (mx + 0.5) * MACRO;
       const z = (mz + 0.5) * MACRO;
-      if (Math.hypot(x - p.x, z - p.z) >= p.radius) return;
+      // Membership is decided at the parent fine column's center, exactly as the
+      // fine pass decides which tops to leave out, so the two tile with no gaps.
+      const px = ((mx >> 2) + 0.5) * FINE;
+      const pz = ((mz >> 2) + 0.5) * FINE;
+      if (Math.hypot(px - p.x, pz - p.z) >= p.radius) return;
       // Earlier patches own their area (no double fill where patches overlap).
       for (const q of patches) {
         if (q === p) break;
-        if (Math.hypot(x - q.x, z - q.z) < q.radius) return;
+        if (Math.hypot(px - q.x, pz - q.z) < q.radius) return;
       }
+      const pc = shape.column(px, pz);
+      if (!macroColumn(pc, Math.hypot(px, pz))) return;
       const c = shape.column(x, z);
       const r = Math.hypot(x, z);
-      if (!macroColumn(c, r)) return;
       const drop = rimDrop(c, r, false);
       const top = c.top - drop;
+      // Near the patch edge, follow the fine skin's quantized top exactly, so there
+      // is no step (and no seam line) where the two resolutions meet.
+      const fineTop = Math.ceil(top / FINE - 0.5) * FINE;
+      const t = Math.min(1, Math.max(0, detailDepth(patches, x, z) / FEATHER));
+      const blended = fineTop + (top - fineTop) * t * t * (3 - 2 * t);
       const y0 = Math.floor((top - MACRO_SKIN - FINE) / MACRO);
-      const yTop = Math.ceil(top / MACRO - 0.5);
+      const yTop = Math.round(blended / MACRO);
       const frosting = c.zone === Zone.Frosting;
       const surface = frosting ? P.frostingPinkLight : surfaceColor(c, x, z, 128, 0);
       for (let y = y0; y < yTop; y++) {
@@ -398,12 +413,15 @@ function buildMacro(
         const ldx = a === 0 ? 1 : a === 1 ? -1 : 0;
         const ldz = a === 2 ? 1 : a === 3 ? -1 : 0;
         const every = 3 + Math.floor(hash3(mx, 10, mz, 71) * 3);
+        // Tapered: a 2-voxel-wide base (across the lean) for the lower third.
+        const wide = Math.ceil(h / 3);
         for (let k = 0; k < h; k++) {
           const t = k / h;
-          const color = t > 0.7 ? P.grassLight : t > 0.3 ? P.grassMint : P.grassDeep;
+          const color = t > 0.75 ? P.grassLight : t > 0.3 ? P.grassMint : P.grassDeep;
           const shift = Math.floor(k / every);
           if (shift === 0) put(yTop + k, color);
           else leans.push([mx + ldx * shift, yTop + k, mz + ldz * shift, color]);
+          if (k < wide) leans.push([mx + ldz, yTop + k, mz + ldx, P.grassDeep]);
         }
       } else if (g > 0.9985) {
         // A sprinkle flower: stem, leaves and a 5-petal bloom (art bible §3 scale).

@@ -2,15 +2,18 @@ import { MAT, PALETTE_NAMES, VOXEL_PALETTE } from '../../art/palette';
 import { CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
 
 /**
- * Palette indices whose faces get smooth corner normals (glossy frosting, glaze,
- * chocolate): they are emitted unmerged, and every vertex carries the normal of
- * the occupancy field at its lattice corner, so highlights flow over the rounded
- * form while the silhouette stays voxel (art bible §2, §5).
+ * Smooth palette entries (gloss icing and glaze, clouds and syrup, sugar and
+ * gingerbread): their faces are emitted unmerged, every vertex carries the
+ * occupancy-gradient normal of its lattice corner, and corners are relaxed toward
+ * the isosurface (surface-nets style), so 1-voxel stair steps become sloped facets.
+ * Silhouettes and per-voxel color stay voxel (art bible §2, §5).
  */
 const SMOOTH = new Uint8Array(256);
 PALETTE_NAMES.forEach((n, i) => {
-  if (VOXEL_PALETTE[n].mat & (MAT.gloss | MAT.lit)) SMOOTH[i + 1] = 1;
+  if (VOXEL_PALETTE[n].mat & (MAT.gloss | MAT.lit | MAT.smooth)) SMOOTH[i + 1] = 1;
 });
+/** Corner relaxation strength: voxels moved per unit of (solid fraction − ½). */
+const RELAX = 1.5;
 
 /**
  * Greedy chunk mesher with per-vertex voxel AO (PLAN M1, art bible §6).
@@ -170,7 +173,14 @@ export function meshChunk(
                 lattice[d] = plane;
                 lattice[u] = hiU ? i + w : i;
                 lattice[v] = hiV ? j + h : j;
-                cornerNormal(padded, lattice, snormals, o);
+                const shift = cornerNormal(padded, lattice, snormals, o);
+                if (shift !== 0) {
+                  positions[o] = (positions[o] ?? 0) + ((snormals[o] ?? 0) / 127) * shift;
+                  positions[o + 1] =
+                    (positions[o + 1] ?? 0) + ((snormals[o + 1] ?? 0) / 127) * shift;
+                  positions[o + 2] =
+                    (positions[o + 2] ?? 0) + ((snormals[o + 2] ?? 0) / 127) * shift;
+                }
               }
               voxel[vb + c * 2] = key & 255;
               voxel[vb + c * 2 + 1] = ((key >> (8 + cc * 2)) & 3) | (hiU ? 4 : 0) | (hiV ? 8 : 0);
@@ -216,12 +226,17 @@ export function meshChunk(
 
 /**
  * Normal of the occupancy field at a lattice corner (local voxel coords), from
- * the 8 voxels around it (as marching cubes does), written as Int8 ×3.
+ * the 8 voxels around it (as marching cubes does), written as Int8 ×3. Returns
+ * how far to relax the corner along that normal (voxels): (solid fraction − ½) ×
+ * RELAX, or 0 if any of the 8 voxels is a non-smooth solid (seams with matte
+ * neighbours must stay on the lattice, or cracks would open).
  */
-function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, o: number): void {
+function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, o: number): number {
   let gx = 0;
   let gy = 0;
   let gz = 0;
+  let solid = 0;
+  let pinned = false;
   const x0 = l[0] ?? 0;
   const y0 = l[1] ?? 0;
   const z0 = l[2] ?? 0;
@@ -229,7 +244,10 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
     const dx = c & 1;
     const dy = (c >> 1) & 1;
     const dz = (c >> 2) & 1;
-    if ((padded[paddedIndex(x0 - 1 + dx, y0 - 1 + dy, z0 - 1 + dz)] ?? 0) === 0) continue;
+    const pal = padded[paddedIndex(x0 - 1 + dx, y0 - 1 + dy, z0 - 1 + dz)] ?? 0;
+    if (pal === 0) continue;
+    solid++;
+    if (SMOOTH[pal] !== 1) pinned = true;
     gx += dx ? 1 : -1;
     gy += dy ? 1 : -1;
     gz += dz ? 1 : -1;
@@ -237,10 +255,11 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
   // Solid → empty points outward: the normal is minus the occupancy gradient.
   // A degenerate corner (no gradient) keeps the face normal already written.
   const len = Math.hypot(gx, gy, gz);
-  if (len === 0) return;
+  if (len === 0) return 0;
   out[o] = Math.round((-gx / len) * 127);
   out[o + 1] = Math.round((-gy / len) * 127);
   out[o + 2] = Math.round((-gz / len) * 127);
+  return pinned ? 0 : (solid / 8 - 0.5) * RELAX;
 }
 
 /** Concatenates several meshes into one (e.g. all chunks of a small prop). */

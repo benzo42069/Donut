@@ -122,7 +122,7 @@ export function createMilk(opts: MilkOptions): Milk {
 
   const material = new MeshStandardMaterial({
     // Below white: milk in full golden sun must not clip (art bible §10.7).
-    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.5),
+    color: new Color(VOXEL_PALETTE.milk.hex).multiplyScalar(0.4),
     roughness: 0.16,
     metalness: 0,
     envMapIntensity: 0.4,
@@ -239,7 +239,7 @@ float shoreDist(vec2 p) {
   vec3 Rw = normalize((vec4(Rv, 0.0) * viewMatrix).xyz);
   vec3 sky = mix(uSkyLow, uSkyTop, smoothstep(0.0, 0.8, Rw.y));
   float fr = 0.32 + 0.68 * pow(1.0 - saturate(dot(normalize(vViewPosition), normal)), 5.0);
-  outgoingLight = mix(outgoingLight, sky * 0.92, clamp(fr * 0.75, 0.0, 0.55));
+  outgoingLight = mix(outgoingLight, sky * 0.8, clamp(fr * 0.6, 0.0, 0.5));
 }
 if (uReflect > 0.0) {
   // Soft, ripple-distorted mirror image, Fresnel-weighted (milk is no mirror).

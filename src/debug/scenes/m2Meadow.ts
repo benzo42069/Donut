@@ -134,10 +134,11 @@ const PLANS = {
   /** Low over the milk, looking at the pier and lighthouse against the sun. */
   lagoonEdge: {
     frame: () => ({
-      // Yawed so the bakery stays out of frame instead of being cut at the left edge.
-      eye: new Vector3(-4.0, 0.55, 1.7),
-      target: new Vector3(4.34, 2.0, -0.15),
-      fov: 50,
+      // Solved for clean edges: bakery, lighthouse, pier and trees are either
+      // wholly in frame or wholly out (≥ 3° margin at 16:9), none cut.
+      eye: new Vector3(-3.0, 0.55, 2.2),
+      target: new Vector3(3.39, 2.0, -2.61),
+      fov: 54,
       post: { aoRadius: 0.3, aoFalloff: 0.35, aoIntensity: 2.0 },
     }),
   },

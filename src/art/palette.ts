@@ -117,6 +117,9 @@ export const VOXEL_PALETTE = {
   // don't print baked-AO vein lines down the tower.
   towerRed: entry('#E0555E', MAT.smooth, 0.03),
   towerCream: entry('#FFF0E0', MAT.smooth, 0.03),
+  // Still syrup pooled in its channel: crisp flat voxels (no relaxation, which
+  // facets a level sheet), self-lit a touch like the falling syrup.
+  syrupPool: entry('#F6BA5A', MAT.emissive | MAT.translucent, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
 
 export type VoxelColorName = keyof typeof VOXEL_PALETTE;

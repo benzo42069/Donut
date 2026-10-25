@@ -51,5 +51,5 @@ export const MEADOW_LAYOUT: IslandLayout = {
     { ...band(48, 0.5), radius: 1.7, height: 0.4, kind: 'meadow' },
     { ...band(-100, 0.7), radius: 1.6, height: 0.35, kind: 'meadow' },
   ],
-  falls: [{ deg: -112, halfWidth: 0.45, channel: 0.36 }],
+  falls: [{ deg: -112, halfWidth: 0.45, channel: 0.14 }],
 };

@@ -141,7 +141,7 @@ function surfaceColor(c: Column, x: number, z: number, res: number, slope: numbe
         ? P.pathPebble
         : P.pathDirt;
     case Zone.Syrup:
-      return P.syrupLight;
+      return P.syrupPool;
     case Zone.Sugar:
     case Zone.Rock:
       // A clean powdered-sugar cap on a gingerbread mountain (ref 01): no dither.
@@ -263,10 +263,11 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
             ? P.frostingPink
             : P.frostingPinkShadow;
       } else if (c.zone === Zone.Syrup && below < 0.06) {
-        color = topVoxel ? P.syrupLight : P.syrup;
+        color = P.syrupPool;
       } else if (topVoxel) {
         color = surfaceColor(c, x, z, 32, slope);
-      } else if (c.zone === Zone.Meadow && below < 0.07) {
+      } else if (c.zone === Zone.Meadow && below < 0.2) {
+        // Deep enough that banks (syrup channel, patch edges) show turf, not dough.
         color = P.grassDeep;
       } else if (c.zone === Zone.Path && below < 0.12) {
         // Smooth all the way down a few voxels, so relaxation is not pinned at steps.
@@ -388,7 +389,7 @@ function buildMacro(
         let v: number;
         if (y === yTop - 1) v = surface;
         else if (frosting) v = below < 0.05 ? P.frostingPink : P.frostingPinkShadow;
-        else v = c.zone === Zone.Meadow ? (below < 0.03 ? P.grassDeep : P.doughCrumb) : P.pathDirt;
+        else v = c.zone === Zone.Meadow ? P.grassDeep : P.pathDirt;
         put(y, v);
       }
       if (frosting) {

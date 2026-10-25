@@ -58,6 +58,11 @@ export function vertexAO(side1: boolean, side2: boolean, corner: boolean): numbe
   return 3 - (Number(side1) + Number(side2) + Number(corner));
 }
 
+/** `vertexAO` for every (side1, side2, corner) bit pattern (bit 0, 1, 2). */
+const AO_LUT = Uint8Array.from({ length: 8 }, (_, b) =>
+  vertexAO((b & 1) !== 0, (b & 2) !== 0, (b & 4) !== 0),
+);
+
 /** Meshes one padded chunk. `origin` is the chunk's minimum corner in voxel units. */
 export function meshChunk(
   padded: Uint8Array,
@@ -93,6 +98,8 @@ export function meshChunk(
   };
 
   const lattice = [0, 0, 0];
+  const [ox, oy, oz] = origin;
+  const org = [ox, oy, oz];
   // mask[u + v*size]: 0 = no face, else pal | ao0<<8 | ao1<<10 | ao2<<12 | ao3<<14.
   const mask = new Uint32Array(size * size);
 
@@ -107,25 +114,26 @@ export function meshChunk(
       for (let s = 0; s < size; s++) {
         // 1. Build the face mask for this slice.
         let any = false;
+        const base = (s + BORDER) * sd + BORDER * su + BORDER * sv;
         for (let j = 0; j < size; j++) {
-          for (let i = 0; i < size; i++) {
-            const idx = (s + BORDER) * sd + (i + BORDER) * su + (j + BORDER) * sv;
+          let idx = base + j * sv;
+          let m = j * size;
+          for (let i = 0; i < size; i++, idx += su, m++) {
             const pal = padded[idx] ?? 0;
-            const m = j * size + i;
-            if (pal === 0 || (padded[idx + step] ?? 0) !== 0) {
+            if (pal === 0 || padded[idx + step]) {
               mask[m] = 0;
               continue;
             }
             // AO is sampled in the empty layer in front of the face.
             const L = idx + step;
-            const s0 = (padded[L - su] ?? 0) !== 0;
-            const s1 = (padded[L + su] ?? 0) !== 0;
-            const t0 = (padded[L - sv] ?? 0) !== 0;
-            const t1 = (padded[L + sv] ?? 0) !== 0;
-            const ao0 = vertexAO(s0, t0, (padded[L - su - sv] ?? 0) !== 0);
-            const ao1 = vertexAO(s1, t0, (padded[L + su - sv] ?? 0) !== 0);
-            const ao2 = vertexAO(s1, t1, (padded[L + su + sv] ?? 0) !== 0);
-            const ao3 = vertexAO(s0, t1, (padded[L - su + sv] ?? 0) !== 0);
+            const s0 = padded[L - su] ? 1 : 0;
+            const s1 = padded[L + su] ? 1 : 0;
+            const t0 = padded[L - sv] ? 2 : 0;
+            const t1 = padded[L + sv] ? 2 : 0;
+            const ao0 = AO_LUT[s0 | t0 | (padded[L - su - sv] ? 4 : 0)] as number;
+            const ao1 = AO_LUT[s1 | t0 | (padded[L + su - sv] ? 4 : 0)] as number;
+            const ao2 = AO_LUT[s1 | t1 | (padded[L + su + sv] ? 4 : 0)] as number;
+            const ao3 = AO_LUT[s0 | t1 | (padded[L - su + sv] ? 4 : 0)] as number;
             mask[m] = pal | (ao0 << 8) | (ao1 << 10) | (ao2 << 12) | (ao3 << 14);
             any = true;
           }
@@ -162,9 +170,9 @@ export function meshChunk(
               const hiU = cc === 1 || cc === 2;
               const hiV = cc >= 2;
               const o = pb + c * 3;
-              positions[o + d] = plane + (origin[d] ?? 0);
-              positions[o + u] = (hiU ? i + w : i) + (origin[u] ?? 0);
-              positions[o + v] = (hiV ? j + h : j) + (origin[v] ?? 0);
+              positions[o + d] = plane + (org[d] as number);
+              positions[o + u] = (hiU ? i + w : i) + (org[u] as number);
+              positions[o + v] = (hiV ? j + h : j) + (org[v] as number);
               normals[o + d] = sign * 127;
               snormals[o + d] = sign * 127;
               snormals[o + u] = 0;

@@ -73,9 +73,10 @@ async function boot(): Promise<void> {
   const h = window.innerHeight;
   renderer.setSize(w, h);
 
-  const shot = await def.build(w / h);
+  const shot = await def.build(w / h, QUALITY[tier]);
   fitCamera(shot, w, h);
-  renderer.setScene(shot.scene, shot.camera);
+  if (shot.environment) renderer.setEnvironment(shot.scene, shot.environment);
+  renderer.setScene(shot.scene, shot.camera, shot.post);
   await renderer.gl.compileAsync(shot.scene, shot.camera);
 
   if (shotId) {

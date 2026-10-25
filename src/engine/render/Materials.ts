@@ -1,4 +1,10 @@
-import { MeshStandardMaterial, Vector4, type MeshStandardMaterialParameters } from 'three';
+import {
+  MeshStandardMaterial,
+  ShaderChunk,
+  Vector3,
+  Vector4,
+  type MeshStandardMaterialParameters,
+} from 'three';
 import { MAT, PALETTE_NAMES, VOXEL_PALETTE, hexToSrgb } from '../../art/palette';
 
 /**
@@ -22,7 +28,11 @@ export interface VoxelMaterialTuning {
   roughGloss: number;
   roughRough: number;
   emissive: number;
+  /** Emissive strength of `MAT.glow` entries (lamps, lit windows). */
+  glow: number;
   rim: number;
+  /** Wrap-lighting amount of `MAT.soft` entries (0 = Lambert). */
+  wrap: number;
   /** 0 = no baked AO, 1 = AO level 0 is black. */
   aoStrength: number;
   /**
@@ -37,12 +47,14 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughGloss: 0.3,
   roughRough: 0.96,
   emissive: 0.12,
+  glow: 2.4,
   rim: 0.35,
-  aoStrength: 0.55,
+  wrap: 0.45,
+  aoStrength: 0.42,
   crackEps: 5e-5,
 };
 
-/** Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, 0). */
+/** Per palette index: (sRGB r, g, b, jitter) and (roughness, emissive, rim, wrap). */
 export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
   colors: Vector4[];
   materials: Vector4[];
@@ -57,9 +69,9 @@ export function paletteUniforms(t: VoxelMaterialTuning = DEFAULT_TUNING): {
       e.mat & MAT.gloss ? t.roughGloss : e.mat & MAT.rough ? t.roughRough : t.roughMatte;
     materials[i + 1]?.set(
       rough,
-      e.mat & MAT.emissive ? t.emissive : 0,
+      e.mat & MAT.glow ? t.glow : e.mat & MAT.emissive ? t.emissive : 0,
       e.mat & MAT.translucent ? t.rim : 0,
-      0,
+      e.mat & MAT.soft ? t.wrap : 0,
     );
   });
   return { colors, materials };
@@ -104,6 +116,7 @@ const VERTEX_MAIN = /* glsl */ `
 
 const FRAGMENT_PARS = /* glsl */ `
 uniform float uAoStrength;
+uniform vec3 uSssTint;
 flat varying vec4 vPal;
 flat varying vec4 vVoxelMat;
 varying vec3 vCell;
@@ -143,6 +156,26 @@ const FRAGMENT_EMISSIVE = /* glsl */ `
 }
 `;
 
+/**
+ * Wrap lighting for `MAT.soft` voxels (art bible §5 "subsurface feel"): diffuse
+ * light wraps past the terminator with a warm tint. Specular stays standard.
+ */
+const LAMBERT_LINE =
+  'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );';
+const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
+  LAMBERT_LINE,
+  /* glsl */ `{
+    float nlRaw = dot( geometryNormal, directLight.direction );
+    float nl = saturate( nlRaw );
+    float wrapNL = saturate( ( nlRaw + vVoxelMat.w ) / ( 1.0 + vVoxelMat.w ) );
+    vec3 wrapIrr = directLight.color * ( nl + max( wrapNL - nl, 0.0 ) * uSssTint );
+    reflectedLight.directDiffuse += wrapIrr * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
+  }`,
+);
+if (WRAP_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
+  throw new Error('Materials.ts: three.js lighting chunk changed; update LAMBERT_LINE');
+}
+
 export function createVoxelMaterial(
   params: MeshStandardMaterialParameters = {},
   tuning: VoxelMaterialTuning = DEFAULT_TUNING,
@@ -154,6 +187,7 @@ export function createVoxelMaterial(
     shader.uniforms.uVoxelMat = { value: materials };
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
+    shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.72, 0.52) };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERTEX_PARS}`)
       .replace('#include <begin_vertex>', VERTEX_MAIN);
@@ -164,8 +198,9 @@ export function createVoxelMaterial(
         '#include <roughnessmap_fragment>',
         '#include <roughnessmap_fragment>\nroughnessFactor = vVoxelMat.x;',
       )
-      .replace('#include <emissivemap_fragment>', FRAGMENT_EMISSIVE);
+      .replace('#include <emissivemap_fragment>', FRAGMENT_EMISSIVE)
+      .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS);
   };
-  mat.customProgramCacheKey = () => 'voxel-v2';
+  mat.customProgramCacheKey = () => 'voxel-v3';
   return mat;
 }

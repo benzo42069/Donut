@@ -80,4 +80,21 @@ describe('VoxelGrid', () => {
     expect(p[paddedIndex(-1, -1, -1)]).toBe(4);
     expect([...p].filter((v) => v !== 0).length).toBe(4);
   });
+
+  it('generateColumns matches set() and dirties touched chunks plus neighbors', () => {
+    const a = new VoxelGrid();
+    const b = new VoxelGrid();
+    const h = (x: number, z: number): number => 20 + ((x * 7 + z * 3) % 30) - 10;
+    a.generateColumns(-40, -5, 40, 37, (x, z, put) => {
+      for (let y = h(x, z) - 3; y < h(x, z); y++) put(y, 1 + ((x + y + z) & 3));
+    });
+    for (let z = -5; z < 37; z++)
+      for (let x = -40; x < 40; x++)
+        for (let y = h(x, z) - 3; y < h(x, z); y++) b.set(x, y, z, 1 + ((x + y + z) & 3));
+    expect(a.count()).toBe(b.count());
+    for (let z = -6; z < 38; z++)
+      for (let x = -41; x < 41; x++)
+        for (let y = -2; y < 45; y++) expect(a.get(x, y, z)).toBe(b.get(x, y, z));
+    expect(keys(a)).toEqual(keys(b));
+  });
 });

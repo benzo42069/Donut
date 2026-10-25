@@ -6,5 +6,9 @@
   "M1": {
     "shots": ["m1-terrain", "m1-low-tier"],
     "strips": []
+  },
+  "M2": {
+    "shots": ["m2-hero", "m2-ground", "m2-closeup-donut", "m2-lagoon-edge", "m2-low-tier"],
+    "strips": []
   }
 }

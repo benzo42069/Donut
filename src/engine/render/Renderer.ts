@@ -1,10 +1,12 @@
 import {
   BloomEffect,
+  DepthOfFieldEffect,
   EffectComposer,
   EffectPass,
   RenderPass,
   SMAAEffect,
   SMAAPreset,
+  TiltShiftEffect,
   ToneMappingEffect,
   ToneMappingMode,
   type Effect,
@@ -13,6 +15,7 @@ import { N8AOPostPass } from 'n8ao';
 import {
   HalfFloatType,
   NoToneMapping,
+  PMREMGenerator,
   SRGBColorSpace,
   VSMShadowMap,
   WebGLRenderer,
@@ -21,6 +24,23 @@ import {
 } from 'three';
 import type { QualitySettings } from '../quality';
 import { ColorGradeEffect } from './ColorGrade';
+
+/** Per-scene post settings (look-dev knobs; every field optional). */
+export interface PostSettings {
+  /** N8AO radius and distance falloff in world units, and intensity. */
+  aoRadius?: number;
+  aoFalloff?: number;
+  aoIntensity?: number;
+  bloomThreshold?: number;
+  bloomIntensity?: number;
+  /** Bokeh depth of field (ground-level and close-up shots, art bible §6 / K-04). */
+  dof?: { focusDistance: number; focusRange: number; bokehScale: number };
+  /** Tilt-shift blur band (vistas only, never during play; art bible §6). */
+  tiltShift?: { offset: number; focusArea: number; feather: number };
+  /** Color grade strength and vignette. */
+  grade?: number;
+  vignette?: number;
+}
 
 export interface RendererInfo {
   readonly gpu: string;
@@ -68,8 +88,18 @@ export class Renderer {
     return { gpu, webgl2: this.gl.capabilities.isWebGL2 };
   }
 
+  /**
+   * Pre-filters `envScene` (e.g. the sky dome) into the scene's environment map,
+   * which drives glossy reflections and soft sky fill on every material.
+   */
+  setEnvironment(scene: Scene, envScene: Scene): void {
+    const pmrem = new PMREMGenerator(this.gl);
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    pmrem.dispose();
+  }
+
   /** Builds the post chain for a scene/camera pair. Call again when either changes. */
-  setScene(scene: Scene, camera: Camera): void {
+  setScene(scene: Scene, camera: Camera, post: PostSettings = {}): void {
     this.composer?.dispose();
     const q = this.quality;
     const composer = new EffectComposer(this.gl, {
@@ -80,9 +110,9 @@ export class Renderer {
 
     if (q.ssao) {
       const ao = new N8AOPostPass(scene, camera, this.width, this.height);
-      ao.configuration.aoRadius = 0.6;
-      ao.configuration.distanceFalloff = 0.6;
-      ao.configuration.intensity = 2.2;
+      ao.configuration.aoRadius = post.aoRadius ?? 0.6;
+      ao.configuration.distanceFalloff = post.aoFalloff ?? 0.6;
+      ao.configuration.intensity = post.aoIntensity ?? 2.2;
       ao.configuration.aoSamples = q.aoSamples;
       ao.configuration.denoiseSamples = 8;
       ao.configuration.denoiseRadius = 10;
@@ -94,19 +124,26 @@ export class Renderer {
       this.aoPass = null;
     }
 
+    if (post.dof && q.tier !== 'low') {
+      composer.addPass(new EffectPass(camera, new DepthOfFieldEffect(camera, post.dof)));
+    }
+    if (post.tiltShift && q.tier !== 'low') {
+      composer.addPass(new EffectPass(camera, new TiltShiftEffect(post.tiltShift)));
+    }
+
     const effects: Effect[] = [];
     if (q.bloom) {
       effects.push(
         new BloomEffect({
-          luminanceThreshold: 0.85,
+          luminanceThreshold: post.bloomThreshold ?? 0.85,
           luminanceSmoothing: 0.15,
-          intensity: 0.45,
+          intensity: post.bloomIntensity ?? 0.45,
           mipmapBlur: true,
         }),
       );
     }
-    effects.push(new ToneMappingEffect({ mode: ToneMappingMode.AGX }));
-    effects.push(new ColorGradeEffect());
+    effects.push(new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL }));
+    effects.push(new ColorGradeEffect(post.grade, post.vignette));
     if (q.smaa) effects.push(new SMAAEffect({ preset: SMAAPreset.HIGH }));
     composer.addPass(new EffectPass(camera, ...effects));
 

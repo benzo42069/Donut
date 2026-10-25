@@ -140,6 +140,60 @@ export class VoxelGrid {
     }
   }
 
+  /**
+   * Column-wise world generation for thin or uneven shapes (terrain skins),
+   * where scanning a whole box with `generate` would waste most calls.
+   * `fn(x, z, put)` is called once per column of the half-open XZ rectangle and
+   * calls `put(y, value)` for each voxel it writes (0 is ignored). Touched chunks
+   * and their neighbors are marked dirty once at the end.
+   */
+  generateColumns(
+    x0: number,
+    z0: number,
+    x1: number,
+    z1: number,
+    fn: (x: number, z: number, put: (y: number, value: number) => void) => void,
+  ): void {
+    const touched = new Set<number>();
+    let cx = 0;
+    let cz = 0;
+    let lx = 0;
+    let lz = 0;
+    let lastCy = Number.NaN;
+    let chunk: Uint8Array | undefined;
+    const put = (y: number, value: number): void => {
+      if (value === 0) return;
+      const cy = y >> CHUNK_BITS;
+      if (cy !== lastCy) {
+        lastCy = cy;
+        const key = chunkKey(cx, cy, cz);
+        chunk = this.chunks.get(key);
+        if (!chunk) {
+          chunk = new Uint8Array(CHUNK * CHUNK * CHUNK);
+          this.chunks.set(key, chunk);
+        }
+        touched.add(key);
+      }
+      (chunk as Uint8Array)[localIndex(lx, y & MASK, lz)] = value;
+    };
+    for (let z = z0; z < z1; z++) {
+      for (let x = x0; x < x1; x++) {
+        cx = x >> CHUNK_BITS;
+        cz = z >> CHUNK_BITS;
+        lx = x & MASK;
+        lz = z & MASK;
+        lastCy = Number.NaN;
+        fn(x, z, put);
+      }
+    }
+    for (const key of touched) {
+      const c = unpackChunkKey(key);
+      for (let dz = -1; dz <= 1; dz++)
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) this.markDirty(c.cx + dx, c.cy + dy, c.cz + dz);
+    }
+  }
+
   /** Marks a chunk for remeshing (only if it exists). */
   markDirty(cx: number, cy: number, cz: number): void {
     const key = chunkKey(cx, cy, cz);
@@ -178,6 +232,23 @@ export class VoxelGrid {
   /** All allocated chunks. */
   chunkCoords(): ChunkCoord[] {
     return [...this.chunks.keys()].map(unpackChunkKey);
+  }
+
+  /** Calls `fn` for every solid voxel (chunk order). */
+  forEachVoxel(fn: (x: number, y: number, z: number, value: number) => void): void {
+    for (const [key, c] of this.chunks) {
+      const { cx, cy, cz } = unpackChunkKey(key);
+      for (let i = 0; i < c.length; i++) {
+        const v = c[i] ?? 0;
+        if (!v) continue;
+        fn(
+          (cx << CHUNK_BITS) + (i & MASK),
+          (cy << CHUNK_BITS) + ((i >> CHUNK_BITS) & MASK),
+          (cz << CHUNK_BITS) + (i >> (2 * CHUNK_BITS)),
+          v,
+        );
+      }
+    }
   }
 
   /** Number of solid voxels. */

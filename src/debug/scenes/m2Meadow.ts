@@ -56,7 +56,7 @@ const onGround = (w: Diorama, p: { x: number; z: number }, lift: number): Vector
  */
 const CLOSEUP_DIR = new Vector3(SPOTS.bakery.x - HERO_DONUT.x, 0, SPOTS.bakery.z - HERO_DONUT.z)
   .normalize()
-  .applyAxisAngle(new Vector3(0, 1, 0), 0.35);
+  .applyAxisAngle(new Vector3(0, 1, 0), 0.6);
 const CLOSEUP_DIST = 3.2;
 
 /** M2 gate cameras (PLAN M2). */

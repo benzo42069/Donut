@@ -96,6 +96,9 @@ export const VOXEL_PALETTE = {
   steam: entry('#FFF4EC', MAT.lit, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),
+  // Matte chocolate tiles: roofs keep crisp voxel steps (no relaxation).
+  shingle: entry('#6B3A2A', MAT.matte, 0.04),
+  shingleDark: entry('#4A2418', MAT.matte, 0.04),
   gingerbread: entry('#94562F', MAT.soft | MAT.smooth, 0.04),
   pathDirt: entry('#F2CF94', MAT.soft | MAT.smooth, 0.05),
   pathPebble: entry('#D9B48C', MAT.soft | MAT.smooth, 0.05),
@@ -119,7 +122,7 @@ export function paletteEntryAt(index: number): PaletteEntry | undefined {
 
 /** Light, sky and fog colors (art bible §6). Not voxel colors, but palette-governed. */
 export const LIGHT_PALETTE = {
-  sunGolden: '#FFC88A',
+  sunGolden: '#FFD3A2',
   skyFill: '#BFE0FF',
   groundBounce: '#F2C08A',
   skyZenith: '#82B6EC',

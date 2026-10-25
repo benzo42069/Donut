@@ -68,7 +68,11 @@ async function boot(): Promise<void> {
   const tier = pickTier(params, def.tier);
   const canvas = document.createElement('canvas');
   document.body.appendChild(canvas);
-  const renderer = new Renderer(canvas, QUALITY[tier]);
+  // Debug toggles for look-dev diagnostics (never used by gate shots).
+  let quality = QUALITY[tier];
+  if (params.has('noao')) quality = { ...quality, ssao: false };
+  if (params.has('nomsaa')) quality = { ...quality, msaa: 0 };
+  const renderer = new Renderer(canvas, quality);
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h);

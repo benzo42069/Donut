@@ -274,7 +274,8 @@ export function dripDepth(s: number, seed: number, minBand: number, maxTongue: n
     const shoulder = half + 0.12;
     if (dx >= shoulder) continue;
     let d: number;
-    if (dx < half) d = band + Math.max(0, len - half) + Math.sqrt(half * half - dx * dx);
+    // Tapered drop shape: full near the band, narrowing to a rounded tip.
+    if (dx < half) d = band + (len + half) * Math.pow(1 - (dx / half) ** 2, 0.6);
     else {
       const t = (shoulder - dx) / 0.12;
       d = band + t * t * 0.1;
@@ -286,6 +287,7 @@ export function dripDepth(s: number, seed: number, minBand: number, maxTongue: n
 
 /** Bulb at the end of a drip: extra coat thickness near the tip. */
 export function dripBulb(belowTop: number, depth: number): number {
-  const toTip = depth - belowTop;
-  return toTip < 0.12 ? 0.035 * (1 - toTip / 0.12) : 0;
+  // A rounded bead just above the tip, where the icing gathers.
+  const t = (depth - belowTop - 0.06) / 0.06;
+  return Math.abs(t) < 1 ? 0.045 * Math.sqrt(1 - t * t) : 0;
 }

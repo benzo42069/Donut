@@ -57,6 +57,7 @@ modeling toolkit with a donut and grass-tuft model, instanced props, and the
 | 1 | 5.2 | 5.3 | FAIL |
 | 2 | 5.8 | 6.1 | FAIL |
 | 3 | 6.0 | 6.2 | FAIL |
+| 4 | 6.1 | 6.2 | FAIL |
 
 **Plateau (AGENTIC_LOOP §5), before iter 4.** The gate mean rose by only about 0.15 from iter 2 to iter 3
 after a 0.7 jump, and both reviewers name the same residual: terraced icing on donuts
@@ -71,6 +72,20 @@ silhouettes. Corners touching matte voxels stay on the lattice, so seams with do
 wood and grass stay closed. The same iteration re-authors the near-field patch boundary:
 macro heights snap to the fine skin's quantized top across a feather band, so there is
 no step where the patches meet.
+
+**Plateau again, before iter 5.** Relaxation alone did not move the mean (6.0/6.2 → 6.1/6.2).
+Both reviewers trace the remaining technical blockers (pinholes, facet crosshatch and
+spec scribbles, path contour lines) to how the geometry is sampled and shaded, not to art
+values. Iter 5 makes three structural changes:
+(1) **Drop MSAA on high.** A diagnostic render (`scripts/diag.mjs`, `?noao`, `?nomsaa`)
+proved the black pinholes come from MSAA resolving sub-samples into sub-pixel seams
+(N8AO off: still there; MSAA off: 0). SMAA does the anti-aliasing.
+(2) **Wide-window normals.** The mesher padding grows to 2 voxels, and smooth normals use
+a tent-weighted 4×4×4 occupancy gradient instead of the 2×2×2 corner, so relaxed icing
+shades as a continuous surface without facet lattices or glints.
+(3) **Material re-authoring.** The path has a smooth dirt sub-layer, so relaxation is not
+pinned at its steps. Drips are tapered drops with beads. Roofs use matte shingles, and the
+bakery is solid. The key is less saturated, so strawberry frosting stays pink instead of coral.
 
 ## Status
 

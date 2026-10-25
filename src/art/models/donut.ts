@@ -90,9 +90,8 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
     const dx = Math.abs(f - 0.5) / half;
     if (dx < 1 && len > 0) {
       // A U-shaped tongue: straight sides, then a semicircular tip as wide as the drip.
-      const segLen = (2 * Math.PI * (outer ? RING + TUBE_A : RING - TUBE_A)) / segs;
-      const tip = Math.min(len, half * segLen);
-      d -= (Math.max(0, len - tip) + tip * Math.sqrt(1 - dx * dx)) / v;
+      // Tapered drop: full at the frosting edge, narrowing to a rounded tip.
+      d -= (len * Math.pow(1 - dx * dx, 0.6)) / v;
     }
     return d;
   };

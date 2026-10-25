@@ -50,14 +50,14 @@ export interface VoxelMaterialTuning {
 
 export const DEFAULT_TUNING: VoxelMaterialTuning = {
   roughMatte: 0.82,
-  roughGloss: 0.16,
+  roughGloss: 0.26,
   roughRough: 0.96,
   emissive: 0.12,
   glow: 2.4,
   lit: 0.45,
   rim: 0.35,
   wrap: 0.45,
-  glaze: 0.9,
+  glaze: 0.7,
   smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,
@@ -201,7 +201,7 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
     // read as glossy (art bible §5).
     if ( vVoxelMat.x < 0.4 ) {
       vec3 R = reflect( - geometryViewDir, geometryNormal );
-      float lobe = pow( saturate( dot( R, directLight.direction ) ), 22.0 );
+      float lobe = pow( saturate( dot( R, directLight.direction ) ), 9.0 );
       float fres = 0.3 + 0.7 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
       reflectedLight.directSpecular += directLight.color * lobe * fres * uGlaze * saturate( nlRaw + 0.35 );
     }

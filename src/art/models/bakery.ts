@@ -131,8 +131,8 @@ export function buildBakery(): VoxelGrid {
       if (y >= ru && y < ru + ROOF_T + lip) {
         const tile = Math.floor((z + (row % 2) * 3) / 6);
         const h = hash3(row, tile, x < MID_X ? 1 : 2, 13);
-        if (y === ru) return P.woodDark; // soffit
-        return h > 0.6 ? P.chocolateDark : P.chocolate;
+        if (y === ru) return P.woodLight; // soffit, warm so the eave underside reads lit
+        return h > 0.6 ? P.shingleDark : P.shingle;
       }
     }
 
@@ -188,7 +188,8 @@ export function buildBakery(): VoxelGrid {
       const dLeft = x - X0;
       const dRight = X1 - 1 - x;
       const d = Math.min(dFront, dBack, dLeft, dRight);
-      if (d >= 3) return 0;
+      // Solid inside: a hollow shell shows its unlit interior through any seam.
+      if (d >= 3) return P.creamWall;
       if (d === dFront) return wallVoxel(x - X0, y, W, FRONT_WINDOWS, true, d);
       if (d === dBack) return wallVoxel(x - X0, y, W, FRONT_WINDOWS, false, d);
       return wallVoxel(z - Z0, y, D, SIDE_WINDOWS, false, d);

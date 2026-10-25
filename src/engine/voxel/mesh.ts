@@ -1,5 +1,5 @@
 import { MAT, PALETTE_NAMES, VOXEL_PALETTE } from '../../art/palette';
-import { CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
+import { BORDER, CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
 
 /**
  * Smooth palette entries (gloss icing and glaze, clouds and syrup, sugar and
@@ -109,7 +109,7 @@ export function meshChunk(
         let any = false;
         for (let j = 0; j < size; j++) {
           for (let i = 0; i < size; i++) {
-            const idx = (s + 1) * sd + (i + 1) * su + (j + 1) * sv;
+            const idx = (s + BORDER) * sd + (i + BORDER) * su + (j + BORDER) * sv;
             const pal = padded[idx] ?? 0;
             const m = j * size + i;
             if (pal === 0 || (padded[idx + step] ?? 0) !== 0) {
@@ -240,17 +240,28 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
   const x0 = l[0] ?? 0;
   const y0 = l[1] ?? 0;
   const z0 = l[2] ?? 0;
+  // Relaxation and pinning use the 8 voxels touching the corner.
   for (let c = 0; c < 8; c++) {
-    const dx = c & 1;
-    const dy = (c >> 1) & 1;
-    const dz = (c >> 2) & 1;
-    const pal = padded[paddedIndex(x0 - 1 + dx, y0 - 1 + dy, z0 - 1 + dz)] ?? 0;
+    const pal =
+      padded[paddedIndex(x0 - 1 + (c & 1), y0 - 1 + ((c >> 1) & 1), z0 - 1 + ((c >> 2) & 1))] ?? 0;
     if (pal === 0) continue;
     solid++;
     if (SMOOTH[pal] !== 1) pinned = true;
-    gx += dx ? 1 : -1;
-    gy += dy ? 1 : -1;
-    gz += dz ? 1 : -1;
+  }
+  // The normal uses a wider 4×4×4 tent-weighted window (BORDER = 2), so shading
+  // flows smoothly across voxel steps instead of faceting at every edge.
+  for (let k = 0; k < 64; k++) {
+    const ox = (k & 3) - 2;
+    const oy = ((k >> 2) & 3) - 2;
+    const oz = (k >> 4) - 2;
+    if ((padded[paddedIndex(x0 + ox, y0 + oy, z0 + oz)] ?? 0) === 0) continue;
+    const cx = ox + 0.5;
+    const cy = oy + 0.5;
+    const cz = oz + 0.5;
+    const w = (2 - Math.abs(cx)) * (2 - Math.abs(cy)) * (2 - Math.abs(cz));
+    gx += cx * w;
+    gy += cy * w;
+    gz += cz * w;
   }
   // Solid → empty points outward: the normal is minus the occupancy gradient.
   // A degenerate corner (no gradient) keeps the face normal already written.

@@ -10,8 +10,13 @@
 export const CHUNK_BITS = 5;
 export const CHUNK = 1 << CHUNK_BITS;
 const MASK = CHUNK - 1;
-/** Padded chunk edge: one voxel of neighbor data on every side (for culling and AO). */
-export const PAD = CHUNK + 2;
+/**
+ * Neighbor voxels copied on every side of a padded chunk: one for face culling
+ * and AO, a second for the wide smooth-normal window of relaxed materials.
+ */
+export const BORDER = 2;
+/** Padded chunk edge. */
+export const PAD = CHUNK + 2 * BORDER;
 
 const KEY_OFFSET = 512;
 const KEY_RANGE = 1024;
@@ -40,9 +45,9 @@ export function unpackChunkKey(key: number): ChunkCoord {
 export const localIndex = (x: number, y: number, z: number): number =>
   x | (y << CHUNK_BITS) | (z << (2 * CHUNK_BITS));
 
-/** Index into a padded PAD³ array; coordinates run from -1 to CHUNK. */
+/** Index into a padded PAD³ array; coordinates run from -BORDER to CHUNK + BORDER - 1. */
 export const paddedIndex = (x: number, y: number, z: number): number =>
-  x + 1 + (y + 1) * PAD + (z + 1) * PAD * PAD;
+  x + BORDER + (y + BORDER) * PAD + (z + BORDER) * PAD * PAD;
 
 export class VoxelGrid {
   readonly chunks = new Map<number, Uint8Array>();
@@ -259,7 +264,7 @@ export class VoxelGrid {
   }
 
   /**
-   * Copies a chunk plus a one-voxel border from its 26 neighbors into a PAD³
+   * Copies a chunk plus a BORDER-voxel border from its 26 neighbors into a PAD³
    * array (index with `paddedIndex`). This is the mesher's input.
    */
   padded(
@@ -276,7 +281,7 @@ export class VoxelGrid {
           if (!src) continue;
           // Range of local source coords that land in the padded window, per axis.
           const range = (d: number): [number, number] =>
-            d < 0 ? [MASK, CHUNK] : d > 0 ? [0, 1] : [0, CHUNK];
+            d < 0 ? [CHUNK - BORDER, CHUNK] : d > 0 ? [0, BORDER] : [0, CHUNK];
           const [x0, x1] = range(dx);
           const [y0, y1] = range(dy);
           const [z0, z1] = range(dz);

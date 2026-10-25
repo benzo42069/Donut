@@ -46,7 +46,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 `;
 
 export class ColorGradeEffect extends Effect {
-  constructor(strength = 0.16, vignette = 0.2, saturation = 1.06, contrast = 0.18) {
+  constructor(strength = 0.1, vignette = 0.2, saturation = 1.06, contrast = 0.18) {
     super('ColorGradeEffect', fragment, {
       blendFunction: BlendFunction.NORMAL,
       uniforms: new Map<string, Uniform>([

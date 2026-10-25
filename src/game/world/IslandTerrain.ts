@@ -48,7 +48,7 @@ const INNER_SKIN = 0.3;
 const INNER_SKIN_FLOOR = -0.5;
 /** Frosting coat thickness over the outer cliff (outside the dough wall). */
 const COAT_OUT = 0.15;
-const COAT_IN = 0.065;
+const COAT_IN = 0.09;
 const SYRUP_SHEET = 0.11;
 const RIM_ROUND = 0.2;
 /** Macro patches replace this much of the top. */
@@ -268,6 +268,9 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
         color = surfaceColor(c, x, z, 32, slope);
       } else if (c.zone === Zone.Meadow && below < 0.07) {
         color = P.grassDeep;
+      } else if (c.zone === Zone.Path && below < 0.12) {
+        // Smooth all the way down a few voxels, so relaxation is not pinned at steps.
+        color = P.pathDirt;
       } else if (c.zone === Zone.Sugar && below < 0.1) {
         color = P.powderedSugar;
       } else if (c.zone === Zone.Sugar || c.zone === Zone.Rock) {
@@ -380,7 +383,7 @@ function buildMacro(
         let v: number;
         if (y === yTop - 1) v = surface;
         else if (frosting) v = below < 0.05 ? P.frostingPink : P.frostingPinkShadow;
-        else v = c.zone === Zone.Meadow && below < 0.03 ? P.grassDeep : P.doughCrumb;
+        else v = c.zone === Zone.Meadow ? (below < 0.03 ? P.grassDeep : P.doughCrumb) : P.pathDirt;
         put(y, v);
       }
       if (frosting) {

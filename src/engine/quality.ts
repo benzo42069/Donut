@@ -44,7 +44,9 @@ export const QUALITY: Record<QualityTier, QualitySettings> = {
     aoSamples: 16,
     bloom: true,
     smaa: true,
-    msaa: 4,
+    // No MSAA: resolved sub-samples that land in sub-pixel voxel seams read as
+    // dark pinholes (§10.1). SMAA handles silhouettes.
+    msaa: 0,
   },
 };
 

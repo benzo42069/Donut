@@ -1,9 +1,102 @@
 # Progress
 
-## M3 ESCALATED to the user after iter 8 (AGENTIC_LOOP §6): waiting for a decision
+## Handoff → M4 (Glazey in motion)
 
-M3 is NOT done and the gate has NOT passed. All 8 iterations are spent. The relay
-is paused: do not hand off or start more gate iterations until the user decides.
+**M3 status: DONE, accepted by the user (option B), gate NOT passed.** After 8
+reviewed iterations of the ★ double gate (best mean 6.80, final 6.75, bar 9.0;
+iters 7–8 had no blockers and no regressions), the user accepted the donut
+library, bites and props as they stand. **Glazey is not accepted:** the M4 gate
+also re-gates `gallery-glazey-belly` at the full bar (PLAN §M4). The bar, rubric,
+art bible and reviewer definition are unchanged. Final shots are in
+`shots/M3/final/` (iter 8, harness capture at `c656127`).
+
+**What was built (M3):**
+- **Donut library** (`src/art/models/donut.ts`):
+  - all 9 flavors at any voxel size, through `buildDonut(flavor, seed, voxel,
+    opts)`;
+  - `DonutOptions.sprinkles` overrides a flavor's sprinkles (the island's
+    wild donuts keep theirs);
+  - bites with a crumb interior (`biteDonut`), and `scatterCrumbs`.
+- **Glazey** (`src/art/models/glazey.ts`):
+  - `buildGlazey(belly, expression)` returns `{ grid, pivot, height, face }`;
+  - the body is 1/32 m, with belly stages 0–5;
+  - `face` is a separate **1/128 m decal grid** (`GLAZEY_FACE_VOXEL`) holding
+    the eyes, mouth, blush, belly patch and tuft. Place it with the same pose
+    as the body.
+- **Props** (`props.ts`, `sprinkleTree.ts`, `lighthouse.ts`, `pier.ts`,
+  `stand.ts`): donut, floss and sprinkle trees, rock candy, gingerbread rock,
+  fences, flower beds, the Moon Donut and lighthouse, pier, display stands.
+- **Studio and gallery** (`src/debug/scenes/studio.ts`, `gallery.ts`):
+  - a warm spot key, cool soft-spot fill and rim, a warm hemisphere, and a cloth
+    sweep with a faint self-glow;
+  - `STUDIO_TUNING` (hue hold 0.5, wrap 0.2, glow 3.2, emissive 0.35) and
+    `STUDIO_POST` (warm AO tint via `PostSettings.aoColor`, bloom threshold 1.7).
+- **Renderer:** `PostSettings.aoColor` tints N8AO occlusion.
+
+**Decisions:**
+- **The M2 regression baseline is now GPU-rendered** (user-approved).
+  `shots/M2/final/` was re-captured on ANGLE Metal from the accepted M2 commit
+  `51cae65`. The old SwiftShader set is in `shots/M2/final-swiftshader/`. Point
+  every reviewer at `final/`.
+- **Motion is out of scope for M3** (user ruling). Squash, stretch and the
+  belly wobble are M4/M5 work, so gate them there.
+
+**Gotchas (read these first):**
+- **Headless rendering on the Mac:**
+  - The harness takes the **GPU path** (ANGLE Metal, Apple M4).
+  - A full M3 capture takes about 20 s, and M2 about 80 s.
+  - SwiftShader in the cloud renders specular peaks differently, so never
+    compare shots across renderers.
+- **Normals** (`mesh.ts` `cornerNormal`): relaxed corners use the 6³ window
+  only where it is 36–64 % solid (`WIDE_FILL`), otherwise the 4³ window. The
+  wide window on thin drips bent normals toward the sun and caused the M2
+  chimney hot spot. Specular clamps do not work: they also kill the sprinkle
+  glints.
+- **Crack growth** (`Materials.ts`) is skipped on relaxed quads. It opened
+  pinholes ("fireflies") in Glazey's silhouette.
+- **The decal facing test** in `glazey.ts` uses `gz + 0.3·gy`. The camera
+  looks down, so upward-facing surfaces count. An earlier `−gy` sign clipped
+  the belly for four iterations.
+- **Palette:** 124 of 128 uniform slots are used (`PALETTE_SIZE`). Raising it
+  needs a different uniform layout.
+- **Perf:** high tier runs 18–28 fps on the M4 (target 60). Low tier is 32–45
+  fps (target 30). The high-tier number is still open.
+
+**Open follow-ups from M3** (the details are in `reviews/M3-iter8*.md`):
+- **Glazey** (re-gated in M4):
+  - stucco or checker skin;
+  - belly rings;
+  - a bell-shaped skirt;
+  - the arm reads as a nose in profile;
+  - the far eye pokes past the profile;
+  - the shadow side is hot coral; it should be cool.
+- **Rainbow centerpiece:** pastel, stair-stepped bands, glare in the hole, no
+  glow.
+- **Classic glaze:** opaque, not translucent.
+- **Bite pockets:** khaki, with floating floor crumbs.
+- **Jelly:** it does not ooze from a split.
+- **Blueberry:** the crags are lost.
+- **Props:** fence, pretzel trunk, rock sugar, boxy hanging donuts, 1-voxel
+  pier rails, and the mushroom-patch terraces.
+- **Glow:** the crystal and lamp glow is weak.
+- **Composition:** empty cloth at the top of the gallery frames.
+
+**First 3 steps for M4:**
+1. Add the M4 gate to `scripts/gates.json`: `m4-walk-strip`, `m4-jump-apex`,
+   `m4-touch-ui`, plus `gallery-glazey-belly` for the Glazey re-gate, with
+   strips for `m4-walk-strip` and `gallery-glazey-belly`.
+2. Rework Glazey's skin and silhouette **structurally** before any animation:
+   try a 1/64 m body or a smooth-skin approach, a centred raised belly swell
+   with no rings, rounded arms, and eyes kept inside the profile. Animation
+   will build on this model.
+3. Build the character controller and the procedural sub-part animation
+   (squash and stretch, idle, walk, jump, land) on the reworked model, then run
+   the double-reviewer gate.
+
+### M3 gate record (escalated after iter 8)
+
+All 8 iterations were spent and the gate did not pass. The user chose option B
+(2026-10-26): accept the donut library, bites and props, and re-gate Glazey in M4.
 
 - **Scores:**
 
@@ -501,7 +594,8 @@ threat and nothing scary.
 | M0 Scaffold and screenshot harness | **DONE** | none | `npm run shots -- --gate M0` produces lit test-cube PNGs (`shots/M0/final/`) |
 | M1 Voxel engine core | **DONE** | perf budget | remesh 1.4–2.7 ms/chunk (median, in-browser); real-GPU fps unverified (no GPU here) |
 | M2 Beauty slice ★ | **DONE (accepted by user, gate not passed)** | double reviewer | best reviewed mean 6.5 / 6.5 (bar 9.0); accepted at iter 8; final shots in `shots/M2/final/` |
-| M3–M10 | — | | |
+| M3 Procedural asset library ★ | **DONE (accepted by user, option B; gate not passed)** | double reviewer | best mean 6.80, final 6.75 (bar 9.0); 0 blockers at iters 7–8; Glazey re-gated in M4; final shots in `shots/M3/final/` |
+| M4–M10 | — | | |
 
 ## M0 — Scaffold and screenshot harness (DONE)
 

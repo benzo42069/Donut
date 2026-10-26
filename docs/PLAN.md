@@ -106,6 +106,10 @@ post work happens here.
   touch, keyboard and gamepad input, squash and stretch, idle, walk, jump and
   land animations (procedural bone-less animation of voxel sub-parts).
 * Gate shots: `m4-walk-strip` (motion strip), `m4-jump-apex`, `m4-touch-ui`.
+* **Glazey re-gate (user decision, 2026-10-26):** M3 was accepted without Glazey.
+  Glazey's static look is gated here: `gallery-glazey-belly` (with its turntable
+  strip) joins the M4 gate shots and must pass the full bar. The open findings are
+  in `reviews/M3-iter8*.md`.
 
 ### M5 — The Munch ★ (GATE + feel check)
 * Munch interaction: auto-aim, 3 bites, a real voxel carve with a scalloped

@@ -1,0 +1,44 @@
+{
+  "gate": "M3",
+  "iter": "8",
+  "webglPath": "gpu",
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "flags": [
+    "--enable-gpu",
+    "--ignore-gpu-blocklist",
+    "--enable-webgl",
+    "--use-angle=default"
+  ],
+  "files": [
+    "gallery-donuts_1920x1080.png",
+    "gallery-donuts_844x390.png",
+    "gallery-glazey-belly_1920x1080.png",
+    "gallery-glazey-belly_844x390.png",
+    "gallery-props_1920x1080.png",
+    "gallery-props_844x390.png",
+    "gallery-donut-bites_1920x1080.png",
+    "gallery-donut-bites_844x390.png",
+    "gallery-low-tier_1920x1080.png",
+    "gallery-low-tier_844x390.png",
+    "gallery-glazey-belly_strip_f0.png",
+    "gallery-glazey-belly_strip_f1.png",
+    "gallery-glazey-belly_strip_f2.png",
+    "gallery-glazey-belly_strip.png"
+  ],
+  "timingsMs": {
+    "gallery-donuts_1920x1080.png": 1607,
+    "gallery-donuts_844x390.png": 1549,
+    "gallery-glazey-belly_1920x1080.png": 2034,
+    "gallery-glazey-belly_844x390.png": 1961,
+    "gallery-props_1920x1080.png": 3080,
+    "gallery-props_844x390.png": 2986,
+    "gallery-donut-bites_1920x1080.png": 1366,
+    "gallery-donut-bites_844x390.png": 1302,
+    "gallery-low-tier_1920x1080.png": 1635,
+    "gallery-low-tier_844x390.png": 1532,
+    "gallery-glazey-belly_strip.png": 2485
+  },
+  "totalMs": 21777,
+  "log": [],
+  "ok": true
+}

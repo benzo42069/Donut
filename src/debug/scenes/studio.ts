@@ -4,7 +4,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   Color,
-  DirectionalLight,
   HemisphereLight,
   Mesh,
   MeshBasicMaterial,
@@ -107,14 +106,12 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   const depth = opts.depth ?? 8;
   const sweep = new Mesh(
     sweepGeometry(opts.width ?? 40, depth, opts.back ?? -3),
-    // The cloth barely sees the cool studio dome and carries a faint warm floor
-    // of its own, so outside the key's pool it falls off warm, never grey-blue.
+    // The cloth barely sees the cool studio dome, so outside the key's pool it
+    // falls off to the warm hemisphere bounce, never grey-blue.
     new MeshStandardMaterial({
-      color: new Color(LIGHT_PALETTE.studioCream),
+      color: new Color(LIGHT_PALETTE.studioCloth),
       roughness: 0.92,
-      envMapIntensity: 0.25,
-      emissive: new Color(LIGHT_PALETTE.studioShade),
-      emissiveIntensity: 0.22,
+      envMapIntensity: 0.1,
     }),
   );
   sweep.receiveShadow = true;
@@ -127,8 +124,8 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   const keyDir = (opts.keyDir ?? new Vector3(0.75, 0.62, 0.42)).clone().normalize();
   const ext = opts.shadowExtent ?? 4;
   const dist = 30;
-  const angle = Math.atan((ext * 2.4) / dist);
-  const key = new SpotLight(new Color(LIGHT_PALETTE.studioKey), 4.6, 0, angle, 1, 0);
+  const angle = Math.atan((ext * 2.0) / dist);
+  const key = new SpotLight(new Color(LIGHT_PALETTE.studioKey), 5.0, 0, angle, 1, 0);
   key.position.copy(keyDir).multiplyScalar(dist);
   key.target.position.set(0, 0.3, 0);
   key.castShadow = true;
@@ -137,7 +134,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   key.shadow.camera.far = 50;
   // Blur and normal bias are set in texels, so a wide pool (the props shelf)
   // keeps the same softness without VSM streaks on thin parts.
-  const texel = (2 * ext * 2.4) / quality.shadowMapSize;
+  const texel = (2 * ext * 2.0) / quality.shadowMapSize;
   key.shadow.radius = Math.min(9, 0.045 / texel);
   key.shadow.blurSamples = 24;
   key.shadow.bias = -0.001;
@@ -145,23 +142,26 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   scene.add(key, key.target);
 
   // Cool fill from the front left: the shadow sides go blue-lilac (warm key,
-  // cool fill). A weak hemisphere keeps a warm bounce off the cloth below.
-  // The fill is a soft spot over the same area as the key, so it cools the
-  // subjects' shadow sides without turning the far cloth grey-blue.
-  const fill = new SpotLight(new Color(LIGHT_PALETTE.studioFill), 1.4, 0, angle, 1, 0);
+  // cool fill). It is a soft spot over the subjects, so it cools their shadow
+  // sides without turning the far cloth grey-blue; a warm hemisphere bounce is
+  // all that lights the cloth outside the pool, so the edges fall off warm.
+  const fill = new SpotLight(new Color(LIGHT_PALETTE.studioFill), 1.1, 0, angle * 1.3, 1, 0);
   fill.position.set(-0.8, 0.35, 0.6).normalize().multiplyScalar(dist);
   fill.target.position.copy(key.target.position);
   scene.add(fill, fill.target);
   scene.add(
     new HemisphereLight(
-      new Color(LIGHT_PALETTE.studioFill),
       new Color(LIGHT_PALETTE.studioShade),
-      0.25,
+      new Color(LIGHT_PALETTE.studioShade),
+      0.35,
     ),
   );
   // Cool rim from the back left, so silhouettes separate from the cream sweep.
-  const rim = new DirectionalLight(new Color(LIGHT_PALETTE.studioRim), 1.8);
-  rim.position.set(-0.7, 0.55, -0.8).multiplyScalar(30);
+  // Also a soft spot on the subjects: as a directional light it washed the
+  // whole floor and cyc curve grey-blue.
+  const rim = new SpotLight(new Color(LIGHT_PALETTE.studioRim), 1.8, 0, angle * 1.3, 1, 0);
+  rim.position.set(-0.7, 0.55, -0.8).normalize().multiplyScalar(dist);
+  rim.target.position.copy(key.target.position);
   scene.add(rim, rim.target);
   scene.environmentIntensity = 0.4;
 
@@ -198,7 +198,7 @@ export const STUDIO_TUNING: VoxelMaterialTuning = { ...DEFAULT_TUNING, hueHold: 
 
 /** Studio post: crisp (no DoF), contact AO scaled to small props, light grade. */
 export const STUDIO_POST: PostSettings = {
-  aoRadius: 0.12,
+  aoRadius: 0.2,
   aoFalloff: 0.15,
   aoIntensity: 2.2,
   aoColor: LIGHT_PALETTE.studioOcclusion,

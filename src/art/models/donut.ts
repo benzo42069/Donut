@@ -137,6 +137,9 @@ const RAINBOW: VoxelColorName[] = [
   'rainbowRed',
 ];
 
+/** Width of the split around the jelly (voxels). */
+const JELLY_SPLIT = 1.8;
+
 /** Default prop voxel size for donuts out in the world. */
 export const DONUT_VOXEL = 1 / 64;
 /** Close-up hero asset voxel size (the subject of ground-level shots). */
@@ -211,16 +214,22 @@ function bodySdf(flavor: DonutFlavor, seed: number, v: number) {
       q = Math.hypot(x, z) - R;
     }
     if (form === 'craggy') {
-      // Old-fashioned: fat petals around the outside, lumpy everywhere.
+      // Old-fashioned: rounded lobes around the outside, lumpy everywhere.
       const th = Math.atan2(z, x);
-      const petal = Math.pow(0.5 + 0.5 * Math.cos(th * 9 + seed), 2);
+      const petal = 0.5 + 0.5 * Math.cos(th * 12 + seed);
       const out = Math.max(0, q / a0);
-      a += a0 * 0.24 * petal * out;
+      a += a0 * 0.15 * petal * out;
       b += b0 * 0.16 * petal * Math.max(0, 1 - Math.abs(q / a0 - 0.6));
       const n = fbm3(x * 0.09 * v * 64, y * 0.09 * v * 64, z * 0.09 * v * 64, 3, seed + 7);
       const m = fbm3(x * v * 22, y * v * 22, z * v * 22, 2, seed + 11);
       a += ((n - 0.5) * 0.07 + (m - 0.5) * 0.008) / v;
       b += ((n - 0.5) * 0.055 + (m - 0.5) * 0.006) / v;
+      // Crags: rounded knobs about 7 cm across (4–6 per quadrant), strongest
+      // on the crown, so the top reads as a cracked cake ring, not plain icing.
+      const c = fbm3(x * v * 14, y * v * 14, z * v * 14, 2, seed + 19);
+      const crown = Math.max(0, Math.min(1, y / b0 + 0.3));
+      b += ((c - 0.5) * 0.07 * crown) / v;
+      a += ((c - 0.5) * 0.04) / v;
     }
     const k = Math.hypot(q / a, y / b);
     return (k - 1) * Math.min(a, b);
@@ -295,7 +304,7 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
   // Jelly: a glossy squeeze of jam oozing out of a split in the side, with a
   // little run down toward the stand.
   const jt = 0.6 + seed * 0.7;
-  const jr = (d.R + d.a * 0.93) / v;
+  const jr = (d.R + d.a * 0.84) / v;
   const jc = { x: Math.cos(jt) * jr, y: 0.022 / v, z: Math.sin(jt) * jr };
   const jelly: Sdf = (x, y, z) => {
     const ex = x - jc.x;
@@ -325,7 +334,13 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
       if (!sugar && py <= 0) {
         dd -= drip(perimeterAngle(flavor, px, pz), outerSide(px, pz)).bead(py);
       }
-      if (flavor === 'jelly') dd = Math.min(dd, jelly(px, py, pz));
+      if (flavor === 'jelly') {
+        // The jelly bulges out of a split: a narrow groove torn open around it
+        // near the surface (dark with AO), then the jelly itself.
+        const j = jelly(px, py, pz);
+        if (j > 0 && j < JELLY_SPLIT && dd > -3) dd = Math.max(dd, j - JELLY_SPLIT);
+        dd = Math.min(dd, j);
+      }
       return dd;
     },
     [0, 0, 0],
@@ -340,9 +355,8 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
       if (flavor === 'jelly') {
         const j = jelly(px, py, pz);
         if (j <= 0) return j < -1.5 ? PALETTE_INDEX.jellyRed : PALETTE_INDEX.jellyDeep;
-        // The dough tears open around the jelly: a rim of crumb.
-        if (j < 1.6 && inDough)
-          return h > 0.4 ? PALETTE_INDEX.crumbFresh : PALETTE_INDEX.crumbFreshPore;
+        // The dough tears open around the jelly: a toasted rim lining the split.
+        if (j < JELLY_SPLIT + 1.6 && inDough) return PALETTE_INDEX.bunToasted;
       }
       if (sugar) {
         // Sugar dusts the top faces only, thinning out down the sides.
@@ -350,7 +364,6 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
           const n = valueNoise3(px * 0.25, 0, pz * 0.25, seed + 9);
           const edge = (0.32 + (n - 0.5) * 0.3) * (d.b / v) + (h - 0.5) * 2;
           if (py <= edge) return 0;
-          if (h > 0.985) return PALETTE_INDEX.sugarSparkle;
           return py < edge + 2 || h < 0.18
             ? PALETTE_INDEX.donutSugarShade
             : PALETTE_INDEX.donutSugar;

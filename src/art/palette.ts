@@ -184,10 +184,9 @@ export const VOXEL_PALETTE = {
   tongueSoft: entry('#F2788C', MAT.soft | MAT.smooth, 0.02),
   cheekGlow: entry('#F7A0AE', MAT.soft | MAT.smooth | MAT.candy, 0.02),
   // Donut powdered sugar (art bible §5): high-value, rough, hue-held so the
-  // warm key can't turn it beige, with a few sparkling grains.
+  // warm key can't turn it beige.
   donutSugar: entry('#FFFBF4', MAT.rough | MAT.smooth | MAT.candy, 0.04),
   donutSugarShade: entry('#F4ECE2', MAT.rough | MAT.smooth | MAT.candy, 0.04),
-  sugarSparkle: entry('#FFFFFA', MAT.emissive | MAT.candy, 0),
   // Fresh bite crumb (K-07): relaxed, so the torn face shades as soft, airy
   // crumb instead of a pitted surface that mottles the shadow; hue-held so
   // the cool fill can't turn it olive in the bite's shade.
@@ -212,6 +211,13 @@ export const VOXEL_PALETTE = {
   pierWood: entry('#9A5E36', MAT.soft | MAT.smooth, 0.045),
   pierWoodLight: entry('#C08552', MAT.soft | MAT.smooth, 0.045),
   pierWoodDark: entry('#6E3F24', MAT.soft | MAT.smooth, 0.045),
+  // Canopy sprinkles: relaxed twins of the sprinkle colors, so inlaid capsules
+  // sink with the relaxed canopy instead of standing proud of its silhouette.
+  canopySprinkleRed: entry('#F2484E', MAT.emissive | MAT.smooth, 0.03),
+  canopySprinkleOrange: entry('#FF9A3C', MAT.emissive | MAT.smooth, 0.03),
+  canopySprinkleYellow: entry('#FFD93D', MAT.emissive | MAT.smooth, 0.03),
+  canopySprinkleBlue: entry('#4AA8F0', MAT.emissive | MAT.smooth, 0.03),
+  canopySprinkleViolet: entry('#A66CF0', MAT.emissive | MAT.smooth, 0.03),
   standWood: entry('#A67C58', MAT.soft | MAT.smooth, 0.03),
   standWoodDeep: entry('#8E6646', MAT.soft | MAT.smooth, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
@@ -250,6 +256,8 @@ export const LIGHT_PALETTE = {
   milkFoam: '#FFFAF2',
   // Studio sweep for the asset gallery (K-06): warm cream cloth.
   studioCream: '#F6F3F0',
+  // The cloth itself: a warmer cream, so where it falls off it darkens warm.
+  studioCloth: '#F6E8DA',
   studioShade: '#D8CCC0',
   studioKey: '#FFE3C2',
   studioFill: '#C4D3F2',

@@ -96,7 +96,7 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   const arm = (s: number): Sdf =>
     capsule(
       [s * rx * 0.8, y0 + ry * 0.02, rz * 0.08],
-      [s * (rx + lerp(2.4, 1.8, t)), y0 - ry * lerp(0.42, 0.34, t), rz * 0.3],
+      [s * (rx + lerp(1.6, 1.1, t)), y0 - ry * lerp(0.46, 0.42, t), rz * 0.3],
       lerp(3.2, 3.0, t),
     );
   const foot = (s: number): Sdf =>
@@ -232,15 +232,15 @@ function faceLayout(
 ): (x: number, y: number, shrink: number) => FaceHit | null {
   const open = expression === 'happy' || expression === 'surprised';
   const eyeX = rx * lerp(0.42, 0.33, t);
-  const eyeY = y0 + ry * lerp(0.22, 0.14, t) + 0.8;
-  const eyeRx = expression === 'surprised' ? 3.7 : 3.4;
-  const eyeRy = expression === 'surprised' ? 4.3 : 3.95;
-  const mouthY = eyeY - lerp(4.7, 4.3, t);
+  const eyeY = y0 + ry * lerp(0.22, 0.14, t) + 1.8;
+  const eyeRx = expression === 'surprised' ? 3.5 : 3.2;
+  const eyeRy = expression === 'surprised' ? 4.0 : 3.65;
+  const mouthY = eyeY - lerp(4.3, 3.9, t);
   const mouthRx = expression === 'surprised' ? 1.6 : expression === 'munch' ? 3.6 : 3.1;
   const mouthRy = expression === 'surprised' ? 2.0 : 2.6;
   const cheekX = eyeX + 2.3;
   const cheekY = mouthY + 0.2;
-  const bellyTop = mouthY - mouthRy - 0.3;
+  const bellyTop = mouthY - mouthRy - 0.6;
   const bellyBot = FOOT_CREASE + 1.2;
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;

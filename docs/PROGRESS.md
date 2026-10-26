@@ -1,10 +1,10 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 4 in progress)
+## M3 in progress: resume here (gate iter 5 under review)
 
-M3 is NOT done. Iteration 4 is the plateau-rule structural change below. If
-this thread stops, a new thread resumes from the newest `reviews/M3-iter*.md`.
-Do not restart the milestone.
+M3 is NOT done. Iteration 5 is committed and was sent to two reviewers. If this
+thread stops, a new thread resumes at the iter 5 reports (`reviews/M3-iter5*.md`).
+Do not restart the milestone. Escalation (§6) is due after iter 8.
 
 - **Scores so far:**
 
@@ -13,6 +13,51 @@ Do not restart the milestone.
   | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 |
   | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
   | 3 | 6.6 | 7.0 | 6.80 | 0 / 0 |
+  | 4 | 6.65 | 6.9 | 6.78 | 0 / 1 |
+
+- **Iter 5 changes:**
+  - **Blocker, M2 regression:** a blown, blooming specular on the `m2-ground`
+    chimney drip. It came from three.js's own GGX peak at roughness 0.15 on a
+    smooth grazing normal, not from our glaze lobe, which I tried first. The
+    fix clamps `directSpecular` to 1.1 after the lighting pass (`HUE_HOLD`
+    chunk). The hot pixel went from (249,243,235) to (248,209,188), and the
+    halo is gone. The glaze lobe is also capped at 0.7.
+  - **Lighting**, per both iter 4 reviews (iter 4 was flat, had no pool, and had
+    a grey corner):
+    - A narrower key cone (`ext * 2.0`) at 5.0 with full penumbra.
+    - The fill and rim are soft spots on the subjects. The directional rim had
+      washed the floor and cyc curve grey-blue.
+    - A warm hemisphere (`studioShade`, 0.35).
+    - No cloth self-glow.
+    - A warmer cloth (`studioCloth`), with the environment light on it at 0.1.
+    - AO radius 0.2.
+    - Corners now fall off warm, for example (147,142,147) instead of
+      (150,152,166), and there is a visible pool on the subjects.
+    - The trade-off: Glazey's blue/red split is now only +0.015. The warm
+      bounce reaches the shadow sides, though cast shadows still read lilac.
+  - **Asset re-authoring** (r2's call for the plateau):
+    - Glazey:
+      - The eyes are slightly smaller and higher, and the mouth sits closer to
+        them, which frees room for a tall belly oval with a convex top.
+      - The arms droop.
+      - The RF-12 test now measures torso width at y = 5. At y = 6 it now
+        catches the drooping hands.
+    - The 6³ normal window now applies to all relaxed corners, not only gloss.
+      This targets the contour rings.
+    - The jelly sits half-sunk in a split, a groove around it lined with
+      toasted dough.
+    - The sparkle grains are removed; they rendered as grey-blue pepper.
+    - Blueberry:
+      - 12 rounded lobes.
+      - A crag-knob noise layer, about 7 cm, strongest on the crown.
+    - The canopy sprinkles use relaxed twins (`canopySprinkle*`), so they no
+      longer poke out of the relaxed canopy. The color cycle covers all six
+      colors (`i * 5`; it was `i * 3`, which hit only two).
+    - The hero rows are deeper (`gz` 1.3), so the rainbow no longer hides the
+      chocolate.
+- **M2 regression (builder):** `m2-hero`, `m2-closeup-donut` and `m2-ground`
+  compared with `final/`: the chimney is clean and the pink tree is matte with
+  sunk sprinkles. No quality drop.
 
 - **Plateau rule (§5), triggered at iter 3.** Iter 3 gained +0.02, and both
   reviewers called the plateau. Iter 4 makes a **structural change to the studio

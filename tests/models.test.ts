@@ -101,7 +101,8 @@ describe('Glazey', () => {
         lo = Math.min(lo, z);
         hi = Math.max(hi, z);
       });
-      return { volume: g.grid.count(), depth: hi - lo, width: widthAt(g.grid, 6) };
+      // Torso width just above the feet, below where the drooping hands reach.
+      return { volume: g.grid.count(), depth: hi - lo, width: widthAt(g.grid, 5) };
     });
     stages.slice(1).forEach((s, i) => {
       const prev = stages[i] ?? s;

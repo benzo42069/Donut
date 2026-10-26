@@ -17,13 +17,14 @@ const LEAVES: Record<TreeLeaf, [VoxelColorName, VoxelColorName, VoxelColorName]>
   pink: ['canopyPinkLight', 'canopyPink', 'canopyPinkShadow'],
 };
 
+// Relaxed sprinkle colors: the canopy is relaxed, and crisp inlays would be
+// pinned on the lattice and poke out of its silhouette.
 const SPRINKLES: VoxelColorName[] = [
-  'sprinkleRed',
-  'sprinkleOrange',
-  'sprinkleYellow',
-  'sprinkleBlue',
-  'sprinkleViolet',
-  'candyCream',
+  'canopySprinkleRed',
+  'canopySprinkleOrange',
+  'canopySprinkleYellow',
+  'canopySprinkleBlue',
+  'canopySprinkleViolet',
   'frostingPinkLight',
 ];
 
@@ -142,7 +143,7 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
     step[ax] = Math.sign(dir[ax] ?? 1);
     // Lay the capsule along one of the two axes tangent to the surface.
     const along = (ax + 1 + (hash3(i, seed, 3, 47) > 0.5 ? 1 : 0)) % 3;
-    const color = PALETTE_INDEX[SPRINKLES[(i * 3 + seed) % SPRINKLES.length] ?? 'sprinkleRed'];
+    const color = PALETTE_INDEX[SPRINKLES[(i * 5 + seed) % SPRINKLES.length] ?? 'sprinkleRed'];
     // Inlaid flush: recolor three exposed crown voxels in a row (never stand off it).
     const cells: [number, number, number][] = [-1, 0, 1].map((k) => [
       x + (along === 0 ? k : 0),

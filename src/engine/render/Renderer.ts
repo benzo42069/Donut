@@ -1,0 +1,182 @@
+import {
+  BloomEffect,
+  DepthOfFieldEffect,
+  EffectComposer,
+  EffectPass,
+  RenderPass,
+  SMAAEffect,
+  SMAAPreset,
+  TiltShiftEffect,
+  ToneMappingEffect,
+  ToneMappingMode,
+  type Effect,
+} from 'postprocessing';
+import { N8AOPostPass } from 'n8ao';
+import {
+  Color,
+  HalfFloatType,
+  NoToneMapping,
+  PMREMGenerator,
+  SRGBColorSpace,
+  VSMShadowMap,
+  WebGLRenderer,
+  type Camera,
+  type Scene,
+} from 'three';
+import type { QualitySettings } from '../quality';
+import { ColorGradeEffect, GamutEffect } from './ColorGrade';
+
+/** Per-scene post settings (look-dev knobs; every field optional). */
+export interface PostSettings {
+  /** N8AO radius and distance falloff in world units, and intensity. */
+  aoRadius?: number;
+  aoFalloff?: number;
+  aoIntensity?: number;
+  /** Occlusion tint (palette hex); black by default. Warm keeps food crevices appetizing. */
+  aoColor?: string;
+  bloomThreshold?: number;
+  bloomIntensity?: number;
+  /** Bokeh depth of field (ground-level and close-up shots, art bible §6 / K-04). */
+  dof?: { focusDistance: number; focusRange: number; bokehScale: number };
+  /** Tilt-shift blur band (vistas only, never during play; art bible §6). */
+  tiltShift?: { offset: number; focusArea: number; feather: number };
+  /** Color grade strength and vignette. */
+  grade?: number;
+  vignette?: number;
+}
+
+export interface RendererInfo {
+  readonly gpu: string;
+  readonly webgl2: boolean;
+}
+
+/**
+ * three.js renderer plus the post stack (art bible §6):
+ * render → N8AO (screen-space AO) → bloom → AgX tone map → color grade → SMAA.
+ */
+export class Renderer {
+  readonly gl: WebGLRenderer;
+  readonly quality: QualitySettings;
+  private composer: EffectComposer | null = null;
+  private aoPass: N8AOPostPass | null = null;
+  private width = 1;
+  private height = 1;
+  /** Called before each composed frame (e.g. planar reflections). */
+  beforeRender: ((gl: WebGLRenderer) => void) | null = null;
+
+  constructor(canvas: HTMLCanvasElement, quality: QualitySettings) {
+    this.quality = quality;
+    this.gl = new WebGLRenderer({
+      canvas,
+      antialias: false,
+      stencil: false,
+      depth: true,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true,
+    });
+    this.gl.outputColorSpace = SRGBColorSpace;
+    this.gl.toneMapping = NoToneMapping;
+    this.gl.shadowMap.enabled = true;
+    this.gl.shadowMap.type = VSMShadowMap;
+    this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.maxPixelRatio));
+  }
+
+  /** The screen-space AO pass, if this tier has one (for look-dev tuning). */
+  get ao(): N8AOPostPass | null {
+    return this.aoPass;
+  }
+
+  info(): RendererInfo {
+    const ctx = this.gl.getContext();
+    const ext = ctx.getExtension('WEBGL_debug_renderer_info');
+    const gpu = ext ? String(ctx.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : 'unknown';
+    return { gpu, webgl2: this.gl.capabilities.isWebGL2 };
+  }
+
+  /**
+   * Pre-filters `envScene` (e.g. the sky dome) into the scene's environment map,
+   * which drives glossy reflections and soft sky fill on every material.
+   */
+  setEnvironment(scene: Scene, envScene: Scene): void {
+    const pmrem = new PMREMGenerator(this.gl);
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    pmrem.dispose();
+  }
+
+  /** Builds the post chain for a scene/camera pair. Call again when either changes. */
+  setScene(scene: Scene, camera: Camera, post: PostSettings = {}): void {
+    this.composer?.dispose();
+    const q = this.quality;
+    const composer = new EffectComposer(this.gl, {
+      frameBufferType: HalfFloatType,
+      multisampling: q.msaa,
+    });
+    composer.addPass(new RenderPass(scene, camera));
+
+    if (q.ssao) {
+      const ao = new N8AOPostPass(scene, camera, this.width, this.height);
+      ao.configuration.aoRadius = post.aoRadius ?? 0.6;
+      ao.configuration.distanceFalloff = post.aoFalloff ?? 0.6;
+      ao.configuration.intensity = post.aoIntensity ?? 2.2;
+      if (post.aoColor) ao.configuration.color = new Color(post.aoColor);
+      ao.configuration.aoSamples = q.aoSamples;
+      ao.configuration.denoiseSamples = 8;
+      ao.configuration.denoiseRadius = 10;
+      ao.configuration.halfRes = q.tier !== 'high';
+      ao.configuration.gammaCorrection = false;
+      composer.addPass(ao);
+      this.aoPass = ao;
+    } else {
+      this.aoPass = null;
+    }
+
+    if (post.dof && q.tier !== 'low') {
+      composer.addPass(new EffectPass(camera, new DepthOfFieldEffect(camera, post.dof)));
+    }
+    if (post.tiltShift && q.tier !== 'low') {
+      composer.addPass(new EffectPass(camera, new TiltShiftEffect(post.tiltShift)));
+    }
+
+    const effects: Effect[] = [new GamutEffect()];
+    if (q.bloom) {
+      effects.push(
+        new BloomEffect({
+          luminanceThreshold: post.bloomThreshold ?? 1.3,
+          luminanceSmoothing: 0.3,
+          intensity: post.bloomIntensity ?? 0.45,
+          mipmapBlur: true,
+        }),
+      );
+    }
+    effects.push(new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL }));
+    effects.push(new ColorGradeEffect(post.grade, post.vignette));
+    if (q.smaa) effects.push(new SMAAEffect({ preset: SMAAPreset.HIGH }));
+    composer.addPass(new EffectPass(camera, ...effects));
+
+    composer.setSize(this.width, this.height);
+    this.composer = composer;
+  }
+
+  setSize(width: number, height: number): void {
+    this.width = Math.max(1, Math.floor(width));
+    this.height = Math.max(1, Math.floor(height));
+    this.gl.setSize(this.width, this.height, false);
+    this.composer?.setSize(this.width, this.height);
+  }
+
+  render(deltaSeconds: number): void {
+    this.beforeRender?.(this.gl);
+    this.composer?.render(deltaSeconds);
+  }
+
+  /** Blocks until the GPU has finished all queued work (a 1-pixel readback). */
+  finish(): void {
+    const ctx = this.gl.getContext();
+    ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, new Uint8Array(4));
+  }
+
+  dispose(): void {
+    this.composer?.dispose();
+    this.gl.dispose();
+  }
+}

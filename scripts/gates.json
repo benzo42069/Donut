@@ -1,0 +1,24 @@
+{
+  "M0": {
+    "shots": ["m0-test-cube", "m0-low-tier"],
+    "strips": ["m0-test-cube"]
+  },
+  "M1": {
+    "shots": ["m1-terrain", "m1-low-tier"],
+    "strips": []
+  },
+  "M2": {
+    "shots": ["m2-hero", "m2-ground", "m2-closeup-donut", "m2-lagoon-edge", "m2-low-tier"],
+    "strips": []
+  },
+  "M3": {
+    "shots": [
+      "gallery-donuts",
+      "gallery-glazey-belly",
+      "gallery-props",
+      "gallery-donut-bites",
+      "gallery-low-tier"
+    ],
+    "strips": ["gallery-glazey-belly"]
+  }
+}

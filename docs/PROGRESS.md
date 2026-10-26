@@ -1,20 +1,67 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 6 under review)
+## M3 ESCALATED to the user after iter 6 (AGENTIC_LOOP §6): waiting for a decision
 
-M3 is NOT done. Iteration 6 is committed and was sent to two reviewers. If this
-thread stops, a new thread resumes at the iter 6 reports (`reviews/M3-iter6*.md`).
-Do not restart the milestone. Escalation (§6) is due after iter 8.
+M3 is NOT done and the gate has NOT passed. The relay is paused for the user.
+Do not hand off and do not start iter 7 until the user picks an option below.
 
-- **Scores so far:**
+- **Scores:**
 
   | iter | r1 | r2 | gate mean | blockers |
   |---|---|---|---|---|
   | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 |
   | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
-  | 3 | 6.6 | 7.0 | 6.80 | 0 / 0 |
+  | 3 | 6.6 | 7.0 | **6.80** (best) | 0 / 0 |
   | 4 | 6.65 | 6.9 | 6.78 | 0 / 1 |
   | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 |
+  | 6 | 6.55 | 6.8 | 6.68 | 0 / 1 |
+
+  The bar is 9.0. The mean has been flat at 6.65–6.80 for four iterations,
+  despite two structural changes: the studio lighting model at iter 4, and
+  asset re-authoring at iter 5.
+- **Why I escalated early** (before iter 8). Two of the three causes are
+  decisions only the user can make:
+  1. **The regression baseline depends on the renderer.** `shots/M2/final/` was
+     captured on SwiftShader (the cloud container). Every M3 render and review
+     since iter 2 runs on the Mac's GPU path (ANGLE Metal), whose specular peaks
+     differ. Since iter 4 each review has traded one M2 "regression" blocker for
+     another:
+     - the chimney hot spot (iter 4);
+     - the lost sprinkle glints (iter 5);
+     - glare on the lagoon chocolate donut (iter 6).
+
+     Iter 1's own code on this GPU already shows the lagoon glare (luma 250,
+     against the final's 240). A sweep of specular caps proved no single
+     setting meets both baseline frames on this GPU:
+
+     | cap | lagoon glare | glints |
+     |---|---|---|
+     | 1.6 | luma 243, pass | gone |
+     | 2.5 | luma 247 | gone |
+     | 4.0 | luma 249 | faint |
+     | none | luma 249 | present |
+
+     Changing the baseline is the user's decision.
+  2. **Scope conflict.** Both reviewers score motion (rubric 11) at 5 every
+     round and ask for squash/stretch and the belly wobble. PLAN §M3 defines a
+     turntable gallery, squash and stretch is M4, and the belly wobble is M5.
+  3. **Plateau.** The remaining open findings are large re-authoring jobs:
+     - the rainbow centerpiece;
+     - Glazey's skin and profile;
+     - a translucent classic glaze;
+     - emissive glow;
+     - the props: fence, pretzel trunk, hanging donuts.
+- **Options for the user:**
+  - **A. Accept M3 with follow-ups**, as with M2, and hand off to M4. The open
+    findings are in `reviews/M3-iter6*.md`.
+  - **B. Rebaseline, then continue iters 7–8.** Re-capture `shots/M2/final/` on
+    the GPU path and pin both reviewers to it, so regression checks compare like
+    with like. Optionally also rule motion out of scope for M3.
+  - **C. Allocate a structural rewrite beyond iter 8**: Glazey at a new
+    density or with a new skin approach, the rainbow rebuild, and the props
+    pass.
+- **State:** iter 6 is committed (`01fe42a`), and these reports are committed
+  with this note. The working tree is clean.
 
 - **Iter 6 changes (the iter 5 blockers, at their root causes):**
   - **Grey backdrop wedge**, flagged by both reviewers. I had misjudged the

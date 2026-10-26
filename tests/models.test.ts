@@ -94,14 +94,14 @@ describe('Glazey', () => {
 
   it('grows clearly rounder at every belly stage (RF-12)', () => {
     const stages = [0, 1, 2, 3, 4, 5].map((b) => {
-      const g = buildGlazey(b);
+      const g = buildGlazey(b).parts.body;
       let lo = Infinity;
       let hi = -Infinity;
       g.grid.forEachVoxel((_x, _y, z) => {
         lo = Math.min(lo, z);
         hi = Math.max(hi, z);
       });
-      // Torso width just above the feet, below where the drooping hands reach.
+      // Torso width just above the feet (the arms are separate parts).
       return { volume: g.grid.count(), depth: hi - lo, width: widthAt(g.grid, 5) };
     });
     stages.slice(1).forEach((s, i) => {
@@ -113,7 +113,7 @@ describe('Glazey', () => {
   });
 
   it('is coral on the back, with no face or text there (RF-10, RF-13)', () => {
-    const { grid, pivot } = buildGlazey(2);
+    const { grid, pivot } = buildGlazey(2).parts.body;
     const back = new Set<number>();
     grid.forEachVoxel((_x, y, z, c) => {
       if (z < pivot[2] - 3 && y < 30) back.add(c);
@@ -123,8 +123,8 @@ describe('Glazey', () => {
 
   it('has a clean, symmetric 1/128 m face decal with glossy eyes and glints', () => {
     for (const b of [0, 5]) {
-      const { face, pivot } = buildGlazey(b, 'happy');
-      const cx = pivot[0] * 4;
+      const { face, body } = buildGlazey(b, 'happy').parts;
+      const cx = face.pivot[0];
       const seen = new Map<number, number>();
       let mirrorMiss = 0;
       face.grid.forEachVoxel((x, y, z, c) => {
@@ -135,7 +135,7 @@ describe('Glazey', () => {
       expect(seen.get(PALETTE_INDEX.eyeShine) ?? 0).toBeGreaterThan(20);
       expect(seen.get(PALETTE_INDEX.mouthInside) ?? 0).toBeGreaterThan(20);
       expect(mirrorMiss / face.grid.count()).toBeLessThan(0.02);
-      expect(face.pivot).toEqual([pivot[0] * 4, 0, pivot[2] * 4]);
+      expect(face.joint).toEqual(body.joint);
     }
   });
 });

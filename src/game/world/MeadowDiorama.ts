@@ -66,8 +66,31 @@ export const HERO_EYE = new Vector3(-8, 23, 32.5);
 const PROP = 1 / 32;
 const CLOUD = 1 / 16;
 
+/**
+ * A solid prop footprint for the character controller (PLAN M4): an upright
+ * cylinder, or a box turned by `rotY`, standing on the ground at `y`.
+ */
+export type Obstacle = (
+  | { kind: 'cylinder'; x: number; y: number; z: number; radius: number; height: number }
+  | {
+      kind: 'box';
+      x: number;
+      y: number;
+      z: number;
+      hx: number;
+      hz: number;
+      height: number;
+      rotY: number;
+    }
+) & {
+  /** Big enough to block the camera (buildings); trunks and donuts never do. */
+  blocksCamera?: boolean;
+};
+
 export interface Diorama {
   scene: Scene;
+  /** Solid props Glazey bumps into or hops onto. */
+  obstacles: Obstacle[];
   environment: Scene;
   shape: IslandShape;
   sun: DirectionalLight;
@@ -212,6 +235,7 @@ export async function buildMeadowDiorama(
 
   // --- Props ---
   const placed: Placed[] = [];
+  const obstacles: Obstacle[] = [];
   const at = (p: { x: number; z: number }, lift = 0): Vector3 =>
     new Vector3(p.x, shape.surface(p.x, p.z) + lift, p.z);
   /** Moves a spot off the path, outward. */
@@ -232,6 +256,15 @@ export async function buildMeadowDiorama(
     pos: at(SPOTS.bakery, -0.03),
     rotY: faceToward(SPOTS.bakery, { x: -3.5, z: -1 }),
   });
+  obstacles.push({
+    kind: 'box',
+    ...at(SPOTS.bakery, -0.03),
+    hx: BAKERY_SIZE[0] * PROP * 0.46,
+    hz: BAKERY_SIZE[2] * PROP * 0.46,
+    height: BAKERY_SIZE[1] * PROP,
+    rotY: faceToward(SPOTS.bakery, { x: -3.5, z: -1 }),
+    blocksCamera: true,
+  });
 
   // Lighthouse, lamp turned toward the hero view.
   placed.push({
@@ -240,6 +273,13 @@ export async function buildMeadowDiorama(
     pivot: [LIGHTHOUSE_SIZE[0] / 2, 0, LIGHTHOUSE_SIZE[2] / 2],
     pos: at(SPOTS.lighthouse, -0.03),
     rotY: faceToward(SPOTS.lighthouse, { x: HERO_EYE.x, z: HERO_EYE.z }),
+  });
+  obstacles.push({
+    kind: 'cylinder',
+    ...at(SPOTS.lighthouse, -0.03),
+    radius: LIGHTHOUSE_SIZE[0] * PROP * 0.42,
+    height: LIGHTHOUSE_SIZE[1] * PROP,
+    blocksCamera: true,
   });
 
   // Pier: stairs from the inner rim down to a dock on posts.
@@ -277,6 +317,7 @@ export async function buildMeadowDiorama(
       pos: at(p, -0.06),
       rotY: hash3(i, 1, 1, 3) * Math.PI * 2,
     });
+    obstacles.push({ kind: 'cylinder', ...at(p, -0.06), radius: 0.24, height: 2.4 * h });
     // Mushrooms at the foot of some trees.
     if (i % 2 === 0) {
       for (let m = 0; m < 3; m++) {
@@ -320,6 +361,15 @@ export async function buildMeadowDiorama(
       pivot: hero ? [hs[0] / 2, 0, hs[2] / 2] : donutPivot,
       pos: at(p, -0.03),
       rotY: hash3(i, 2, 2, 7) * Math.PI * 2,
+    });
+    // Low enough to hop onto.
+    const v = hero ? DONUT_HERO_VOXEL : DONUT_VOXEL;
+    const size = hero ? hs : ds;
+    obstacles.push({
+      kind: 'cylinder',
+      ...at(p, -0.03),
+      radius: size[0] * v * 0.46,
+      height: size[1] * v,
     });
   });
   const floaters: [number, number, DonutFlavor][] = [
@@ -464,6 +514,7 @@ export async function buildMeadowDiorama(
 
   return {
     scene,
+    obstacles,
     environment,
     shape,
     sun,

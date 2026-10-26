@@ -20,5 +20,9 @@
       "gallery-low-tier"
     ],
     "strips": ["gallery-glazey-belly"]
+  },
+  "M4": {
+    "shots": ["m4-walk-strip", "m4-jump-apex", "m4-touch-ui", "gallery-glazey-belly"],
+    "strips": ["m4-walk-strip", "gallery-glazey-belly"]
   }
 }

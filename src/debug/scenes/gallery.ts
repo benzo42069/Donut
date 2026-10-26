@@ -10,7 +10,8 @@ import {
   type DonutFlavor,
 } from '../../art/models/donut';
 import { STAND_HEIGHT, buildStand, standSize } from '../../art/models/stand';
-import { GLAZEY_FACE_VOXEL, GLAZEY_VOXEL, buildGlazey } from '../../art/models/glazey';
+import { buildGlazey } from '../../art/models/glazey';
+import { GlazeyRig, restPose } from '../../game/player/GlazeyRig';
 import { BAKERY_SIZE, buildBakery } from '../../art/models/bakery';
 import { FINE_DECOR_VOXEL, buildGrassTuft } from '../../art/models/grassTuft';
 import { LIGHTHOUSE_LAMP, LIGHTHOUSE_SIZE, buildLighthouse } from '../../art/models/lighthouse';
@@ -170,28 +171,30 @@ export async function buildGlazeyGallery(
   quality: QualitySettings,
 ): Promise<ShotScene> {
   const studio = createStudio(quality, { shadowExtent: 4.6 });
-  const items: Placed[] = [];
+  const material = createVoxelMaterial({}, STUDIO_TUNING);
+  const pool = new MesherPool();
   const spacing = 1.4;
-  for (let b = 0; b <= 5; b++) {
-    const g = buildGlazey(b, b === 5 ? 'bliss' : 'happy');
-    const pos = new Vector3((b - 2.5) * spacing, 0, 0);
-    items.push(
-      { grid: g.grid, voxel: GLAZEY_VOXEL, pivot: g.pivot, pos, rotY: 0 },
-      { grid: g.face.grid, voxel: GLAZEY_FACE_VOXEL, pivot: g.face.pivot, pos, rotY: 0 },
-    );
-  }
-  const placed = await populate(studio, items);
+  const rigs = await Promise.all(
+    [0, 1, 2, 3, 4, 5].map((b) =>
+      GlazeyRig.build(buildGlazey(b, b === 5 ? 'bliss' : 'happy'), material, pool),
+    ),
+  );
+  pool.dispose();
+  rigs.forEach((rig, b) => {
+    rig.position.set((b - 2.5) * spacing, 0, 0);
+    rig.pose(restPose());
+    studio.scene.add(rig);
+  });
   const camera = studioCamera(aspect, 19, new Vector3(0, 2.6, 14.2), new Vector3(0, 0.48, 0));
-  const turn = (t: number): void => {
-    for (const p of placed) p.group.rotation.y = t;
-  };
   return {
     scene: studio.scene,
     camera,
     environment: studio.environment,
     post: STUDIO_POST,
     // Turntable: stills face front; the strip shows front, side and back.
-    update: (t) => turn(t),
+    update: (t) => {
+      for (const rig of rigs) rig.rotation.y = t;
+    },
     stripTimes: [0, Math.PI / 2, Math.PI],
   };
 }

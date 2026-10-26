@@ -3,6 +3,10 @@ import { QUALITY, detectTier, isQualityTier, type QualityTier } from './engine/q
 import { Renderer } from './engine/render/Renderer';
 import { SHOTS } from './debug/shots';
 import type { ShotScene } from './debug/shotTypes';
+import { GamepadInput, KeyboardInput, MergedInput } from './engine/input/Input';
+import { Game } from './game/Game';
+import { TouchControls } from './ui/TouchControls';
+import { loadTouchIcons } from './ui/touchIcons';
 
 /** Screenshot-harness hooks (PLAN §2 "Determinism"). */
 interface ShotApi {
@@ -59,10 +63,52 @@ function fitCamera(shot: ShotScene, w: number, h: number): void {
   }
 }
 
+/** Where a fresh session starts: on the meadow by the lagoon, camera out front. */
+const SPAWN = { x: -0.86, z: 7.03, yaw: 0.17, cameraYaw: -0.24 };
+
+/** Play mode (PLAN M4): Glazey on the island, keyboard, gamepad and touch. */
+async function play(params: URLSearchParams): Promise<void> {
+  const tier = pickTier(params);
+  const canvas = document.createElement('canvas');
+  document.body.appendChild(canvas);
+  const renderer = new Renderer(canvas, QUALITY[tier]);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  const touch = new TouchControls(document.body, await loadTouchIcons());
+  if (params.has('touch')) touch.show(true);
+  const input = new MergedInput(new KeyboardInput(), new GamepadInput(), touch);
+  const game = await Game.create(
+    QUALITY[tier],
+    window.innerWidth / window.innerHeight,
+    { kind: 'live', source: input },
+    { spawn: SPAWN },
+  );
+  const camera = game.camera.camera;
+  renderer.setEnvironment(game.scene, game.environment);
+  renderer.setScene(game.scene, camera, game.post);
+  renderer.beforeRender = (gl) => game.prerender(gl, camera);
+  await renderer.gl.compileAsync(game.scene, camera);
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  });
+  const timer = new Timer();
+  timer.connect(document);
+  const loop = (timestamp?: number): void => {
+    timer.update(timestamp);
+    const dt = Math.min(timer.getDelta(), 0.1);
+    game.update(dt);
+    renderer.render(dt);
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+
 async function boot(): Promise<void> {
   const params = new URLSearchParams(window.location.search);
   const shotId = params.get('shot');
-  const def = SHOTS[shotId ?? 'm0-test-cube'];
+  if (!shotId) return play(params);
+  const def = SHOTS[shotId];
   if (!def) throw new Error(`Unknown shot "${shotId}". Known: ${Object.keys(SHOTS).join(', ')}`);
 
   const tier = pickTier(params, def.tier);
@@ -78,13 +124,14 @@ async function boot(): Promise<void> {
   renderer.setSize(w, h);
 
   const shot = await def.build(w / h, QUALITY[tier]);
+  if (shot.overlay) document.body.appendChild(shot.overlay);
   fitCamera(shot, w, h);
   if (shot.environment) renderer.setEnvironment(shot.scene, shot.environment);
   renderer.setScene(shot.scene, shot.camera, shot.post);
   if (shot.prerender) renderer.beforeRender = (gl) => shot.prerender?.(gl, shot.camera);
   await renderer.gl.compileAsync(shot.scene, shot.camera);
 
-  if (shotId) {
+  if (!params.has('live')) {
     // Frozen clock: only setTime() advances the scene.
     const setTime = async (t: number): Promise<void> => {
       shot.update?.(t);
@@ -96,7 +143,7 @@ async function boot(): Promise<void> {
         await nextFrame();
       }
     };
-    await setTime(def.time ?? 0);
+    await setTime(shot.stillTime ?? def.time ?? 0);
     window.__SHOT__ = {
       id: shotId,
       tier,

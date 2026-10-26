@@ -8,6 +8,10 @@ export interface ShotScene {
   readonly camera: Camera;
   /** Poses the scene at time `t` seconds. The clock is frozen otherwise. */
   update?(t: number): void;
+  /** Time of the still frame (overrides the definition's `time`). */
+  readonly stillTime?: number;
+  /** DOM overlay shown over the canvas (the touch UI). */
+  readonly overlay?: HTMLElement;
   /** Times (seconds) of the 3-frame motion strip. */
   readonly stripTimes?: readonly number[];
   /** Called before each frame is composed (planar reflections and the like). */

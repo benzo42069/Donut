@@ -174,11 +174,13 @@ export const VOXEL_PALETTE = {
   lanternGlow: entry('#FFD27A', MAT.glow | MAT.smooth, 0.02),
   railMint: entry('#9EE3C8', MAT.smooth, 0.03),
   deckWood: entry('#C08552', MAT.smooth, 0.04),
-  // Glazey's 1/128 m face decal (reference 03): glossy dark-brown eye domes with
-  // a warm lower iris and white glints, a relaxed mouth, two-tone soft blush.
-  eyeIris: entry('#4A2A26', MAT.gloss, 0.02),
-  eyeIrisLight: entry('#7A4636', MAT.gloss, 0.02),
-  eyePupil: entry('#2C1719', MAT.gloss, 0.015),
+  // Glazey's 1/128 m face decal (reference 03): dark-brown eye domes with a warm
+  // lower iris and painted white glints (the glints carry the gloss: a mirror
+  // finish showed each eye a different slice of the sky, so they mismatched),
+  // a relaxed mouth, two-tone soft blush.
+  eyeIris: entry('#4A2A26', MAT.smooth, 0.02),
+  eyeIrisLight: entry('#7A4636', MAT.smooth, 0.02),
+  eyePupil: entry('#2C1719', MAT.smooth, 0.015),
   eyeShine: entry('#FFF9F0', MAT.gloss | MAT.emissive, 0),
   mouthInside: entry('#7E2A3A', MAT.smooth, 0.02),
   tongueSoft: entry('#F2788C', MAT.soft | MAT.smooth, 0.02),

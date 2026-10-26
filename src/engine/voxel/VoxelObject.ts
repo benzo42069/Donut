@@ -1,5 +1,6 @@
 import { Group, Mesh, type Material } from 'three';
 import { buildGeometry } from './geometry';
+import type { MeshData } from './mesh';
 import { MesherPool } from './MesherPool';
 import { CHUNK, VoxelGrid, type ChunkCoord } from './VoxelGrid';
 
@@ -28,6 +29,12 @@ export class VoxelObject extends Group {
   private readonly meshes = new Map<number, Mesh>();
   private readonly versions = new Map<number, number>();
   castsShadow = true;
+  /**
+   * Optional analytic surface normal in grid coordinates. When set, it replaces
+   * the occupancy normals of every vertex (characters built from SDFs shade as
+   * one smooth surface instead of a lumpy voxel staircase).
+   */
+  normalField: ((x: number, y: number, z: number) => readonly number[]) | null = null;
 
   constructor(grid: VoxelGrid, voxelSize: number, material: Material, pool: MesherPool) {
     super();
@@ -55,6 +62,7 @@ export class VoxelObject extends Group {
         workerMsMax = Math.max(workerMsMax, r.ms);
         quads += r.data.quads;
         if (this.versions.get(c.key) !== version) return; // a newer remesh is in flight
+        if (this.normalField) applyNormalField(r.data, this.normalField);
         this.swap(c.key, r.data.quads > 0 ? buildGeometry(r.data) : null);
       }),
     );
@@ -95,5 +103,20 @@ export class VoxelObject extends Group {
   dispose(): void {
     for (const m of this.meshes.values()) m.geometry.dispose();
     this.meshes.clear();
+  }
+}
+
+/** Overwrites the smooth normals of mesher output with an analytic field. */
+function applyNormalField(
+  data: MeshData,
+  field: (x: number, y: number, z: number) => readonly number[],
+): void {
+  const p = data.positions;
+  const sn = data.snormals;
+  for (let i = 0; i < p.length; i += 3) {
+    const n = field(p[i] ?? 0, p[i + 1] ?? 0, p[i + 2] ?? 0);
+    sn[i] = Math.round((n[0] ?? 0) * 127);
+    sn[i + 1] = Math.round((n[1] ?? 0) * 127);
+    sn[i + 2] = Math.round((n[2] ?? 0) * 127);
   }
 }

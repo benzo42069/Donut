@@ -2,6 +2,7 @@ import type { ShotDefinition } from './shotTypes';
 import { buildTerrainScene } from './scenes/m1Terrain';
 import { buildTestCubeScene } from './scenes/testCube';
 import { m2Shot } from './scenes/m2Meadow';
+import { m4Shot } from './scenes/m4Play';
 import {
   buildBiteGallery,
   buildDonutGallery,
@@ -28,4 +29,7 @@ export const SHOTS: Record<string, ShotDefinition> = {
   'gallery-glazey-belly': { build: buildGlazeyGallery },
   'gallery-props': { build: buildPropsGallery },
   'gallery-low-tier': { build: buildDonutGallery, tier: 'low' },
+  'm4-walk-strip': { build: m4Shot('walk') },
+  'm4-jump-apex': { build: m4Shot('jump') },
+  'm4-touch-ui': { build: m4Shot('touch') },
 };

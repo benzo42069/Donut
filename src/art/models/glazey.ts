@@ -246,7 +246,7 @@ function faceLayout(
   const mouthRy = expression === 'surprised' ? 2.0 : 2.6;
   const cheekX = eyeX + 2.3;
   const cheekY = mouthY + 0.2;
-  const bellyTop = mouthY - mouthRy - 0.6;
+  const bellyTop = mouthY - mouthRy - 0.15;
   const bellyBot = FOOT_CREASE + 1.2;
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;

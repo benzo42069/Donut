@@ -181,7 +181,7 @@ export async function buildGlazeyGallery(
     );
   }
   const placed = await populate(studio, items);
-  const camera = studioCamera(aspect, 30, new Vector3(0, 1.9, 9.6), new Vector3(0, 0.5, 0));
+  const camera = studioCamera(aspect, 19, new Vector3(0, 2.6, 14.2), new Vector3(0, 0.48, 0));
   const turn = (t: number): void => {
     for (const p of placed) p.group.rotation.y = t;
   };

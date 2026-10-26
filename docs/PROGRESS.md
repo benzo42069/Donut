@@ -17,6 +17,18 @@ iter 8. A new thread resumes from the newest `reviews/M3-iter*.md`.
   | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 |
   | 6 | 6.55 | 6.8 | 6.68 | 0 / 1 |
 
+- **Iter 7:** r1 6.58, r2 6.9, gate mean 6.74, 0 / 0 blockers, no regressions
+  against the new GPU M2 baseline.
+- **Iter 8 changes** (the final iteration before §6 escalation; studio and
+  Glazey only, so no M2-shared file changed):
+  - `STUDIO_TUNING.hueHold` goes 0.25 → 0.5. The low hold let the warm key
+    wash the rainbow to pastel and the cool fill turn the bite pockets olive.
+  - The hemisphere is warm (`studioCloth` sky, `studioClothGlow` ground), and
+    the key cone is wider (`ext * 2.3`). Corner saturation is now 0.16–0.25.
+  - The Glazey lineup uses a long lens (FOV 19 from 14.2 m), so it fills the
+    frame width without wide-angle skew. The skew had made the end Glazeys'
+    bellies read lopsided.
+  - The belly top sits right under the mouth (gap 0.15).
 - **Rebaseline (user-approved):** `shots/M2/final/` is now captured on the GPU
   path (ANGLE Metal, Apple M4) from the accepted M2 commit `51cae65`, so the
   baseline holds no M3 change. The old SwiftShader set is kept in

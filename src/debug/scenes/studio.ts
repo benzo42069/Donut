@@ -127,7 +127,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   const keyDir = (opts.keyDir ?? new Vector3(0.75, 0.62, 0.42)).clone().normalize();
   const ext = opts.shadowExtent ?? 4;
   const dist = 30;
-  const angle = Math.atan((ext * 2.0) / dist);
+  const angle = Math.atan((ext * 2.3) / dist);
   const key = new SpotLight(new Color(LIGHT_PALETTE.studioKey), 5.0, 0, angle, 1, 0);
   key.position.copy(keyDir).multiplyScalar(dist);
   key.target.position.set(0, 0.3, 0);
@@ -137,7 +137,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   key.shadow.camera.far = 50;
   // Blur and normal bias are set in texels, so a wide pool (the props shelf)
   // keeps the same softness without VSM streaks on thin parts.
-  const texel = (2 * ext * 2.0) / quality.shadowMapSize;
+  const texel = (2 * ext * 2.3) / quality.shadowMapSize;
   key.shadow.radius = Math.min(9, 0.045 / texel);
   key.shadow.blurSamples = 24;
   key.shadow.bias = -0.001;
@@ -154,9 +154,9 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   scene.add(fill, fill.target);
   scene.add(
     new HemisphereLight(
-      new Color(LIGHT_PALETTE.studioShade),
-      new Color(LIGHT_PALETTE.studioShade),
-      0.35,
+      new Color(LIGHT_PALETTE.studioCloth),
+      new Color(LIGHT_PALETTE.studioClothGlow),
+      0.4,
     ),
   );
   // Cool rim from the back left, so silhouettes separate from the cream sweep.
@@ -199,7 +199,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
  */
 export const STUDIO_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
-  hueHold: 0.25,
+  hueHold: 0.5,
   wrap: 0.2,
   // Sprinkles, crystals and the rainbow pop a little more on the cream cloth,
   // enough to reach the bloom threshold and carry a soft halo (art bible §5).

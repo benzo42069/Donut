@@ -247,8 +247,9 @@ export function buildGingerRock(seed: number): VoxelGrid {
     [sx, sy, sz],
     (x, y, z) => {
       const top = rock(x + 0.5 - cx, y + 1.5, z + 0.5 - cz) > 0;
-      if (top && y > 18 && valueNoise3(x * 0.2, y * 0.2, z * 0.2, seed) > 0.35)
-        return P.powderedSugar;
+      // Sugar caps: whole, soft-edged drifts on the upper faces only.
+      if (top && y > 20 && valueNoise3(x * 0.09, y * 0.09, z * 0.09, seed) > 0.3)
+        return P.donutSugar;
       return hash3(x, y, z, seed) > 0.6 ? P.gingerCragDark : P.gingerCrag;
     },
   );

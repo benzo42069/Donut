@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BORDER,
   CHUNK,
   PAD,
   VoxelGrid,
@@ -71,15 +72,15 @@ describe('VoxelGrid', () => {
     g.set(-1, 0, 0, 2); // chunk -1, appears at padded x = -1
     g.set(32, 31, 0, 3); // chunk +x, appears at padded x = 32
     g.set(-1, -1, -1, 4); // corner neighbour
-    g.set(33, 0, 0, 9); // two voxels away: inside the 2-voxel border
-    g.set(34, 0, 0, 7); // three voxels away: not in the padding
+    g.set(31 + BORDER, 0, 0, 9); // BORDER voxels away: the edge of the padding
+    g.set(32 + BORDER, 0, 0, 7); // one further: not in the padding
     const p = g.padded(0, 0, 0);
     expect(p.length).toBe(PAD ** 3);
     expect(p[paddedIndex(0, 0, 0)]).toBe(1);
     expect(p[paddedIndex(-1, 0, 0)]).toBe(2);
     expect(p[paddedIndex(32, 31, 0)]).toBe(3);
     expect(p[paddedIndex(-1, -1, -1)]).toBe(4);
-    expect(p[paddedIndex(33, 0, 0)]).toBe(9);
+    expect(p[paddedIndex(31 + BORDER, 0, 0)]).toBe(9);
     expect([...p].filter((v) => v !== 0).length).toBe(5);
   });
 

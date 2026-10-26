@@ -54,28 +54,28 @@ export function buildLighthouse({ lamp = true }: { lamp?: boolean } = {}): Voxel
     }
 
     // Gallery deck, railing posts and top rail.
-    if (y < GALLERY + 4) return r < 21 ? (y === GALLERY + 3 ? P.mint : P.woodLight) : 0;
+    if (y < GALLERY + 4) return r < 21 ? (y === GALLERY + 3 ? P.railMint : P.deckWood) : 0;
     if (y < GALLERY + 13) {
       if (r >= 19 && r < 21) {
-        if (y >= GALLERY + 11) return P.mint;
+        if (y >= GALLERY + 11) return P.railMint;
         const post = ((a / (Math.PI * 2)) * 24 + 24) % 1;
-        if (post < 0.22) return P.mint;
+        if (post < 0.22) return P.railMint;
       }
     }
 
     // Lantern room: cream drum with a glowing band.
     if (y >= GALLERY + 4 && y < GALLERY + 24 && r < 11) {
-      if (r < 8) return P.lampGlow;
+      if (r < 8) return P.lanternGlow;
       if (y >= GALLERY + 9 && y < GALLERY + 19) {
         const mullion = ((a / (Math.PI * 2)) * 8 + 8) % 1 < 0.14;
-        return mullion ? P.candyCream : P.lampGlow;
+        return mullion ? P.towerCream : P.lanternGlow;
       }
-      return P.candyCream;
+      return P.towerCream;
     }
     // Cap: a squat red dome.
     if (y >= GALLERY + 24 && y < GALLERY + 32) {
       const capR = 13 - (y - GALLERY - 24) * 1.5;
-      if (r < capR) return P.candyRed;
+      if (r < capR) return P.towerRed;
     }
 
     // Donut lamp standing on top (torus in the XY plane).

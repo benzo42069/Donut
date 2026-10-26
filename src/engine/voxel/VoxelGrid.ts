@@ -14,7 +14,7 @@ const MASK = CHUNK - 1;
  * Neighbor voxels copied on every side of a padded chunk: one for face culling
  * and AO, a second for the wide smooth-normal window of relaxed materials.
  */
-export const BORDER = 2;
+export const BORDER = 3;
 /** Padded chunk edge. */
 export const PAD = CHUNK + 2 * BORDER;
 

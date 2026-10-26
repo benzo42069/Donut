@@ -135,6 +135,10 @@ const VERTEX_MAIN = /* glsl */ `
   vSNormal = normalMatrix * sn;
 
   // Grow the quad outward in its plane by a sub-pixel amount (T-junction cracks).
+  // Relaxed (smooth) quads are never merged and share exact corners, so they
+  // skip it: their corners no longer lie in the axis plane, and growing each
+  // face's copy of a corner along different axes opens pinholes (fireflies).
+  bool relaxed = (flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 && (flags & ${MAT.crisp}) == 0;
   vec3 an = abs(normal);
   vec3 axisU = an.x > 0.5 ? vec3(0.0, 1.0, 0.0) : an.y > 0.5 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
   vec3 axisV = an.x > 0.5 ? vec3(0.0, 0.0, 1.0) : an.y > 0.5 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
@@ -144,7 +148,7 @@ const VERTEX_MAIN = /* glsl */ `
     crackMv = crackMv * instanceMatrix;
   #endif
   float depth = max(-(crackMv * vec4(position, 1.0)).z, 0.0);
-  float eps = uCrackEps * depth / length(crackMv[0].xyz);
+  float eps = relaxed ? 0.0 : uCrackEps * depth / length(crackMv[0].xyz);
   transformed += (axisU * corner.x + axisV * corner.y) * eps;
 }
 `;
@@ -288,6 +292,6 @@ if (vVoxelMat.w >= 5.0) {
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
       .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v9';
+  mat.customProgramCacheKey = () => 'voxel-v10';
   return mat;
 }

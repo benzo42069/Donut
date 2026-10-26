@@ -37,6 +37,8 @@ export interface StudioOptions {
   /** Floor depth in front of the curve, and the sweep's width (meters). */
   depth?: number;
   width?: number;
+  /** Where the floor starts curving up into the wall (z, meters). */
+  back?: number;
 }
 
 /** A floor that curves up into a backdrop, with gentle cloth folds on the wall. */
@@ -72,9 +74,9 @@ function sweepGeometry(width: number, depth: number, back: number): BufferGeomet
       // Soft hanging folds that fade out toward the floor (reference 04's cloth).
       const up = Math.min(1, Math.max(0, (y - 0.6) / 3.5));
       const fold =
-        (0.1 * Math.sin(x * 0.7 + 0.7) +
-          0.05 * Math.sin(x * 1.6 + 1.9) +
-          0.025 * Math.sin(x * 2.9)) *
+        (0.16 * Math.sin(x * 0.7 + 0.7) +
+          0.075 * Math.sin(x * 1.6 + 1.9) +
+          0.035 * Math.sin(x * 2.9)) *
         up;
       pos[i++] = x;
       pos[i++] = y;
@@ -100,7 +102,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   scene.background = new Color(LIGHT_PALETTE.studioCream);
   const depth = opts.depth ?? 8;
   const sweep = new Mesh(
-    sweepGeometry(opts.width ?? 40, depth, -3),
+    sweepGeometry(opts.width ?? 40, depth, opts.back ?? -3),
     new MeshStandardMaterial({ color: new Color(LIGHT_PALETTE.studioCream), roughness: 0.92 }),
   );
   sweep.receiveShadow = true;
@@ -108,7 +110,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
 
   // Key: a big warm softbox from the upper right (soft VSM shadows).
   const keyDir = (opts.keyDir ?? new Vector3(0.75, 0.62, 0.42)).clone().normalize();
-  const key = new DirectionalLight(new Color(LIGHT_PALETTE.studioKey), 3.6);
+  const key = new DirectionalLight(new Color(LIGHT_PALETTE.studioKey), 4.3);
   key.position.copy(keyDir).multiplyScalar(30);
   key.castShadow = true;
   key.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
@@ -116,10 +118,13 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   Object.assign(key.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext });
   key.shadow.camera.near = 10;
   key.shadow.camera.far = 50;
-  key.shadow.radius = 9;
+  // Blur and normal bias are set in texels, so a wide shadow camera (the props
+  // shelf) keeps the same softness without VSM streaks on thin parts.
+  const texel = (2 * ext) / quality.shadowMapSize;
+  key.shadow.radius = Math.min(9, 0.045 / texel);
   key.shadow.blurSamples = 24;
   key.shadow.bias = -0.0003;
-  key.shadow.normalBias = 0.004;
+  key.shadow.normalBias = Math.max(0.012, texel * 2.5);
   scene.add(key, key.target);
 
   // Cool fill from the sky side, warm bounce off the cloth.
@@ -127,11 +132,11 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
     new HemisphereLight(
       new Color(LIGHT_PALETTE.studioFill),
       new Color(LIGHT_PALETTE.studioShade),
-      0.55,
+      0.5,
     ),
   );
-  // Rim from the back left, so silhouettes separate from the cream sweep.
-  const rim = new DirectionalLight(new Color(LIGHT_PALETTE.skySunGlow), 1.1);
+  // Cool rim from the back left, so silhouettes separate from the cream sweep.
+  const rim = new DirectionalLight(new Color(LIGHT_PALETTE.studioRim), 1.8);
   rim.position.set(-0.7, 0.55, -0.8).multiplyScalar(30);
   scene.add(rim, rim.target);
   scene.environmentIntensity = 0.55;

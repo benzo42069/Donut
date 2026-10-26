@@ -1,13 +1,14 @@
 import { PALETTE_INDEX, type VoxelColorName } from '../palette';
-import { smoothUnion, subtract, union, voxelize, type Sdf } from '../sdf';
+import { smoothUnion, union, voxelize, type Sdf } from '../sdf';
 import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 
 /**
  * Glazey (art bible §7, reference 03, D-01, RF-09–RF-13): a squishy coral
  * creature at character-sheet density (1/32 m voxels, about 32 voxels tall at
  * belly 0). Coral from every angle, a cream belly, pink blush, big glossy eyes
- * with 2×2 glints, a small happy mouth, a 5-stripe rainbow sprinkle tuft, two
- * stubby arms and two feet, and nothing else (no tail, no labels).
+ * with white glints, a happy open mouth, a 5-stripe rainbow sprinkle tuft, two
+ * stubby arms and two feet, and nothing else (no tail, no labels). The face and
+ * belly patch are a separate 1/128 m decal grid (`face`), placed with the body.
  *
  * Belly stages 0–5 are clearly distinct silhouettes: a pear-shaped bean at 0,
  * rounder and wider with a growing belly, and a perfectly round ball at 5.
@@ -23,6 +24,8 @@ export interface GlazeyModel {
   pivot: [number, number, number];
   /** Height in voxels, tuft included. */
   height: number;
+  /** The face decal: same pose as the body, voxel size `GLAZEY_FACE_VOXEL`. */
+  face: { grid: VoxelGrid; pivot: [number, number, number] };
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -99,29 +102,6 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   const foot = (s: number): Sdf =>
     ellipsoid(s * rx * lerp(0.42, 0.36, t), 2.3, rz * lerp(0.22, 0.3, t), 4.4, 2.8, 5.4);
 
-  // Face layout on the front of the body.
-  const eyeY = y0 + ry * lerp(0.2, 0.12, t);
-  const eyeX = rx * lerp(0.37, 0.3, t);
-  const front = (x: number, y: number): number => {
-    // z of the body surface in front of (x, y) (for placing face features).
-    const ny = Math.max(-1, Math.min(1, (y - y0) / ry));
-    const w = rx * (1 - pear * ny);
-    const d = rz * (1 - pear * 0.6 * ny);
-    const k = 1 - (x / w) ** 2 - ((y - y0) / ry) ** 2;
-    return k > 0 ? d * Math.sqrt(k) : 0;
-  };
-  const eyeW = expression === 'surprised' ? 3.4 : 3.0;
-  const eyeH = expression === 'surprised' ? 4.0 : 3.7;
-  const mouthY = eyeY - lerp(4.4, 4.0, t);
-  const mouthZ = front(0, mouthY);
-  const mouthW = expression === 'surprised' ? 1.6 : expression === 'munch' ? 3.0 : 2.2;
-  const mouthH = expression === 'surprised' ? 2.0 : 1.4;
-  // The mouth is a little scoop, open below its top edge (a smile).
-  const mouth: Sdf = (x, y, z) => {
-    const top = expression === 'surprised' ? mouthY + mouthH : mouthY + 0.4;
-    const e = Math.hypot(x / mouthW, (y - mouthY) / mouthH, (z - mouthZ) / 1.6) - 1;
-    return Math.max(e, y - top);
-  };
   const tuft: Sdf[] = TUFT.map((_, i) => {
     const a = ((i - 2) / 2) * 0.62;
     const bx = Math.sin(a) * 2.2;
@@ -133,7 +113,8 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
 
   const torso = smoothUnion(body, bellyBulge, 4);
   const limbs = union(arm(-1), arm(1), foot(-1), foot(1));
-  const solid = subtract(union(smoothUnion(torso, limbs, 1.6), ...tuft), mouth);
+  const skin = smoothUnion(torso, limbs, 1.6);
+  const face = faceLayout(expression, t, rx, ry, y0);
 
   const grid = new VoxelGrid();
   const W = Math.ceil(rx + 8);
@@ -142,68 +123,155 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   // Grid coords are offset so the model sits in positive space.
   const ox = W;
   const oz = W;
-  const glint = (x: number, y: number, s: number): number => {
-    // A 2×2 glint at the upper left of each eye (one consistent key light),
-    // plus a 1-voxel twinkle at the lower right.
-    const gx = s * eyeX - eyeW * 0.2;
-    const gy = eyeY + eyeH * 0.22;
-    if (x >= gx - 1 && x < gx + 1 && y >= gy - 1 && y < gy + 1) return 1;
-    if (Math.abs(x - (s * eyeX + eyeW * 0.3)) < 0.5 && Math.abs(y - (eyeY - eyeH * 0.36)) < 0.5)
-      return 1;
-    return 0;
-  };
   voxelize(
     grid,
-    (x, y, z) => solid(x - ox, y, z - oz),
+    (x, y, z) => skin(x - ox, y, z - oz),
     [0, 0, 0],
     [2 * W, H, W + D],
-    (gx, gy, gz) => {
-      const x = gx + 0.5 - ox;
-      const y = gy + 0.5;
-      const z = gz + 0.5 - oz;
+    () => PALETTE_INDEX.glazeyBody,
+  );
+  // Open a shallow socket under every face feature (shrunk a little, so the
+  // decal's clean outline overlaps the body's voxel edge instead of exposing it).
+  grid.forEachVoxel((gx, gy, gz) => {
+    const x = gx + 0.5 - ox;
+    const y = gy + 0.5;
+    const z = gz + 0.5 - oz;
+    if (z <= 0 || !face(x, y, SOCKET_SHRINK)) return;
+    if (skin(x, y, z) > -SOCKET_DEPTH) grid.set(gx, gy, gz, 0);
+  });
+  grid.takeDirty();
+
+  // The face decal: 1/128 m voxels filling each socket and standing just proud
+  // of the body (eyes swell into glossy domes), so every outline is a clean
+  // curve at character distance while the body keeps sheet density (RF-09).
+  const F = FACE_SCALE;
+  const faceGrid = new VoxelGrid();
+  const fy0 = Math.floor((y0 - ry) * F);
+  const fy1 = Math.ceil((y0 + ry * 0.6) * F);
+  faceGrid.generate(0, fy0, oz * F, 2 * W * F, fy1, (W + D) * F, (fx, fy, fz) => {
+    const x = (fx + 0.5) / F - ox;
+    const y = (fy + 0.5) / F;
+    const z = (fz + 0.5) / F - oz;
+    if (z <= 0) return 0;
+    const f = face(x, y, 0);
+    if (!f) return 0;
+    const d = skin(x, y, z);
+    return d <= f.lift && d > -SOCKET_DEPTH - 0.8 ? PALETTE_INDEX[f.color] : 0;
+  });
+  // The rainbow tuft, also at decal density: five rounded sprinkle capsules.
+  const ty0 = Math.floor((y0 + ry - 4) * F);
+  const ty1 = Math.ceil((y0 + ry + 8) * F);
+  faceGrid.generate(
+    (ox - 9) * F,
+    ty0,
+    (oz - 5) * F,
+    (ox + 9) * F,
+    ty1,
+    (oz + 3) * F,
+    (fx, fy, fz) => {
+      const x = (fx + 0.5) / F - ox;
+      const y = (fy + 0.5) / F;
+      const z = (fz + 0.5) / F - oz;
       for (let i = 0; i < TUFT.length; i++) {
-        if ((tuft[i]?.(x, y, z) ?? 1) <= 0 && y > y0 + ry - 0.5)
-          return PALETTE_INDEX[TUFT[i] ?? 'butter'];
+        if ((tuft[i]?.(x, y, z) ?? 1) <= 0) return PALETTE_INDEX[TUFT[i] ?? 'butter'];
       }
-      // Face: only on the front surface.
-      if (z > 0) {
-        for (const s of [-1, 1]) {
-          const ex = (x - s * eyeX) / eyeW;
-          const ey = (y - eyeY) / eyeH;
-          const inEye = ex * ex + ey * ey <= 1;
-          if (expression === 'bliss' || expression === 'munch') {
-            // Closed happy eyes: a ^ arc.
-            const arc = Math.abs(Math.hypot(x - s * eyeX, (y - eyeY + 1.6) * 1.1) - 2.6);
-            if (arc < 0.75 && y > eyeY - 1.4 && Math.abs(x - s * eyeX) < 3)
-              return PALETTE_INDEX.eyeDark;
-          } else if (inEye && z > front(x, y) - 2.5) {
-            if (glint(x, y, s)) return PALETTE_INDEX.eyeGlint;
-            return PALETTE_INDEX.eyeDark;
-          }
-          // Blush on the cheeks, just outside and below the eyes.
-          const bx = (x - s * (eyeX + eyeW * 0.85)) / 2.6;
-          const by = (y - (eyeY - eyeH - 1.3)) / 1.5;
-          if (bx * bx + by * by <= 1) return PALETTE_INDEX.glazeyCheek;
-        }
-        // Mouth lining: dark inside, a pink tongue at the bottom.
-        if (mouth(x, y, z) < 1.2 && Math.abs(x) < mouthW + 0.5 && y < mouthY + mouthH + 0.5) {
-          if (y > mouthY - mouthH + 0.2 && Math.abs(x) < mouthW + 0.3) {
-            return y < mouthY - mouthH * 0.35
-              ? PALETTE_INDEX.glazeyTongue
-              : PALETTE_INDEX.glazeyMouth;
-          }
-        }
-        // Cream belly patch.
-        const bw = rx * lerp(0.6, 0.66, t);
-        const bh = ry * lerp(0.48, 0.55, t);
-        const by = y0 - ry * lerp(0.36, 0.3, t);
-        if ((x / bw) ** 2 + ((y - by) / bh) ** 2 <= 1 && z > rz * 0.15) {
-          return PALETTE_INDEX.glazeyBellySoft;
-        }
-      }
-      return PALETTE_INDEX.glazeyBody;
+      return 0;
     },
   );
-  grid.takeDirty();
-  return { grid, pivot: [ox, 0, oz], height: Math.ceil(y0 + ry + 6) };
+  faceGrid.takeDirty();
+  return {
+    grid,
+    pivot: [ox, 0, oz],
+    height: Math.ceil(y0 + ry + 6),
+    face: { grid: faceGrid, pivot: [ox * F, 0, oz * F] },
+  };
+}
+
+/** Face decal voxels per body voxel (1/128 m). */
+export const FACE_SCALE = 4;
+export const GLAZEY_FACE_VOXEL = GLAZEY_VOXEL / FACE_SCALE;
+/** Socket depth under the decal and its inset from the outline (body voxels). */
+const SOCKET_DEPTH = 2;
+const SOCKET_SHRINK = 0.8;
+
+interface FaceHit {
+  color: VoxelColorName;
+  /** How far the decal stands proud of the body surface here (body voxels). */
+  lift: number;
+}
+
+/**
+ * The face, as a lookup in the front projection (x, y in body voxels): eyes,
+ * mouth, blush and the cream belly patch. `shrink` insets every outline (the
+ * socket test). Layout follows reference 03: eyes high and wide apart, a wide
+ * open smile between the cheeks, and the belly patch well below the mouth.
+ */
+function faceLayout(
+  expression: GlazeyExpression,
+  t: number,
+  rx: number,
+  ry: number,
+  y0: number,
+): (x: number, y: number, shrink: number) => FaceHit | null {
+  const open = expression === 'happy' || expression === 'surprised';
+  const eyeX = rx * lerp(0.42, 0.33, t);
+  const eyeY = y0 + ry * lerp(0.22, 0.14, t);
+  const eyeRx = expression === 'surprised' ? 3.7 : 3.4;
+  const eyeRy = expression === 'surprised' ? 4.3 : 3.95;
+  const mouthY = eyeY - lerp(4.7, 4.3, t);
+  const mouthRx = expression === 'surprised' ? 1.6 : expression === 'munch' ? 3.6 : 3.1;
+  const mouthRy = expression === 'surprised' ? 2.0 : 2.6;
+  const cheekX = eyeX + 2.3;
+  const cheekY = mouthY + 0.2;
+  const bellyTop = mouthY - mouthRy - 0.3;
+  const bellyBot = y0 - ry * 0.98;
+  const bellyCy = (bellyTop + bellyBot) / 2;
+  const bellyRy = (bellyTop - bellyBot) / 2;
+  const bellyRx = rx * lerp(0.7, 0.72, t);
+  // Normalized radius inside an ellipse, inset by `s` body voxels.
+  const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
+    Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
+  return (x, y, s) => {
+    for (const side of [-1, 1]) {
+      const ex = x - side * eyeX;
+      const ey = y - eyeY;
+      if (open) {
+        const r = ell(ex, ey, eyeRx, eyeRy, s);
+        if (r <= 1) {
+          // A glossy dome: one big glint at the upper left (the key light is
+          // fixed in the sheet), a small twinkle low right, a warm lower iris.
+          const u = ex / eyeRx;
+          const v = ey / eyeRy;
+          const lift = 0.45 + 0.9 * Math.sqrt(Math.max(0, 1 - r * r));
+          if (Math.hypot(u + 0.32, v - 0.36) < 0.27) return { color: 'eyeShine', lift };
+          if (Math.hypot(u - 0.36, v + 0.4) < 0.12) return { color: 'eyeShine', lift };
+          if (r < 0.5) return { color: 'eyePupil', lift };
+          if (v < -0.25 && r > 0.62) return { color: 'eyeIrisLight', lift };
+          return { color: 'eyeIris', lift };
+        }
+      } else {
+        // Closed happy eyes: a smooth ^ arc.
+        const arc = Math.abs(Math.hypot(ex, (ey + 1.7) * 1.15) - 2.9);
+        if (arc < 0.6 - s * 0.5 && ey > -1.1) return { color: 'eyePupil', lift: 0.45 };
+      }
+      // Blush: a soft oval with a lighter center.
+      const c = ell(x - side * cheekX, y - cheekY, 2.5, 1.5, s);
+      if (c <= 1) return { color: c < 0.55 ? 'cheekGlow' : 'glazeyCheek', lift: 0.4 };
+    }
+    // Mouth: a wide open smile (flat-ish top, round bottom), tongue at the bottom.
+    const mx = x;
+    const my = y - mouthY;
+    if (expression === 'surprised') {
+      if (ell(mx, my, mouthRx, mouthRy, s) <= 1)
+        return { color: my < -mouthRy * 0.45 ? 'tongueSoft' : 'mouthInside', lift: 0.4 };
+    } else {
+      const top = 0.9 - 0.06 * mx * mx - s;
+      if (my < top && ell(mx, my, mouthRx, mouthRy, s) <= 1)
+        return { color: my < -mouthRy * 0.4 ? 'tongueSoft' : 'mouthInside', lift: 0.4 };
+    }
+    // The cream belly patch: a clean ellipse below the mouth.
+    if (ell(x, y - bellyCy, bellyRx, bellyRy, s) <= 1)
+      return { color: 'glazeyBellySoft', lift: 0.3 };
+    return null;
+  };
 }

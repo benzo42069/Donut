@@ -9,9 +9,12 @@ import { BORDER, CHUNK, PAD, paddedIndex, type VoxelGrid } from './VoxelGrid';
  * Silhouettes and per-voxel color stay voxel (art bible §2, §5).
  */
 const SMOOTH = new Uint8Array(256);
+/** Glossy entries shade with a wider normal window (one clean specular, no terraces). */
+const GLOSS = new Uint8Array(256);
 PALETTE_NAMES.forEach((n, i) => {
   const m = VOXEL_PALETTE[n].mat;
   if (m & (MAT.gloss | MAT.lit | MAT.smooth) && !(m & MAT.crisp)) SMOOTH[i + 1] = 1;
+  if (m & MAT.gloss && !(m & MAT.crisp)) GLOSS[i + 1] = 1;
 });
 /** Corner relaxation strength: voxels moved per unit of (solid fraction − ½). */
 const RELAX = 1.5;
@@ -246,6 +249,7 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
   let gz = 0;
   let solid = 0;
   let pinned = false;
+  let gloss = false;
   const x0 = l[0] ?? 0;
   const y0 = l[1] ?? 0;
   const z0 = l[2] ?? 0;
@@ -256,22 +260,24 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
     if (pal === 0) continue;
     solid++;
     if (SMOOTH[pal] !== 1) pinned = true;
+    if (GLOSS[pal] === 1) gloss = true;
   }
-  // The normal uses a wider 4×4×4 tent-weighted window (BORDER = 2), so shading
-  // flows smoothly across voxel steps instead of faceting at every edge.
-  for (let k = 0; k < 64; k++) {
-    const ox = (k & 3) - 2;
-    const oy = ((k >> 2) & 3) - 2;
-    const oz = (k >> 4) - 2;
-    if ((padded[paddedIndex(x0 + ox, y0 + oy, z0 + oz)] ?? 0) === 0) continue;
-    const cx = ox + 0.5;
-    const cy = oy + 0.5;
-    const cz = oz + 0.5;
-    const w = (2 - Math.abs(cx)) * (2 - Math.abs(cy)) * (2 - Math.abs(cz));
-    gx += cx * w;
-    gy += cy * w;
-    gz += cz * w;
-  }
+  // The normal uses a wider tent-weighted window, so shading flows smoothly
+  // across voxel steps instead of faceting at every edge: 4×4×4, or 6×6×6
+  // (BORDER = 3) at glossy corners, whose tight highlight shows any terrace.
+  const r = gloss ? 3 : 2;
+  for (let oz = -r; oz < r; oz++)
+    for (let oy = -r; oy < r; oy++)
+      for (let ox = -r; ox < r; ox++) {
+        if ((padded[paddedIndex(x0 + ox, y0 + oy, z0 + oz)] ?? 0) === 0) continue;
+        const cx = ox + 0.5;
+        const cy = oy + 0.5;
+        const cz = oz + 0.5;
+        const w = (r - Math.abs(cx)) * (r - Math.abs(cy)) * (r - Math.abs(cz));
+        gx += cx * w;
+        gy += cy * w;
+        gz += cz * w;
+      }
   // Solid → empty points outward: the normal is minus the occupancy gradient.
   // A degenerate corner (no gradient) keeps the face normal already written.
   const len = Math.hypot(gx, gy, gz);

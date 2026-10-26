@@ -62,7 +62,7 @@ export const VOXEL_PALETTE = {
   // Accents
   mint: entry('#9EE3C8'),
   butter: entry('#FFE29A'),
-  blueberry: entry('#7C8CE0', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
+  blueberry: entry('#7C8CE0', MAT.gloss | MAT.candy, 0.03),
   milk: entry('#FFF6E6', MAT.gloss | MAT.translucent, 0.02),
   powderedSugar: entry('#FBF3EA', MAT.rough | MAT.soft | MAT.smooth, 0.03),
   classicGlaze: entry('#F8E2C0', MAT.gloss | MAT.translucent, 0.03),
@@ -85,9 +85,10 @@ export const VOXEL_PALETTE = {
   sprinkleViolet: entry('#A66CF0', MAT.emissive, 0.03),
   // M2 Glaze Meadows diorama
   grassLight: entry('#98D6AA', MAT.matte | MAT.candy, 0.06),
-  leafMint: entry('#8FD6A0', MAT.gloss, 0.05),
-  leafGreen: entry('#7CC775', MAT.gloss, 0.05),
-  leafDeep: entry('#5AA866', MAT.gloss, 0.05),
+  // Canopy leaves: matte and relaxed (soft wrap light), never wet plastic.
+  leafMint: entry('#8FD6A0', MAT.soft | MAT.smooth, 0.05),
+  leafGreen: entry('#7CC775', MAT.soft | MAT.smooth, 0.05),
+  leafDeep: entry('#5AA866', MAT.soft | MAT.smooth, 0.05),
   woodLight: entry('#C08552'),
   woodDark: entry('#6E3F24'),
   creamWall: entry('#FBE8CC', MAT.soft, 0.04),
@@ -129,8 +130,8 @@ export const VOXEL_PALETTE = {
   syrupPool: entry('#F6BA5A', MAT.emissive | MAT.translucent, 0.03),
   // --- M3 asset library ---
   // Blueberry old-fashioned (RF-15): soft periwinkle, never navy.
-  blueberryLight: entry('#9AA8EC', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
-  blueberryShadow: entry('#6878CC', MAT.gloss | MAT.candy | MAT.crisp, 0.03),
+  blueberryLight: entry('#9AA8EC', MAT.gloss | MAT.candy, 0.03),
+  blueberryShadow: entry('#6878CC', MAT.gloss | MAT.candy, 0.03),
   // Jelly peeking out of the powdered donut.
   jellyRed: entry('#D93A52', MAT.gloss | MAT.translucent, 0.03),
   jellyDeep: entry('#A8263E', MAT.gloss | MAT.translucent, 0.03),
@@ -164,10 +165,39 @@ export const VOXEL_PALETTE = {
   flossPink: entry('#F9C4DA', MAT.soft | MAT.smooth | MAT.candy, 0.03),
   flossBlue: entry('#C2DCF8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
   // Rock candy crystals.
-  crystalLilac: entry('#CDB4F0', MAT.gloss | MAT.translucent, 0.03),
-  crystalMint: entry('#B2EAD6', MAT.gloss | MAT.translucent, 0.03),
+  crystalLilac: entry('#CDB4F0', MAT.gloss | MAT.translucent | MAT.emissive, 0.03),
+  crystalMint: entry('#B2EAD6', MAT.gloss | MAT.translucent | MAT.emissive, 0.03),
   // Classic glaze where it runs thin and the golden dough shows through.
   classicGlazeThin: entry('#F0C68C', MAT.gloss | MAT.translucent, 0.03),
+  // Lighthouse lantern: relaxed twins of the deck, rail and glow band, so the
+  // small cylinders don't shade as alternating front/side voxel stripes.
+  lanternGlow: entry('#FFD27A', MAT.glow | MAT.smooth, 0.02),
+  railMint: entry('#9EE3C8', MAT.smooth, 0.03),
+  deckWood: entry('#C08552', MAT.smooth, 0.04),
+  // Glazey's 1/128 m face decal (reference 03): glossy dark-brown eye domes with
+  // a warm lower iris and white glints, a relaxed mouth, two-tone soft blush.
+  eyeIris: entry('#4A2A26', MAT.gloss, 0.02),
+  eyeIrisLight: entry('#7A4636', MAT.gloss, 0.02),
+  eyePupil: entry('#2C1719', MAT.gloss, 0.015),
+  eyeShine: entry('#FFF9F0', MAT.gloss | MAT.emissive, 0),
+  mouthInside: entry('#7E2A3A', MAT.smooth, 0.02),
+  tongueSoft: entry('#F2788C', MAT.soft | MAT.smooth, 0.02),
+  cheekGlow: entry('#F7A0AE', MAT.soft | MAT.smooth | MAT.candy, 0.02),
+  // Donut powdered sugar (art bible §5): high-value, rough, hue-held so the
+  // warm key can't turn it beige, with a few sparkling grains.
+  donutSugar: entry('#FFFBF4', MAT.rough | MAT.smooth | MAT.candy, 0.04),
+  donutSugarShade: entry('#F4ECE2', MAT.rough | MAT.smooth | MAT.candy, 0.04),
+  sugarSparkle: entry('#FFFFFA', MAT.emissive | MAT.candy, 0),
+  // Fresh bite crumb (K-07): relaxed, so the torn face shades as soft, airy
+  // crumb instead of a pitted surface that mottles the shadow; hue-held so
+  // the cool fill can't turn it olive in the bite's shade.
+  crumbFresh: entry('#F4D49C', MAT.soft | MAT.smooth | MAT.candy, 0.05),
+  crumbFreshPore: entry('#E2B676', MAT.soft | MAT.smooth | MAT.candy, 0.05),
+  // Classic glaze pooled thick (pale cream) where it gathers on the crown.
+  classicGlazePool: entry('#FCEBD0', MAT.gloss | MAT.translucent, 0.02),
+  // Display stands: a lighter, calmer turned wood than the props (quiet grain).
+  standWood: entry('#A67C58', MAT.soft, 0.03),
+  standWoodDeep: entry('#8E6646', MAT.soft, 0.03),
 } as const satisfies Record<string, PaletteEntry>;
 
 export type VoxelColorName = keyof typeof VOXEL_PALETTE;
@@ -203,10 +233,11 @@ export const LIGHT_PALETTE = {
   milkDeep: '#EAD6BC',
   milkFoam: '#FFFAF2',
   // Studio sweep for the asset gallery (K-06): warm cream cloth.
-  studioCream: '#EEE5DA',
-  studioShade: '#DCC6AC',
+  studioCream: '#F6F0E8',
+  studioShade: '#D8CCC0',
   studioKey: '#FFEAD4',
-  studioFill: '#DCE4F6',
+  studioFill: '#D2DDF4',
+  studioRim: '#E4ECFF',
 } as const;
 
 export type LightColorName = keyof typeof LIGHT_PALETTE;

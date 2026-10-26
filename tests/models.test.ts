@@ -82,7 +82,7 @@ describe('donut library', () => {
     expect(first.length / whole).toBeLessThan(0.45);
     expect(second.length).toBeGreaterThan(0);
     expect(g.count()).toBe(whole - first.length - second.length);
-    expect(colors(g).has(PALETTE_INDEX.crumbPore)).toBe(true);
+    expect(colors(g).has(PALETTE_INDEX.crumbFreshPore)).toBe(true);
   });
 });
 
@@ -119,5 +119,23 @@ describe('Glazey', () => {
       if (z < pivot[2] - 3 && y < 30) back.add(c);
     });
     expect([...back]).toEqual([PALETTE_INDEX.glazeyBody]);
+  });
+
+  it('has a clean, symmetric 1/128 m face decal with glossy eyes and glints', () => {
+    for (const b of [0, 5]) {
+      const { face, pivot } = buildGlazey(b, 'happy');
+      const cx = pivot[0] * 4;
+      const seen = new Map<number, number>();
+      let mirrorMiss = 0;
+      face.grid.forEachVoxel((x, y, z, c) => {
+        seen.set(c, (seen.get(c) ?? 0) + 1);
+        if (face.grid.get(2 * cx - 1 - x, y, z) === 0) mirrorMiss++;
+      });
+      expect(seen.get(PALETTE_INDEX.eyeIris) ?? 0).toBeGreaterThan(200);
+      expect(seen.get(PALETTE_INDEX.eyeShine) ?? 0).toBeGreaterThan(20);
+      expect(seen.get(PALETTE_INDEX.mouthInside) ?? 0).toBeGreaterThan(20);
+      expect(mirrorMiss / face.grid.count()).toBeLessThan(0.02);
+      expect(face.pivot).toEqual([pivot[0] * 4, 0, pivot[2] * 4]);
+    }
   });
 });

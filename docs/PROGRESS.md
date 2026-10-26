@@ -1,34 +1,62 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 1 reviewed, FAIL)
+## M3 in progress: resume here (gate iter 2 under review)
 
-M3 is NOT done. A new thread should resume the gate loop at **iteration 2**. Do not restart the milestone.
+M3 is NOT done. Iteration 2 is committed and was sent to two reviewers. If this
+thread stops, a new thread resumes at the iter 2 reports (`reviews/M3-iter2*.md`).
+Do not restart the milestone.
 
-- **Built (commit f037548):**
-  - Palette flags packed into `uPalette[128]`, plus a `MAT.crisp` flag.
-  - 9 donut flavors with bites and crumbs.
-  - Glazey at belly 0–5.
-  - Props: the donut, floss and rock-candy trees, a gingerbread rock, fences, flower beds, the Moon Donut and the lighthouse.
-  - The studio and gallery scenes, and the M3 shots in `scripts/gates.json`.
-  - `tests/models.test.ts`.
-- **Reviews:**
-  - `reviews/M3-iter1.md`: FAIL, mean 6.1, min 5, 0 blockers.
-  - `reviews/M3-iter1-r2.md`: FAIL, mean 6.5, min 4, **2 blockers**:
-    - Shadow streaks (acne) in the lighthouse lantern in gallery-props.
-    - Firefly specks on Glazey's silhouette.
-- **Next:**
-  - Fix the 2 blockers first.
-  - Then the overlapping fix-list items:
-    - Glazey's eyes and mouth: bigger, round, clean.
-    - Flavor read for classic, powdered and jelly.
-    - The blueberry crag: rounded, no straight slits.
-    - Studio value separation, with a stronger key and rim.
-    - Smaller, calmer stands.
-    - Chocolate specular terracing.
-    - Bite interiors and crumb placement.
-    - Prop shadows on the wall and canopy gloss.
-  - Then commit and spawn 2 reviewers for iter 2.
-- **Rendering path:** the cloud container renders with SwiftShader, which makes a full M3 capture take about 5.5 min. On a Mac, `scripts/harness.mjs` tries the GPU first; log which path works.
+- **Iter 1** (f037548): `reviews/M3-iter1.md` FAIL 6.1 (min 5, 0 blockers);
+  `reviews/M3-iter1-r2.md` FAIL 6.5 (min 4, 2 blockers).
+- **Iter 2 changes:**
+  - Blocker, lantern streaks: these were not shadow acne. They stayed with key
+    shadows, AO and the lamp light all off. They were the voxel staircase of the
+    matte lantern cylinders, where front and side faces alternate in shade. The
+    drum, cap, rail and deck now use relaxed entries (`towerCream`, `towerRed`,
+    `railMint`, `deckWood`, `lanternGlow`). Key shadow blur and normal bias now
+    scale with the shadow texel size (`studio.ts`).
+  - Blocker, Glazey fireflies: these were pinholes where the background showed
+    through. The material's T-junction crack growth moved each face's copy of a
+    shared relaxed corner along a different axis. Relaxed quads are never merged,
+    so they now skip the growth (`Materials.ts`, `relaxed`). The firefly count
+    went from 12–32 per frame to 0. This applies to every relaxed surface in the
+    game.
+  - Glazey's face is now a separate **1/128 m decal grid** (`GlazeyModel.face`,
+    `GLAZEY_FACE_VOXEL`). It holds glossy dark-brown eye domes with white glints,
+    an open smile with a tongue, two-tone blush, and a clean belly-patch ellipse
+    below the mouth. The body opens a shallow socket under each feature. The tuft
+    is five fine rounded capsules. The body stays at 1/32 m (RF-09).
+  - Studio: a lighter, cooler cream sweep, deeper folds, a stronger key, a cool
+    rim (`studioRim`), and an `opts.back` setting. The props wall is pushed back,
+    so it no longer catches shadows. Stands are smaller, made of quieter
+    `standWood`, with no speckle.
+  - Donuts:
+    - Powdered and jelly use hue-held, relaxed `donutSugar`, dusted on the top
+      only, with sparkle grains.
+    - The jelly bulge is bigger.
+    - The classic glaze pools pale on the crown and goes thin and golden on the
+      slopes.
+    - The blueberry is relaxed (no `crisp`), with color-only fissures (no holes).
+    - The rainbow bands are even, by angle around the tube.
+    - No drips inside the hole.
+    - The maple bar has longer drips and shows more of its dough band.
+  - Gloss corners shade with a 6³ normal window, which removes the chocolate
+    specular terraces. This needed `BORDER` = 3.
+  - The bite crumb is relaxed and hue-held (`crumbFresh*`), with a shallower
+    carve. Floor crumbs sit at the foot of each stand.
+  - Props: the leaves are matte and relaxed (also visible in M2, where they read
+    less like wet plastic). The rock candy has a soft emissive. The sugar caps on
+    the gingerbread rock are whole drifts.
+- **M2 regression check (builder):** I captured `m2-hero` and `m2-closeup-donut`
+  to `shots/M2/m3i2-check/` and compared them with `final/`: the same island and
+  lighting, with matte canopies and a smoother donut highlight. No quality drop.
+- **Perf (first real-GPU numbers, Apple M4 via ANGLE Metal, headless):**
+  - Low tier: 32–45 fps on every M2 shot, above the 30 fps floor.
+  - High tier: 18–28 fps, below the 60 fps target. There is no earlier GPU
+    baseline, so this is an open item, not a known regression.
+- **Rendering path:** on this Mac the harness takes the **GPU** path (ANGLE Metal,
+  Apple M4). A full M3 capture takes about 20 s, compared with about 5.5 min on
+  SwiftShader in the cloud container.
 
 ## Handoff → M3 (Procedural asset library ★)
 

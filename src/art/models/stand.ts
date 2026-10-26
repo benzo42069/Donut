@@ -42,12 +42,12 @@ export function buildStand(radius: number, voxel: number, seed = 0): VoxelGrid {
   voxelize(grid, union(plate, ...legs), [0, 0, 0], size, (x, y, z) => {
     const r = Math.hypot(x + 0.5 - c, z + 0.5 - c);
     const h = hash3(x, y, z, seed + 3);
-    if (y < top - thick - 0.5) return h > 0.7 ? PALETTE_INDEX.woodDark : PALETTE_INDEX.wood;
-    // Faint growth rings on the turned plate, a darker bead at the rim.
-    const ring = Math.sin(((r + valueNoise3(x * 0.08, 0, z * 0.08, seed) * 4) * voxel) / 0.018);
-    if (r > R - 0.012 / voxel) return PALETTE_INDEX.woodDark;
-    if (ring > 0.9 && h > 0.3) return PALETTE_INDEX.woodDark;
-    return h > 0.9 ? PALETTE_INDEX.woodLight : PALETTE_INDEX.wood;
+    if (y < top - thick - 0.5) return PALETTE_INDEX.wood;
+    // A soft hint of growth rings on the turned plate: broken, low contrast,
+    // so the stand stays quieter than the donut it carries (reference 04).
+    const ring = Math.sin(((r + valueNoise3(x * 0.08, 0, z * 0.08, seed) * 4) * voxel) / 0.024);
+    if (ring > 0.94 && h > 0.6) return PALETTE_INDEX.standWoodDeep;
+    return PALETTE_INDEX.standWood;
   });
   grid.takeDirty();
   return grid;

@@ -10,7 +10,7 @@ import {
   type DonutFlavor,
 } from '../../art/models/donut';
 import { STAND_HEIGHT, buildStand, standSize } from '../../art/models/stand';
-import { GLAZEY_VOXEL, buildGlazey } from '../../art/models/glazey';
+import { GLAZEY_FACE_VOXEL, GLAZEY_VOXEL, buildGlazey } from '../../art/models/glazey';
 import { BAKERY_SIZE, buildBakery } from '../../art/models/bakery';
 import { FINE_DECOR_VOXEL, buildGrassTuft } from '../../art/models/grassTuft';
 import { LIGHTHOUSE_LAMP, LIGHTHOUSE_SIZE, buildLighthouse } from '../../art/models/lighthouse';
@@ -69,7 +69,8 @@ function donutOnStand(
   for (let b = 0; b < bites; b++) {
     biteDonut(grid, flavor, { angle: 1.1 + b * 0.95 }, DV, seed + b);
   }
-  const radius = flavor === 'maple' ? ds[0] * DV * 0.36 : (ds[2] * DV) / 2 + 0.03;
+  // Stands a touch narrower than the donut, so the donut owns the plinth.
+  const radius = flavor === 'maple' ? ds[0] * DV * 0.3 : (ds[2] * DV) / 2 - 0.02;
   const ss = standSize(radius, STAND_VOXEL);
   return [
     {
@@ -94,7 +95,7 @@ export async function buildDonutGallery(
   aspect: number,
   quality: QualitySettings,
 ): Promise<ShotScene> {
-  const studio = createStudio(quality, { shadowExtent: 3.2 });
+  const studio = createStudio(quality, { shadowExtent: 3.2, back: -1.9 });
   const rows: DonutFlavor[][] = [
     ['strawberry', 'chocolate', 'jelly'],
     ['maple', 'rainbow', 'powdered'],
@@ -152,13 +153,14 @@ export async function buildBiteGallery(
         toward,
         r * 7 + b,
       );
+      // A few on the cloth right at the foot of the stand, where they fell.
       scatterCrumbs(
         crumbs,
-        (x + 0.25) / DV,
+        (x + 0.24) / DV,
         0,
-        (z + 0.5) / DV,
-        9 * b,
-        0.22 / DV,
+        (z + 0.34) / DV,
+        6 * b,
+        0.1 / DV,
         toward,
         r * 9 + b,
       );
@@ -183,13 +185,11 @@ export async function buildGlazeyGallery(
   const spacing = 1.32;
   for (let b = 0; b <= 5; b++) {
     const g = buildGlazey(b, b === 5 ? 'bliss' : 'happy');
-    items.push({
-      grid: g.grid,
-      voxel: GLAZEY_VOXEL,
-      pivot: g.pivot,
-      pos: new Vector3((b - 2.5) * spacing, 0, 0),
-      rotY: 0,
-    });
+    const pos = new Vector3((b - 2.5) * spacing, 0, 0);
+    items.push(
+      { grid: g.grid, voxel: GLAZEY_VOXEL, pivot: g.pivot, pos, rotY: 0 },
+      { grid: g.face.grid, voxel: GLAZEY_FACE_VOXEL, pivot: g.face.pivot, pos, rotY: 0 },
+    );
   }
   const placed = await populate(studio, items);
   const camera = studioCamera(aspect, 30, new Vector3(0, 1.9, 9.6), new Vector3(0, 0.5, 0));
@@ -212,7 +212,7 @@ export async function buildPropsGallery(
   aspect: number,
   quality: QualitySettings,
 ): Promise<ShotScene> {
-  const studio = createStudio(quality, { shadowExtent: 11, width: 70, depth: 14 });
+  const studio = createStudio(quality, { shadowExtent: 11, width: 70, depth: 14, back: -6.5 });
   const P32 = 1 / 32;
   const at = (x: number, z: number, y = 0): Vector3 => new Vector3(x, y, z);
   const base = (size: readonly number[]): [number, number, number] => [

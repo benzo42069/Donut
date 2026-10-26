@@ -47,8 +47,11 @@ iter 8. A new thread resumes from the newest `reviews/M3-iter*.md`.
     The cloth self-glow stays at 0.3; 0.45 with a lower threshold bloomed the
     whole cloth pink.
   - Hero camera: FOV 27, aimed lower, so there is less empty cloth on top.
-- **Motion scope:** the user has not yet ruled on motion (rubric 11) for M3.
-  It was asked before the iter 7 reviews.
+- **Motion scope (user override, 2026-10-26):** the user ruled motion (rubric 11:
+  squash, stretch, belly wobble) out of scope for M3. The gallery strip is a
+  turntable per PLAN §M3; that work belongs to M4/M5 and must be gated there.
+  The reviewers are told this; every other rubric item and the pass bar are
+  unchanged.
 
 - **Iter 6 changes (the iter 5 blockers, at their root causes):**
   - **Grey backdrop wedge**, flagged by both reviewers. I had misjudged the

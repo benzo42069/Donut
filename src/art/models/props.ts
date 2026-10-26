@@ -297,8 +297,8 @@ export function buildFence(posts: number, seed = 0): VoxelGrid {
         return ((y + a * 10) / 5) % 2 < 1 ? P.towerRed : P.towerCream;
       }
       // Wafer grid: golden with toasted score lines.
-      if ((x + seed) % 5 === 0 || y % 4 === 0) return P.doughToasted;
-      return P.doughGolden;
+      if ((x + seed) % 5 === 0 || y % 4 === 0) return P.bunToasted;
+      return P.bunGolden;
     },
   );
   grid.takeDirty();

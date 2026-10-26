@@ -12,11 +12,13 @@ import {
   PerspectiveCamera,
   Scene,
   SphereGeometry,
+  SpotLight,
   Vector3,
 } from 'three';
 import { LIGHT_PALETTE } from '../../art/palette';
 import type { QualitySettings } from '../../engine/quality';
 import type { PostSettings } from '../../engine/render/Renderer';
+import { DEFAULT_TUNING, type VoxelMaterialTuning } from '../../engine/render/Materials';
 
 /**
  * The asset gallery's photo studio (K-06, reference 04): a seamless cream cloth
@@ -26,7 +28,7 @@ import type { PostSettings } from '../../engine/render/Renderer';
 export interface Studio {
   scene: Scene;
   environment: Scene;
-  key: DirectionalLight;
+  key: SpotLight;
 }
 
 export interface StudioOptions {
@@ -105,50 +107,71 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   const depth = opts.depth ?? 8;
   const sweep = new Mesh(
     sweepGeometry(opts.width ?? 40, depth, opts.back ?? -3),
-    new MeshStandardMaterial({ color: new Color(LIGHT_PALETTE.studioCream), roughness: 0.92 }),
+    // The cloth barely sees the cool studio dome and carries a faint warm floor
+    // of its own, so outside the key's pool it falls off warm, never grey-blue.
+    new MeshStandardMaterial({
+      color: new Color(LIGHT_PALETTE.studioCream),
+      roughness: 0.92,
+      envMapIntensity: 0.25,
+      emissive: new Color(LIGHT_PALETTE.studioShade),
+      emissiveIntensity: 0.22,
+    }),
   );
   sweep.receiveShadow = true;
   scene.add(sweep);
 
-  // Key: a big warm softbox from the upper right (soft VSM shadows).
+  // Key: a warm spot from the upper right whose pool covers the subjects and
+  // falls off softly across the sweep, so the subjects hold the strongest
+  // contrast in the frame (art bible §4) and the cloth darkens toward the edges.
+  // No distance decay, so inside the pool it lights like the sun (soft VSM shadows).
   const keyDir = (opts.keyDir ?? new Vector3(0.75, 0.62, 0.42)).clone().normalize();
-  const key = new DirectionalLight(new Color(LIGHT_PALETTE.studioKey), 4.3);
-  key.position.copy(keyDir).multiplyScalar(30);
+  const ext = opts.shadowExtent ?? 4;
+  const dist = 30;
+  const angle = Math.atan((ext * 2.4) / dist);
+  const key = new SpotLight(new Color(LIGHT_PALETTE.studioKey), 4.6, 0, angle, 1, 0);
+  key.position.copy(keyDir).multiplyScalar(dist);
+  key.target.position.set(0, 0.3, 0);
   key.castShadow = true;
   key.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
-  const ext = opts.shadowExtent ?? 4;
-  Object.assign(key.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext });
   key.shadow.camera.near = 10;
   key.shadow.camera.far = 50;
-  // Blur and normal bias are set in texels, so a wide shadow camera (the props
-  // shelf) keeps the same softness without VSM streaks on thin parts.
-  const texel = (2 * ext) / quality.shadowMapSize;
+  // Blur and normal bias are set in texels, so a wide pool (the props shelf)
+  // keeps the same softness without VSM streaks on thin parts.
+  const texel = (2 * ext * 2.4) / quality.shadowMapSize;
   key.shadow.radius = Math.min(9, 0.045 / texel);
   key.shadow.blurSamples = 24;
-  key.shadow.bias = -0.0003;
+  key.shadow.bias = -0.001;
   key.shadow.normalBias = Math.max(0.012, texel * 2.5);
   scene.add(key, key.target);
 
-  // Cool fill from the sky side, warm bounce off the cloth.
+  // Cool fill from the front left: the shadow sides go blue-lilac (warm key,
+  // cool fill). A weak hemisphere keeps a warm bounce off the cloth below.
+  // The fill is a soft spot over the same area as the key, so it cools the
+  // subjects' shadow sides without turning the far cloth grey-blue.
+  const fill = new SpotLight(new Color(LIGHT_PALETTE.studioFill), 1.4, 0, angle, 1, 0);
+  fill.position.set(-0.8, 0.35, 0.6).normalize().multiplyScalar(dist);
+  fill.target.position.copy(key.target.position);
+  scene.add(fill, fill.target);
   scene.add(
     new HemisphereLight(
       new Color(LIGHT_PALETTE.studioFill),
       new Color(LIGHT_PALETTE.studioShade),
-      0.5,
+      0.25,
     ),
   );
   // Cool rim from the back left, so silhouettes separate from the cream sweep.
   const rim = new DirectionalLight(new Color(LIGHT_PALETTE.studioRim), 1.8);
   rim.position.set(-0.7, 0.55, -0.8).multiplyScalar(30);
   scene.add(rim, rim.target);
-  scene.environmentIntensity = 0.55;
+  scene.environmentIntensity = 0.4;
 
-  // Environment: the cream studio with two softboxes, for gloss reflections.
+  // Environment: a cool studio dome (ambient for the shadow sides) with warm
+  // softboxes, for gloss reflections.
   const environment = new Scene();
   environment.add(
     new Mesh(
       new SphereGeometry(40, 32, 16),
-      new MeshBasicMaterial({ color: new Color(LIGHT_PALETTE.studioShade), side: BackSide }),
+      new MeshBasicMaterial({ color: new Color(LIGHT_PALETTE.studioFill), side: BackSide }),
     ),
   );
   const softbox = (dir: Vector3, w: number, h: number, power: number): void => {
@@ -166,6 +189,13 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   return { scene, environment, key };
 }
 
+/**
+ * Studio material tuning: candy colors hold their hue only partly, and the warm
+ * wrap of soft materials is short, so the cool fill tints shadow sides (the
+ * island's full hold and long wrap keep them flat and warm).
+ */
+export const STUDIO_TUNING: VoxelMaterialTuning = { ...DEFAULT_TUNING, hueHold: 0.25, wrap: 0.2 };
+
 /** Studio post: crisp (no DoF), contact AO scaled to small props, light grade. */
 export const STUDIO_POST: PostSettings = {
   aoRadius: 0.12,
@@ -174,8 +204,8 @@ export const STUDIO_POST: PostSettings = {
   aoColor: LIGHT_PALETTE.studioOcclusion,
   bloomThreshold: 1.2,
   bloomIntensity: 0.4,
-  grade: 0.12,
-  vignette: 0.32,
+  grade: 0.1,
+  vignette: 0.24,
 };
 
 /**

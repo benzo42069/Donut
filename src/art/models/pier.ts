@@ -22,8 +22,8 @@ export function buildPier(topY: number): VoxelGrid {
     const k = along === 'x' ? z : x;
     if (k % 6 === 5) return 0;
     return hash3(Math.floor(k / 6), 0, along === 'x' ? Math.floor(x / 24) : z, 5) > 0.5
-      ? P.woodLight
-      : P.wood;
+      ? P.pierWoodLight
+      : P.pierWood;
   };
 
   // Stairs: 6-voxel treads with a stringer on each side.
@@ -35,11 +35,11 @@ export function buildPier(topY: number): VoxelGrid {
         // Stringer: a sloped beam under the treads.
         const line = topY - (x - stairStart) - 4;
         for (let y = Math.max(DECK - 2, line - 5); y < Math.min(topY + 1, line + 6); y++)
-          grid.set(x, y, z, P.woodDark);
+          grid.set(x, y, z, P.pierWoodDark);
         continue;
       }
       for (let y = stepTop - 2; y < stepTop; y++)
-        grid.set(x, y, z, x % 6 === 0 && x >= stairStart ? P.woodDark : P.woodLight);
+        grid.set(x, y, z, x % 6 === 0 && x >= stairStart ? P.pierWoodDark : P.pierWoodLight);
     }
   }
 
@@ -51,7 +51,7 @@ export function buildPier(topY: number): VoxelGrid {
     }
     // Edge beams under the deck.
     for (const z of [1, PIER_WIDTH - 2])
-      for (let y = DECK - 5; y < DECK - 2; y++) grid.set(x, y, z, P.woodDark);
+      for (let y = DECK - 5; y < DECK - 2; y++) grid.set(x, y, z, P.pierWoodDark);
   }
 
   // Posts: in the milk under the deck and stairs, taller with rope caps at the dock.
@@ -66,7 +66,12 @@ export function buildPier(topY: number): VoxelGrid {
       for (let dx = 0; dx < 4; dx++) {
         for (let dz = 0; dz < 4; dz++) {
           const rope = tall && y >= DECK + 4 && y < DECK + 7;
-          grid.set(px + dx, y, pz + dz, rope ? P.doughCrumb : y === top - 1 ? P.woodLight : P.wood);
+          grid.set(
+            px + dx,
+            y,
+            pz + dz,
+            rope ? P.doughCrumb : y === top - 1 ? P.pierWoodLight : P.pierWood,
+          );
         }
       }
     }
@@ -76,10 +81,10 @@ export function buildPier(topY: number): VoxelGrid {
   for (const z of [1, PIER_WIDTH - 2]) {
     for (let x = stairStart; x < deckStart; x++) {
       const line = topY - (x - stairStart) + 22;
-      grid.set(x, line, z, P.woodLight);
-      grid.set(x, line - 1, z, P.woodLight);
+      grid.set(x, line, z, P.pierWoodLight);
+      grid.set(x, line - 1, z, P.pierWoodLight);
       if ((x - stairStart) % 18 === 0)
-        for (let y = line - 24; y < line; y++) grid.set(x, y, z, P.wood);
+        for (let y = line - 24; y < line; y++) grid.set(x, y, z, P.pierWood);
     }
   }
 

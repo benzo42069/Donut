@@ -391,7 +391,6 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
   }
 
   if (lk.form === 'craggy') crackGlaze(grid, cx, cz, seed, v);
-  if (lk.topping === 'sugar') sugarGrains(grid, size, seed);
   if (lk.sprinkles) scatterSprinkles(grid, lk, size, cx, cy, cz, seed, v);
   grid.takeDirty();
   return grid;
@@ -475,20 +474,6 @@ function crackGlaze(grid: VoxelGrid, cx: number, cz: number, seed: number, v: nu
       seam.push([x, y, z]);
   });
   for (const [x, y, z] of seam) grid.set(x, y, z, PALETTE_INDEX.blueberryLight);
-}
-
-/** Loose sugar grains heaped on the dusting: a soft, sparkly, uneven top. */
-function sugarGrains(grid: VoxelGrid, size: readonly number[], seed: number): void {
-  const sugar = PALETTE_INDEX.donutSugar;
-  const sx = size[0] ?? 0;
-  const sz = size[2] ?? 0;
-  for (let x = 0; x < sx; x++)
-    for (let z = 0; z < sz; z++) {
-      if (hash3(x, z, seed, 61) > 0.12) continue;
-      let y = (size[1] ?? 0) - 1;
-      while (y > 0 && grid.get(x, y, z) === 0) y--;
-      if (grid.get(x, y, z) === sugar) grid.set(x, y + 1, z, sugar);
-    }
 }
 
 /**

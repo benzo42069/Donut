@@ -1,9 +1,9 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 3 under review)
+## M3 in progress: resume here (gate iter 4 in progress)
 
-M3 is NOT done. Iteration 3 is committed and was sent to two reviewers. If this
-thread stops, a new thread resumes at the iter 3 reports (`reviews/M3-iter3*.md`).
+M3 is NOT done. Iteration 4 is the plateau-rule structural change below. If
+this thread stops, a new thread resumes from the newest `reviews/M3-iter*.md`.
 Do not restart the milestone.
 
 - **Scores so far:**
@@ -12,9 +12,63 @@ Do not restart the milestone.
   |---|---|---|---|---|
   | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 |
   | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
+  | 3 | 6.6 | 7.0 | 6.80 | 0 / 0 |
 
-  The gain from iter 1 to 2 is +0.48, so the §5 plateau rule is not triggered.
-  If iter 3 also gains less than 0.3, iter 4 must be a structural change.
+- **Plateau rule (§5), triggered at iter 3.** Iter 3 gained +0.02, and both
+  reviewers called the plateau. Iter 4 makes a **structural change to the studio
+  lighting model** instead of more tuning. Reviewer 1 measured Glazey's shaded
+  side as only darker, not cooler (blue/red 0.445 lit vs 0.453 shaded). The cause
+  is in our own model: the `MAT.candy` hue-hold pulls *all* diffuse light,
+  including the cool fill, back to the albedo's hue, so no fill color can ever
+  make a shadow side cooler. The backdrop also gets the same light as the
+  subjects, so the subjects never hold the strongest contrast (art bible §4).
+  The new studio model:
+  1. A warm **spotlight key** with a soft penumbra, aimed at the subjects, so
+     the backdrop falls off darker outside the pool of light.
+  2. A separate **cool directional fill** from the front left.
+  3. Weaker hemisphere and environment light, and a lower studio hue-hold, so
+     the cool fill reaches shadow sides while candy colors keep their hue in the
+     key light.
+
+  Measure of success: Glazey's shaded side blue/red at least 0.08 above the lit
+  side (r1's target), and the backdrop behind each subject at least 15 % luma
+  away from it.
+
+- **Iter 4 changes:**
+  - Structural, the studio lighting model (`studio.ts`):
+    - The key is a warm `SpotLight` with full penumbra, and the fill is a cool
+      soft spot over the same area.
+    - Hemisphere and environment light are weaker. The environment dome is now
+      the cool fill color; it was warm before, and that was the main thing
+      keeping shadow sides warm.
+    - `STUDIO_TUNING` sets hue-hold 0.25 and wrap 0.2.
+    - The cloth gets little environment light, plus a faint warm self-glow.
+    - Shadow bias is -0.001 for the spot.
+  - Measured on Glazey stage 5, shaded side vs lit side, blue/red:
+    - Before: -0.055 (iter 3 capture).
+    - Now: +0.061.
+    - r1's target is +0.08. Coral reflects very little blue, so it moves less
+      than the frosting and glaze do. In the images, cast shadows and shadow
+      sides now read lilac against warm lit sides.
+  - Classic glaze: pale pink-beige (`#EFCDB0`), clearly apart from the maple.
+  - The hero grid is wider (1.16 × 1.14) and the camera is pulled back, so no
+    donut hides another.
+  - Glazey: the face is lifted one voxel. The belly is a narrower egg with a
+    convex top. The facing test tilts down, so the patch stays a full oval
+    (checked with an ASCII front-view dump).
+  - Pier planks are relaxed (`pierWood*`). The fence wafer rails use `bun*`.
+  - The sugar-grain pass is removed; its single-voxel pits showed as grey
+    pepper on the powdered tops.
+  - Tried and reverted:
+    - An environment intensity of 0.6, which flattened the modeling.
+    - A directional fill, which turned the far cloth grey-blue.
+- **Still open:**
+  - The canopy sprinkles still sit on the surface.
+  - The jelly does not ooze from a split.
+  - The pretzel trunk and the hanging donuts on the donut tree.
+  - The rainbow band edges.
+  - Motion: the strip is a turntable by gate definition, and the belly wobble
+    is M5.
 - **Iter 3 changes** (from both iter 2 fix lists):
   - Glazey:
     - The decal lands only where the body faces the front (normal z > 0.35)

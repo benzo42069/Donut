@@ -138,7 +138,9 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     const gx = skin(x + e, y, z) - skin(x - e, y, z);
     const gy = skin(x, y + e, z) - skin(x, y - e, z);
     const gz = skin(x, y, z + e) - skin(x, y, z - e);
-    return gz > FACING * Math.hypot(gx, gy, gz);
+    // Facing a little downward still counts: the camera looks down at Glazey,
+    // and the belly patch must stay a full oval over the round lower body.
+    return gz - 0.6 * gy > FACING * Math.hypot(gx, gy, gz) * 1.17;
   };
   // Open a shallow socket under every face feature (shrunk a little, so the
   // decal's clean outline overlaps the body's voxel edge instead of exposing it).
@@ -230,7 +232,7 @@ function faceLayout(
 ): (x: number, y: number, shrink: number) => FaceHit | null {
   const open = expression === 'happy' || expression === 'surprised';
   const eyeX = rx * lerp(0.42, 0.33, t);
-  const eyeY = y0 + ry * lerp(0.22, 0.14, t);
+  const eyeY = y0 + ry * lerp(0.22, 0.14, t) + 0.8;
   const eyeRx = expression === 'surprised' ? 3.7 : 3.4;
   const eyeRy = expression === 'surprised' ? 4.3 : 3.95;
   const mouthY = eyeY - lerp(4.7, 4.3, t);
@@ -242,7 +244,7 @@ function faceLayout(
   const bellyBot = FOOT_CREASE + 1.2;
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
-  const bellyRx = rx * lerp(0.56, 0.6, t);
+  const bellyRx = rx * lerp(0.48, 0.52, t);
   // Normalized radius inside an ellipse, inset by `s` body voxels.
   const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
     Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
@@ -288,7 +290,7 @@ function faceLayout(
     // The cream belly patch: an egg below the mouth, narrower on top, so its
     // top edge is a clear convex curve (sheet 03), not a flat bowl rim.
     const by = (y - bellyCy) / bellyRy;
-    const egg = bellyRx * (1 - 0.2 * Math.max(-1, Math.min(1, by)));
+    const egg = bellyRx * (1 - 0.3 * Math.max(-1, Math.min(1, by)));
     if (ell(x, y - bellyCy, egg, bellyRy, s) <= 1) return { color: 'glazeyBellySoft', lift: 0.3 };
     return null;
   };

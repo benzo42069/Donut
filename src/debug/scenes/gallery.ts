@@ -38,7 +38,7 @@ import { createVoxelMaterial } from '../../engine/render/Materials';
 import { MesherPool } from '../../engine/voxel/MesherPool';
 import { placeModel, type Placed } from '../../engine/voxel/placeModel';
 import type { ShotScene } from '../shotTypes';
-import { STUDIO_POST, createStudio, studioCamera, type Studio } from './studio';
+import { STUDIO_POST, STUDIO_TUNING, createStudio, studioCamera, type Studio } from './studio';
 
 /** Gallery donuts use the close-up hero density (the Munch and close-ups use it). */
 const DV = DONUT_HERO_VOXEL;
@@ -46,7 +46,7 @@ const STAND_VOXEL = 1 / 128;
 
 /** Meshes placed models into the studio; resolves when every chunk is uploaded. */
 async function populate(studio: Studio, items: Placed[]): Promise<ReturnType<typeof placeModel>[]> {
-  const material = createVoxelMaterial();
+  const material = createVoxelMaterial({}, STUDIO_TUNING);
   const pool = new MesherPool();
   const placed = items.map((p) => placeModel(p, material, pool));
   for (const p of placed) studio.scene.add(p.group);
@@ -102,8 +102,8 @@ export async function buildDonutGallery(
     ['glazed', 'blueberry', 'mystery'],
   ];
   const items: Placed[] = [];
-  const gx = 1.08;
-  const gz = 1.0;
+  const gx = 1.16;
+  const gz = 1.14;
   rows.forEach((row, r) =>
     row.forEach((flavor, c) => {
       const x = (c - 1) * gx;
@@ -118,7 +118,7 @@ export async function buildDonutGallery(
   const glow = new PointLight(new Color(LIGHT_PALETTE.lampLight), 0.6, 1.6, 2);
   glow.position.set(0, STAND_HEIGHT + 0.3, 0);
   studio.scene.add(glow);
-  const camera = studioCamera(aspect, 30, new Vector3(0, 2.75, 4.7), new Vector3(0, 0.12, -0.15));
+  const camera = studioCamera(aspect, 30, new Vector3(0, 3.05, 5.1), new Vector3(0, 0.1, -0.1));
   return { scene: studio.scene, camera, environment: studio.environment, post: STUDIO_POST };
 }
 

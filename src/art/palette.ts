@@ -65,7 +65,7 @@ export const VOXEL_PALETTE = {
   blueberry: entry('#7C8CE0', MAT.gloss | MAT.candy, 0.03),
   milk: entry('#FFF6E6', MAT.gloss | MAT.translucent, 0.02),
   powderedSugar: entry('#FBF3EA', MAT.rough | MAT.soft | MAT.smooth, 0.03),
-  classicGlaze: entry('#F1CB92', MAT.gloss | MAT.translucent, 0.02),
+  classicGlaze: entry('#EFCDB0', MAT.gloss | MAT.translucent, 0.02),
   // Glazey (art bible §7, D-01)
   glazeyCoral: entry('#F28B6E'),
   glazeyBelly: entry('#F5E2A8'),
@@ -168,7 +168,7 @@ export const VOXEL_PALETTE = {
   crystalLilac: entry('#CDB4F0', MAT.gloss | MAT.glow, 0.03),
   crystalMint: entry('#B2EAD6', MAT.gloss | MAT.glow, 0.03),
   // Classic glaze where it runs thin and the golden dough shows through.
-  classicGlazeThin: entry('#E6B072', MAT.gloss | MAT.translucent, 0.02),
+  classicGlazeThin: entry('#E8BB8A', MAT.gloss | MAT.translucent, 0.02),
   // Lighthouse lantern: relaxed twins of the deck, rail and glow band, so the
   // small cylinders don't shade as alternating front/side voxel stripes.
   lanternGlow: entry('#FFD27A', MAT.glow | MAT.smooth, 0.02),
@@ -207,6 +207,11 @@ export const VOXEL_PALETTE = {
   // rock reads as one rounded lump, not stacked blocks.
   rockGinger: entry('#94562F', MAT.soft | MAT.smooth, 0.05),
   rockGingerDark: entry('#7E4220', MAT.soft | MAT.smooth, 0.05),
+  // Pier planks: relaxed twins of the prop woods, so boards read as rounded,
+  // worn planks rather than Lego bricks.
+  pierWood: entry('#9A5E36', MAT.soft | MAT.smooth, 0.045),
+  pierWoodLight: entry('#C08552', MAT.soft | MAT.smooth, 0.045),
+  pierWoodDark: entry('#6E3F24', MAT.soft | MAT.smooth, 0.045),
   standWood: entry('#A67C58', MAT.soft | MAT.smooth, 0.03),
   standWoodDeep: entry('#8E6646', MAT.soft | MAT.smooth, 0.03),
 } as const satisfies Record<string, PaletteEntry>;

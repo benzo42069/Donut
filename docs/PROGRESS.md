@@ -1,34 +1,55 @@
 # Progress
 
-## M3 in progress: resume here (user chose option B; gate iter 7)
+## M3 ESCALATED to the user after iter 8 (AGENTIC_LOOP §6): waiting for a decision
 
-M3 is NOT done. After the iter 6 escalation the user chose **option B**: rebaseline
-M2 on the GPU path, then continue iterations 7–8. Escalation (§6) is due after
-iter 8. A new thread resumes from the newest `reviews/M3-iter*.md`.
+M3 is NOT done and the gate has NOT passed. All 8 iterations are spent. The relay
+is paused: do not hand off or start more gate iterations until the user decides.
 
-- **Scores so far:**
+- **Scores:**
 
-  | iter | r1 | r2 | gate mean | blockers |
-  |---|---|---|---|---|
-  | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 |
-  | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
-  | 3 | 6.6 | 7.0 | **6.80** (best) | 0 / 0 |
-  | 4 | 6.65 | 6.9 | 6.78 | 0 / 1 |
-  | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 |
-  | 6 | 6.55 | 6.8 | 6.68 | 0 / 1 |
+  | iter | r1 | r2 | gate mean | blockers | note |
+  |---|---|---|---|---|---|
+  | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 | SwiftShader |
+  | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 | GPU path from here |
+  | 3 | 6.6 | 7.0 | **6.80** | 0 / 0 | best mean |
+  | 4 | 6.65 | 6.9 | 6.78 | 0 / 1 | studio lighting rewrite |
+  | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 | asset re-authoring |
+  | 6 | 6.55 | 6.8 | 6.68 | 0 / 1 | first escalation, user chose B |
+  | 7 | 6.58 | 6.9 | 6.74 | 0 / 0 | GPU M2 baseline, motion out of scope |
+  | 8 | 6.6 | 6.9 | 6.75 | 0 / 0 | final |
 
-- **Iter 7:** r1 6.58, r2 6.9, gate mean 6.74, 0 / 0 blockers, no regressions
-  against the new GPU M2 baseline.
-- **Iter 8 changes** (the final iteration before §6 escalation; studio and
-  Glazey only, so no M2-shared file changed):
-  - `STUDIO_TUNING.hueHold` goes 0.25 → 0.5. The low hold let the warm key
-    wash the rainbow to pastel and the cool fill turn the bite pockets olive.
-  - The hemisphere is warm (`studioCloth` sky, `studioClothGlow` ground), and
-    the key cone is wider (`ext * 2.3`). Corner saturation is now 0.16–0.25.
-  - The Glazey lineup uses a long lens (FOV 19 from 14.2 m), so it fills the
-    frame width without wide-angle skew. The skew had made the end Glazeys'
-    bellies read lopsided.
-  - The belly top sits right under the mouth (gap 0.15).
+  The pass bar is a 9.0 mean with every category ≥ 8. From iter 2 to iter 8 the
+  mean moved within 6.65–6.80. Iters 7–8 are the first clean rounds (no
+  blockers and no regressions against the GPU M2 baseline), and the minimum
+  category rose from 5 to 6. Reviewer 1 notes that iter 8 was again mostly
+  parameter work, although §5 asked for a structural change; that is accurate.
+- **Top 3 unresolved findings:**
+  1. **Glazey's surface and body:** stucco or checker skin at 1:1, concentric
+     rings on the belly decal, a bell-shaped skirt, and an arm that reads as a
+     nose in profile. Iter 8's warm hemisphere also made the shadow side hot
+     coral instead of cool.
+  2. **Rainbow centerpiece:** pastel bands with stair-stepped borders, glare in
+     the hole, and no glow halo, so it does not read as the hero of the lineup.
+  3. **Asset fidelity across the set:**
+     - props: fence, pretzel trunk, rock sugar, hanging donuts, and one shadow
+       with no visible caster;
+     - classic glaze: opaque fondant, not translucent;
+     - bite pockets: khaki, with floating crumbs;
+     - crystal and lamp: weak glow.
+- **Options for the user:**
+  - **A. Accept M3 with follow-ups**, as with M2, and hand off to M4. The open
+    findings are in `reviews/M3-iter8*.md`.
+  - **B. Split the gate:** accept the donut library, bites and props now, and
+    re-gate Glazey inside M4 ("Glazey in motion"), where the character is
+    rebuilt for animation anyway.
+  - **C. Fund a structural rewrite** beyond iter 8, with a fixed budget (for
+    example 3 more iterations):
+    - Glazey's body at 1/64 m, or a smooth-skin approach;
+    - a rebuilt rainbow;
+    - a full props pass.
+
+    The bar stays at 9.0.
+
 - **Rebaseline (user-approved):** `shots/M2/final/` is now captured on the GPU
   path (ANGLE Metal, Apple M4) from the accepted M2 commit `51cae65`, so the
   baseline holds no M3 change. The old SwiftShader set is kept in

@@ -85,7 +85,13 @@ const LOOK: Record<DonutFlavor, FlavorLook> = {
   }),
   powdered: look({ top: 'donutSugar', side: 'donutSugar', topping: 'sugar', drip: 0 }),
   // Classic glaze: thin, pale and translucent, running far down the sides.
-  glazed: look({ top: 'classicGlaze', side: 'classicGlaze', drip: 0.08, frost: 0.016, line: 0 }),
+  glazed: look({
+    top: 'classicGlaze',
+    side: 'classicGlaze',
+    drip: 0.065,
+    frost: 0.016,
+    line: 0.02,
+  }),
   // RF-15: soft periwinkle glaze over a craggy, cracked old-fashioned ring.
   blueberry: look({
     form: 'craggy',
@@ -209,12 +215,12 @@ function bodySdf(flavor: DonutFlavor, seed: number, v: number) {
       const th = Math.atan2(z, x);
       const petal = Math.pow(0.5 + 0.5 * Math.cos(th * 9 + seed), 2);
       const out = Math.max(0, q / a0);
-      a += a0 * 0.16 * petal * out;
-      b += b0 * 0.1 * petal * Math.max(0, 1 - Math.abs(q / a0 - 0.6));
+      a += a0 * 0.24 * petal * out;
+      b += b0 * 0.16 * petal * Math.max(0, 1 - Math.abs(q / a0 - 0.6));
       const n = fbm3(x * 0.09 * v * 64, y * 0.09 * v * 64, z * 0.09 * v * 64, 3, seed + 7);
       const m = fbm3(x * v * 22, y * v * 22, z * v * 22, 2, seed + 11);
-      a += ((n - 0.5) * 0.04 + (m - 0.5) * 0.008) / v;
-      b += ((n - 0.5) * 0.03 + (m - 0.5) * 0.006) / v;
+      a += ((n - 0.5) * 0.07 + (m - 0.5) * 0.008) / v;
+      b += ((n - 0.5) * 0.055 + (m - 0.5) * 0.006) / v;
     }
     const k = Math.hypot(q / a, y / b);
     return (k - 1) * Math.min(a, b);
@@ -335,7 +341,8 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
         const j = jelly(px, py, pz);
         if (j <= 0) return j < -1.5 ? PALETTE_INDEX.jellyRed : PALETTE_INDEX.jellyDeep;
         // The dough tears open around the jelly: a rim of crumb.
-        if (j < 1.6 && inDough) return h > 0.4 ? PALETTE_INDEX.doughCrumb : PALETTE_INDEX.crumbPore;
+        if (j < 1.6 && inDough)
+          return h > 0.4 ? PALETTE_INDEX.crumbFresh : PALETTE_INDEX.crumbFreshPore;
       }
       if (sugar) {
         // Sugar dusts the top faces only, thinning out down the sides.
@@ -370,21 +377,17 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
     h: number,
   ): number {
     if (!inDough) return 0;
-    if (py < -(d.b - 0.035 * s) / v) {
-      return h > 0.3 ? PALETTE_INDEX.doughToasted : PALETTE_INDEX.doughCrust;
-    }
-    // Pale fried band around the waist (outer side only), then golden.
-    // Soft-edged: crumb fades into golden through a dither, so there is no hard patch.
+    if (py < -(d.b - 0.035 * s) / v) return PALETTE_INDEX.bunToasted;
+    // A clean pale fried band around the waist (outer side only), then golden.
     const bandT = Math.abs(py + (0.01 * s) / v) / ((0.026 * s) / v);
     const q = isRing
       ? Math.hypot(px, pz) - d.R / v
       : Math.hypot(Math.max(Math.abs(px) - d.L / v, 0), pz);
-    if (outer && bandT < 1 && q > (d.a - 0.05 * s) / v && h > bandT * bandT) {
-      return PALETTE_INDEX.doughCrumb;
-    }
-    if (lk.form === 'craggy')
-      return h > 0.55 ? PALETTE_INDEX.doughToasted : PALETTE_INDEX.doughGolden;
-    return h > 0.88 ? PALETTE_INDEX.doughToasted : PALETTE_INDEX.doughGolden;
+    // Soft-edged: a short dither at the band's edges, solid in its middle.
+    if (outer && bandT < 1 && q > (d.a - 0.05 * s) / v && h > Math.max(0, bandT - 0.5) * 2)
+      return PALETTE_INDEX.bunCrumb;
+    if (lk.form === 'craggy') return h > 0.7 ? PALETTE_INDEX.bunToasted : PALETTE_INDEX.bunGolden;
+    return PALETTE_INDEX.bunGolden;
   }
 
   if (lk.form === 'craggy') crackGlaze(grid, cx, cz, seed, v);
@@ -435,17 +438,15 @@ function toppingColor(
     // dough glows through it.
     const t = -py / (d.b / v);
     const n = valueNoise3(px * 0.12, py * 0.12, pz * 0.12, seed + 4);
-    if (t + n * 0.3 > 0.32) return 'classicGlazeThin';
-    // On the crown the glaze pools thick and pale in soft patches, thinner
-    // (dough-tinted) between them, so it reads as a see-through sugar sheet.
-    return n > 0.58 ? 'classicGlazePool' : 'classicGlaze';
+    // An even amber sheet on the crown, thinning golden down the slopes and drips.
+    return t + n * 0.15 > 0.3 ? 'classicGlazeThin' : 'classicGlaze';
   }
   return top ? lk.top : lk.side;
 }
 
 /**
  * Old-fashioned cracks: short, irregular fissures where the glaze thins over
- * the valleys between the crags (reference 04). Color only: the glaze darkens
+ * the valleys between the crags (reference 04). Color only: the glaze lightens
  * along a wobbly seam that tapers at both ends, so no straight slot or hole
  * ever opens to the dough.
  */
@@ -473,7 +474,7 @@ function crackGlaze(grid: VoxelGrid, cx: number, cz: number, seed: number, v: nu
     if (glaze.has(c) && grid.get(x, y + 1, z) === 0 && crackAt(x, y, z) < 0.02)
       seam.push([x, y, z]);
   });
-  for (const [x, y, z] of seam) grid.set(x, y, z, PALETTE_INDEX.blueberryShadow);
+  for (const [x, y, z] of seam) grid.set(x, y, z, PALETTE_INDEX.blueberryLight);
 }
 
 /** Loose sugar grains heaped on the dusting: a soft, sparkly, uneven top. */
@@ -606,17 +607,14 @@ export function biteDonut(
   const max: [number, number, number] = [size[0], size[1], size[2]];
   const removed = carveSdf(grid, sdf, [0, 0, 0], max);
   const dough = new Set([
-    PALETTE_INDEX.doughGolden,
-    PALETTE_INDEX.doughToasted,
-    PALETTE_INDEX.doughCrumb,
-    PALETTE_INDEX.doughCrust,
+    PALETTE_INDEX.bunGolden,
+    PALETTE_INDEX.bunToasted,
+    PALETTE_INDEX.bunCrumb,
   ]);
   grid.forEachVoxel((x, y, z, c) => {
     if (!dough.has(c)) return;
     const dd = sdf(x + 0.5, y + 0.5, z + 0.5);
     if (dd > 2.2 || dd < 0) return;
-    // Crust stays as a thin toasted skin at the very bottom; inside is crumb.
-    if (c === PALETTE_INDEX.doughCrust && hash3(x, y, z, 7) > 0.5) return;
     // Light, open crumb: pale gold with small single-voxel pores, never big
     // dark patches (AO alone deepens the pits).
     const h = hash3(x, y, z, seed + 13);

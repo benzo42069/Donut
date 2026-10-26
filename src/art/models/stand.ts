@@ -46,7 +46,7 @@ export function buildStand(radius: number, voxel: number, seed = 0): VoxelGrid {
     // A soft hint of growth rings on the turned plate: broken, low contrast,
     // so the stand stays quieter than the donut it carries (reference 04).
     const ring = Math.sin(((r + valueNoise3(x * 0.08, 0, z * 0.08, seed) * 4) * voxel) / 0.024);
-    if (ring > 0.94 && h > 0.6) return PALETTE_INDEX.standWoodDeep;
+    if (ring > 0.97 && h > 0.7) return PALETTE_INDEX.standWoodDeep;
     return PALETTE_INDEX.standWood;
   });
   grid.takeDirty();

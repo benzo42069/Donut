@@ -14,7 +14,7 @@ export type TreeLeaf = 'green' | 'mint' | 'pink';
 const LEAVES: Record<TreeLeaf, [VoxelColorName, VoxelColorName, VoxelColorName]> = {
   green: ['leafGreen', 'leafDeep', 'leafMint'],
   mint: ['leafMint', 'leafGreen', 'grassLight'],
-  pink: ['frostingPinkLight', 'frostingPink', 'frostingPinkShadow'],
+  pink: ['canopyPinkLight', 'canopyPink', 'canopyPinkShadow'],
 };
 
 const SPRINKLES: VoxelColorName[] = [

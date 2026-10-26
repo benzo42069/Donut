@@ -71,12 +71,14 @@ function sweepGeometry(width: number, depth: number, back: number): BufferGeomet
     }
     for (let k = 0; k <= nu; k++) {
       const x = (k / nu - 0.5) * width;
-      // Soft hanging folds that fade out toward the floor (reference 04's cloth).
-      const up = Math.min(1, Math.max(0, (y - 0.6) / 3.5));
+      // Soft draped folds (reference 04's cloth): diagonal swags of uneven width
+      // and depth, starting on the curve and fading out toward the floor.
+      const up = Math.min(1, Math.max(0, (y - 0.15) / 2.5));
+      const swell = 0.6 + 0.4 * Math.sin(x * 0.23 + 1.3);
       const fold =
-        (0.16 * Math.sin(x * 0.7 + 0.7) +
-          0.075 * Math.sin(x * 1.6 + 1.9) +
-          0.035 * Math.sin(x * 2.9)) *
+        (0.13 * Math.sin(x * 0.55 + y * 0.42 + 0.7) * swell +
+          0.07 * Math.sin(x * 1.37 - y * 0.61 + 1.9) +
+          0.03 * Math.sin(x * 2.71 + y * 0.9)) *
         up;
       pos[i++] = x;
       pos[i++] = y;
@@ -169,10 +171,11 @@ export const STUDIO_POST: PostSettings = {
   aoRadius: 0.12,
   aoFalloff: 0.15,
   aoIntensity: 2.2,
+  aoColor: LIGHT_PALETTE.studioOcclusion,
   bloomThreshold: 1.2,
   bloomIntensity: 0.4,
-  grade: 0.08,
-  vignette: 0.22,
+  grade: 0.12,
+  vignette: 0.32,
 };
 
 /**

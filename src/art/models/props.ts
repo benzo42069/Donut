@@ -237,7 +237,7 @@ export function buildGingerRock(seed: number): VoxelGrid {
   const rock: Sdf = (x, y, z) => {
     const d = Math.hypot(x / 24, (y - 12) / 18, z / 20) - 1;
     const n = fbm3(x / 9 + seed, y / 9, z / 9, 3, 11) - 0.5;
-    // Flat cleaved facets: quantized noise, crisp ledges like the M2 crag.
+    // A lumpy boulder, relaxed smooth at gallery distance.
     return d * 18 + n * 9 + Math.max(0, -y);
   };
   voxelize(
@@ -250,7 +250,7 @@ export function buildGingerRock(seed: number): VoxelGrid {
       // Sugar caps: whole, soft-edged drifts on the upper faces only.
       if (top && y > 20 && valueNoise3(x * 0.09, y * 0.09, z * 0.09, seed) > 0.3)
         return P.donutSugar;
-      return hash3(x, y, z, seed) > 0.6 ? P.gingerCragDark : P.gingerCrag;
+      return hash3(x, y, z, seed) > 0.6 ? P.rockGingerDark : P.rockGinger;
     },
   );
   grid.takeDirty();

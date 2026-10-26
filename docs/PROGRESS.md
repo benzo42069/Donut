@@ -1,13 +1,60 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 2 under review)
+## M3 in progress: resume here (gate iter 3 under review)
 
-M3 is NOT done. Iteration 2 is committed and was sent to two reviewers. If this
-thread stops, a new thread resumes at the iter 2 reports (`reviews/M3-iter2*.md`).
+M3 is NOT done. Iteration 3 is committed and was sent to two reviewers. If this
+thread stops, a new thread resumes at the iter 3 reports (`reviews/M3-iter3*.md`).
 Do not restart the milestone.
 
-- **Iter 1** (f037548): `reviews/M3-iter1.md` FAIL 6.1 (min 5, 0 blockers);
-  `reviews/M3-iter1-r2.md` FAIL 6.5 (min 4, 2 blockers).
+- **Scores so far:**
+
+  | iter | r1 | r2 | gate mean | blockers |
+  |---|---|---|---|---|
+  | 1 | 6.1 | 6.5 | 6.30 | 0 / 2 |
+  | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
+
+  The gain from iter 1 to 2 is +0.48, so the §5 plateau rule is not triggered.
+  If iter 3 also gains less than 0.3, iter 4 must be a structural change.
+- **Iter 3 changes** (from both iter 2 fix lists):
+  - Glazey:
+    - The decal lands only where the body faces the front (normal z > 0.35)
+      and above the foot crease, so there is no belly strap on the sides and no
+      cream in the rear crease.
+    - The eye domes stand at most 1 body voxel proud.
+    - The belly patch is a smaller egg with a rounded top, inside the
+      front-facing area.
+    - The arms angle about 35° down instead of sticking out like fins.
+    - The lineup spacing is now 1.4.
+  - Bites:
+    - `crumbFresh*` is a richer gold. Pockets measure R−G of 26–31, against
+      r1's ≥ 25 target.
+    - A warm studio AO tint (`PostSettings.aoColor`, `studioOcclusion`).
+    - No crust specks.
+    - Crumbs sit only on the cloth by each stand foot. The plate is now
+      narrower than the donut, so there is no ledge for them.
+  - Classic glaze: an even amber sheet (`#F1CB92`), thin and golden on the
+    slopes. The line is raised so the dough band shows. No blotches, and it now
+    separates from the backdrop.
+  - Donut dough: relaxed `bun*` entries (grain jitter 0.06) with a clean pale
+    band. The bark streaks are gone.
+  - Stands are relaxed, smooth turned wood with sparse grain.
+  - Studio:
+    - A warmer key (`#FFE3C2`) and cooler fill on a whiter sweep.
+    - Diagonal, irregular folds.
+    - Grade 0.12 and vignette 0.32.
+    - The donut camera is lower and tighter, with no dead lower third.
+  - Blueberry: bigger petals and lumps, with lighter (not dark) fissures.
+  - Props:
+    - The crystals use `MAT.glow` and bloom.
+    - The pink canopy is matte (`canopyPink*`).
+    - The gingerbread rock is relaxed (`rockGinger*`).
+    - The props wall is pushed back to -9.
+  - Tried and reverted: a bloom threshold of 0.95. The cream backdrop bloomed
+    into a milky haze.
+- **Not done yet:** the pier, fence and pretzel-trunk chunkiness, embedded
+  canopy sprinkles, jelly seated in a split, and squash/stretch motion. Motion is
+  a turntable strip by gate definition. The belly wobble is M5.
+
 - **Iter 2 changes:**
   - Blocker, lantern streaks: these were not shadow acne. They stayed with key
     shadows, AO and the lamp light all off. They were the voxel staircase of the

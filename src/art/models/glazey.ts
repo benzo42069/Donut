@@ -92,12 +92,12 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     bellyR,
     bellyR * 0.9,
   );
-  // Stubby arms, angled down and out; feet peeking out in front.
+  // Stubby arms, angled about 35° down and a little forward (sheet 03), not fins.
   const arm = (s: number): Sdf =>
     capsule(
-      [s * rx * 0.8, y0 + ry * 0.02, rz * 0.05],
-      [s * (rx + lerp(3.6, 2.6, t)), y0 - ry * lerp(0.32, 0.22, t), rz * 0.25],
-      lerp(3.0, 2.8, t),
+      [s * rx * 0.8, y0 + ry * 0.02, rz * 0.08],
+      [s * (rx + lerp(2.4, 1.8, t)), y0 - ry * lerp(0.42, 0.34, t), rz * 0.3],
+      lerp(3.2, 3.0, t),
     );
   const foot = (s: number): Sdf =>
     ellipsoid(s * rx * lerp(0.42, 0.36, t), 2.3, rz * lerp(0.22, 0.3, t), 4.4, 2.8, 5.4);
@@ -130,13 +130,23 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     [2 * W, H, W + D],
     () => PALETTE_INDEX.glazeyBody,
   );
+  // The decal only lands where the body faces the front, above the feet, so the
+  // belly patch never wraps around the sides or into the foot crease.
+  const facing = (x: number, y: number, z: number): boolean => {
+    if (z <= 0 || y < FOOT_CREASE) return false;
+    const e = 0.5;
+    const gx = skin(x + e, y, z) - skin(x - e, y, z);
+    const gy = skin(x, y + e, z) - skin(x, y - e, z);
+    const gz = skin(x, y, z + e) - skin(x, y, z - e);
+    return gz > FACING * Math.hypot(gx, gy, gz);
+  };
   // Open a shallow socket under every face feature (shrunk a little, so the
   // decal's clean outline overlaps the body's voxel edge instead of exposing it).
   grid.forEachVoxel((gx, gy, gz) => {
     const x = gx + 0.5 - ox;
     const y = gy + 0.5;
     const z = gz + 0.5 - oz;
-    if (z <= 0 || !face(x, y, SOCKET_SHRINK)) return;
+    if (!face(x, y, SOCKET_SHRINK) || !facing(x, y, z)) return;
     if (skin(x, y, z) > -SOCKET_DEPTH) grid.set(gx, gy, gz, 0);
   });
   grid.takeDirty();
@@ -156,7 +166,8 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     const f = face(x, y, 0);
     if (!f) return 0;
     const d = skin(x, y, z);
-    return d <= f.lift && d > -SOCKET_DEPTH - 0.8 ? PALETTE_INDEX[f.color] : 0;
+    if (d > f.lift || d <= -SOCKET_DEPTH - 0.8 || !facing(x, y, z)) return 0;
+    return PALETTE_INDEX[f.color];
   });
   // The rainbow tuft, also at decal density: five rounded sprinkle capsules.
   const ty0 = Math.floor((y0 + ry - 4) * F);
@@ -193,6 +204,10 @@ export const GLAZEY_FACE_VOXEL = GLAZEY_VOXEL / FACE_SCALE;
 /** Socket depth under the decal and its inset from the outline (body voxels). */
 const SOCKET_DEPTH = 2;
 const SOCKET_SHRINK = 0.8;
+/** The decal needs a surface facing the front at least this much (normal z). */
+const FACING = 0.35;
+/** Height of the body–foot crease (body voxels); nothing is painted below it. */
+const FOOT_CREASE = 4.6;
 
 interface FaceHit {
   color: VoxelColorName;
@@ -224,10 +239,10 @@ function faceLayout(
   const cheekX = eyeX + 2.3;
   const cheekY = mouthY + 0.2;
   const bellyTop = mouthY - mouthRy - 0.3;
-  const bellyBot = y0 - ry * 0.98;
+  const bellyBot = FOOT_CREASE + 1.2;
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
-  const bellyRx = rx * lerp(0.7, 0.72, t);
+  const bellyRx = rx * lerp(0.56, 0.6, t);
   // Normalized radius inside an ellipse, inset by `s` body voxels.
   const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
     Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
@@ -242,7 +257,8 @@ function faceLayout(
           // fixed in the sheet), a small twinkle low right, a warm lower iris.
           const u = ex / eyeRx;
           const v = ey / eyeRy;
-          const lift = 0.45 + 0.9 * Math.sqrt(Math.max(0, 1 - r * r));
+          // At most one body voxel proud, so in profile it reads as part of the head.
+          const lift = 0.35 + 0.6 * Math.sqrt(Math.max(0, 1 - r * r));
           if (Math.hypot(u + 0.32, v - 0.36) < 0.27) return { color: 'eyeShine', lift };
           if (Math.hypot(u - 0.36, v + 0.4) < 0.12) return { color: 'eyeShine', lift };
           if (r < 0.5) return { color: 'eyePupil', lift };
@@ -269,9 +285,11 @@ function faceLayout(
       if (my < top && ell(mx, my, mouthRx, mouthRy, s) <= 1)
         return { color: my < -mouthRy * 0.4 ? 'tongueSoft' : 'mouthInside', lift: 0.4 };
     }
-    // The cream belly patch: a clean ellipse below the mouth.
-    if (ell(x, y - bellyCy, bellyRx, bellyRy, s) <= 1)
-      return { color: 'glazeyBellySoft', lift: 0.3 };
+    // The cream belly patch: an egg below the mouth, narrower on top, so its
+    // top edge is a clear convex curve (sheet 03), not a flat bowl rim.
+    const by = (y - bellyCy) / bellyRy;
+    const egg = bellyRx * (1 - 0.2 * Math.max(-1, Math.min(1, by)));
+    if (ell(x, y - bellyCy, egg, bellyRy, s) <= 1) return { color: 'glazeyBellySoft', lift: 0.3 };
     return null;
   };
 }

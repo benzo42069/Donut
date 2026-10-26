@@ -118,7 +118,7 @@ export async function buildDonutGallery(
   const glow = new PointLight(new Color(LIGHT_PALETTE.lampLight), 0.6, 1.6, 2);
   glow.position.set(0, STAND_HEIGHT + 0.3, 0);
   studio.scene.add(glow);
-  const camera = studioCamera(aspect, 30, new Vector3(0, 3.6, 4.9), new Vector3(0, 0.0, 0.1));
+  const camera = studioCamera(aspect, 30, new Vector3(0, 2.75, 4.7), new Vector3(0, 0.12, -0.15));
   return { scene: studio.scene, camera, environment: studio.environment, post: STUDIO_POST };
 }
 
@@ -135,32 +135,21 @@ export async function buildBiteGallery(
       items.push(...donutOnStand(flavor, (b - 1) * 1.08, (r - 0.5) * 1.05, 0, 20 + r * 3 + b, b));
     }
   });
-  // Crumbs on the stands and the cloth around the bitten donuts (K-07).
+  // Crumbs on the cloth around the bitten donuts (K-07). The stand plate is
+  // narrower than the donut, so they fall past it and land by its foot.
   const crumbs = new VoxelGrid();
   rows.forEach((_, r) => {
     for (let b = 1; b < 3; b++) {
       const x = (b - 1) * 1.08;
       const z = (r - 0.5) * 1.05;
       const toward = Math.PI / 2 - 0.3;
-      const plate = Math.round(STAND_HEIGHT / DV);
       scatterCrumbs(
         crumbs,
-        (x + 0.2) / DV,
-        plate,
-        (z + 0.24) / DV,
-        6 * b,
-        0.1 / DV,
-        toward,
-        r * 7 + b,
-      );
-      // A few on the cloth right at the foot of the stand, where they fell.
-      scatterCrumbs(
-        crumbs,
-        (x + 0.24) / DV,
+        (x + 0.15) / DV,
         0,
-        (z + 0.34) / DV,
-        6 * b,
-        0.1 / DV,
+        (z + 0.26) / DV,
+        10 * b,
+        0.12 / DV,
         toward,
         r * 9 + b,
       );
@@ -182,7 +171,7 @@ export async function buildGlazeyGallery(
 ): Promise<ShotScene> {
   const studio = createStudio(quality, { shadowExtent: 4.6 });
   const items: Placed[] = [];
-  const spacing = 1.32;
+  const spacing = 1.4;
   for (let b = 0; b <= 5; b++) {
     const g = buildGlazey(b, b === 5 ? 'bliss' : 'happy');
     const pos = new Vector3((b - 2.5) * spacing, 0, 0);
@@ -212,7 +201,7 @@ export async function buildPropsGallery(
   aspect: number,
   quality: QualitySettings,
 ): Promise<ShotScene> {
-  const studio = createStudio(quality, { shadowExtent: 11, width: 70, depth: 14, back: -6.5 });
+  const studio = createStudio(quality, { shadowExtent: 11, width: 70, depth: 16, back: -9 });
   const P32 = 1 / 32;
   const at = (x: number, z: number, y = 0): Vector3 => new Vector3(x, y, z);
   const base = (size: readonly number[]): [number, number, number] => [

@@ -13,6 +13,7 @@ import {
 } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 import {
+  Color,
   HalfFloatType,
   NoToneMapping,
   PMREMGenerator,
@@ -31,6 +32,8 @@ export interface PostSettings {
   aoRadius?: number;
   aoFalloff?: number;
   aoIntensity?: number;
+  /** Occlusion tint (palette hex); black by default. Warm keeps food crevices appetizing. */
+  aoColor?: string;
   bloomThreshold?: number;
   bloomIntensity?: number;
   /** Bokeh depth of field (ground-level and close-up shots, art bible §6 / K-04). */
@@ -115,6 +118,7 @@ export class Renderer {
       ao.configuration.aoRadius = post.aoRadius ?? 0.6;
       ao.configuration.distanceFalloff = post.aoFalloff ?? 0.6;
       ao.configuration.intensity = post.aoIntensity ?? 2.2;
+      if (post.aoColor) ao.configuration.color = new Color(post.aoColor);
       ao.configuration.aoSamples = q.aoSamples;
       ao.configuration.denoiseSamples = 8;
       ao.configuration.denoiseRadius = 10;

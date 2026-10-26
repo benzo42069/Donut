@@ -53,10 +53,9 @@ describe('donut library', () => {
     const allowed = new Set([
       PALETTE_INDEX.chocolate,
       PALETTE_INDEX.chocolateDark,
-      PALETTE_INDEX.doughGolden,
-      PALETTE_INDEX.doughToasted,
-      PALETTE_INDEX.doughCrust,
-      PALETTE_INDEX.doughCrumb,
+      PALETTE_INDEX.bunGolden,
+      PALETTE_INDEX.bunToasted,
+      PALETTE_INDEX.bunCrumb,
     ]);
     for (const k of c) expect(allowed.has(k)).toBe(true);
   });

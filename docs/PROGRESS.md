@@ -1,5 +1,35 @@
 # Progress
 
+## M3 in progress: resume here (gate iter 1 reviewed, FAIL)
+
+M3 is NOT done. A new thread should resume the gate loop at **iteration 2**. Do not restart the milestone.
+
+- **Built (commit f037548):**
+  - Palette flags packed into `uPalette[128]`, plus a `MAT.crisp` flag.
+  - 9 donut flavors with bites and crumbs.
+  - Glazey at belly 0–5.
+  - Props: the donut, floss and rock-candy trees, a gingerbread rock, fences, flower beds, the Moon Donut and the lighthouse.
+  - The studio and gallery scenes, and the M3 shots in `scripts/gates.json`.
+  - `tests/models.test.ts`.
+- **Reviews:**
+  - `reviews/M3-iter1.md`: FAIL, mean 6.1, min 5, 0 blockers.
+  - `reviews/M3-iter1-r2.md`: FAIL, mean 6.5, min 4, **2 blockers**:
+    - Shadow streaks (acne) in the lighthouse lantern in gallery-props.
+    - Firefly specks on Glazey's silhouette.
+- **Next:**
+  - Fix the 2 blockers first.
+  - Then the overlapping fix-list items:
+    - Glazey's eyes and mouth: bigger, round, clean.
+    - Flavor read for classic, powdered and jelly.
+    - The blueberry crag: rounded, no straight slits.
+    - Studio value separation, with a stronger key and rim.
+    - Smaller, calmer stands.
+    - Chocolate specular terracing.
+    - Bite interiors and crumb placement.
+    - Prop shadows on the wall and canopy gloss.
+  - Then commit and spawn 2 reviewers for iter 2.
+- **Rendering path:** the cloud container renders with SwiftShader, which makes a full M3 capture take about 5.5 min. On a Mac, `scripts/harness.mjs` tries the GPU first; log which path works.
+
 ## Handoff → M3 (Procedural asset library ★)
 
 **M2 status: accepted by the user at iteration 8, gate NOT passed.** The ★ double

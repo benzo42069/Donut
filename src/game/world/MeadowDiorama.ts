@@ -298,6 +298,8 @@ export async function buildMeadowDiorama(
   const ds = donutSize(DONUT_VOXEL);
   const donutPivot = [ds[0] / 2, 0, ds[2] / 2] as const;
   const hs = donutSize(DONUT_HERO_VOXEL);
+  // The island's wild donuts all wear sprinkles (the M2 diorama look).
+  const ISLAND_DONUT = { sprinkles: true };
   const grassDonuts: [number, number, DonutFlavor][] = [
     [104, 0.36, 'strawberry'],
     [122, 0.68, 'chocolate'],
@@ -313,7 +315,7 @@ export async function buildMeadowDiorama(
     const p = hero ? HERO_DONUT : offPath(band(deg, u));
     spots[`donut${i}`] = at(p);
     placed.push({
-      grid: buildDonut(flavor, i + 1, hero ? DONUT_HERO_VOXEL : DONUT_VOXEL),
+      grid: buildDonut(flavor, i + 1, hero ? DONUT_HERO_VOXEL : DONUT_VOXEL, ISLAND_DONUT),
       voxel: hero ? DONUT_HERO_VOXEL : DONUT_VOXEL,
       pivot: hero ? [hs[0] / 2, 0, hs[2] / 2] : donutPivot,
       pos: at(p, -0.03),
@@ -333,7 +335,7 @@ export async function buildMeadowDiorama(
     milkContacts.push([p.x, p.z, 0.36]);
     // Floaters pass close to the low lagoon-edge lens: author them at close-up density.
     placed.push({
-      grid: buildDonut(flavor, i + 11, DONUT_HERO_VOXEL),
+      grid: buildDonut(flavor, i + 11, DONUT_HERO_VOXEL, ISLAND_DONUT),
       voxel: DONUT_HERO_VOXEL,
       pivot: [hs[0] / 2, 0, hs[2] / 2],
       pos: new Vector3(p.x, MILK_LEVEL - 0.075, p.z),

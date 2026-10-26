@@ -88,9 +88,9 @@ const LOOK: Record<DonutFlavor, FlavorLook> = {
   glazed: look({
     top: 'classicGlaze',
     side: 'classicGlaze',
-    drip: 0.065,
+    drip: 0.05,
     frost: 0.016,
-    line: 0.02,
+    line: 0.04,
   }),
   // RF-15: soft periwinkle glaze over a craggy, cracked old-fashioned ring.
   blueberry: look({
@@ -243,9 +243,22 @@ function perimeterAngle(flavor: DonutFlavor, x: number, z: number): number {
   return Math.atan2(z, (x * d.a) / (d.L + d.a));
 }
 
-export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): VoxelGrid {
+export interface DonutOptions {
+  /**
+   * Override the flavor's sprinkles. The island's wild chocolate donuts keep the
+   * sprinkled look of the M2 diorama; the library flavor is plain (ref 04).
+   */
+  sprinkles?: boolean;
+}
+
+export function buildDonut(
+  flavor: DonutFlavor,
+  seed = 0,
+  voxel = DONUT_VOXEL,
+  opts: DonutOptions = {},
+): VoxelGrid {
   const grid = new VoxelGrid();
-  const lk = LOOK[flavor];
+  const lk = { ...LOOK[flavor], sprinkles: opts.sprinkles ?? LOOK[flavor].sprinkles };
   const d = dims(flavor);
   const size = donutSize(voxel, flavor);
   const v = voxel;
@@ -263,10 +276,7 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
   // `bead` is the extra frosting thickness (voxels) at height py: each tongue
   // swells into a rounded bead just above its tip, so drips stand proud of the
   // dough instead of reading as flat painted tabs.
-  const drip = (
-    angle: number,
-    outer: boolean,
-  ): { line: number; bead: (py: number) => number; seg: number } => {
+  const drip = (angle: number, outer: boolean): { line: number; bead: (py: number) => number } => {
     const segs = outer ? lk.segs : Math.round(lk.segs * 0.6);
     // Drips run down the outside only; inside the hole they just clutter it.
     const t = ((angle / (Math.PI * 2) + 1) % 1) * segs;
@@ -283,7 +293,7 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
         : (0.5 + hash3(k, sd, 2, 3)) * lk.drip * s;
     const half = 0.2 + hash3(k, sd, 3, 3) * 0.2;
     const dx = Math.abs(f - 0.5) / half;
-    if (dx >= 1 || len === 0) return { line, bead: () => 0, seg: k };
+    if (dx >= 1 || len === 0) return { line, bead: () => 0 };
     // Tapered drop: full at the frosting edge, pinching toward a rounded tip.
     const tip = line - len / v;
     line -= (len * Math.pow(1 - dx * dx, 1.4)) / v;
@@ -291,7 +301,6 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
     const across = Math.max(0, 1 - dx / 0.55);
     return {
       line,
-      seg: k,
       bead: (py: number) => {
         const u = (py - (tip + r)) / r;
         return u > -1 && u < 1.6
@@ -373,7 +382,7 @@ export function buildDonut(flavor: DonutFlavor, seed = 0, voxel = DONUT_VOXEL): 
         if (py > dr.line) {
           const exposedTop = py > (d.b / v) * 0.72 || !inDough;
           if (!exposedTop && inDough) return doughColor(px, py, pz, outer, inDough, h);
-          return PALETTE_INDEX[toppingColor(flavor, lk, px, py, pz, d, v, py > 0, dr.seg, seed)];
+          return PALETTE_INDEX[toppingColor(flavor, lk, px, py, pz, d, v, py > 0, seed)];
         }
       }
       if (!inDough) return 0;
@@ -418,7 +427,6 @@ function toppingColor(
   d: Dims,
   v: number,
   top: boolean,
-  seg: number,
   seed: number,
 ): VoxelColorName {
   if (lk.topping === 'swirl') {
@@ -430,7 +438,8 @@ function toppingColor(
     return SWIRL[((Math.floor(t) % SWIRL.length) + SWIRL.length) % SWIRL.length] ?? lk.top;
   }
   if (lk.topping === 'rainbow') {
-    if (!top) return RAINBOW[(seg + seed) % RAINBOW.length] ?? lk.side;
+    // Drips take the color of the band they run from (the outer bands), so no
+    // stray-colored slabs hang under the red edge (ref 04 Ignore list).
     // Concentric bands across the tube, inner violet to outer red.
     // Even bands by angle around the tube's cross-section: violet lines the
     // hole, red the outer edge, and each band gets the same arc of icing.
@@ -451,7 +460,7 @@ function toppingColor(
     const t = -py / (d.b / v);
     const n = valueNoise3(px * 0.12, py * 0.12, pz * 0.12, seed + 4);
     // An even amber sheet on the crown, thinning golden down the slopes and drips.
-    return t + n * 0.15 > 0.3 ? 'classicGlazeThin' : 'classicGlaze';
+    return t + n * 0.15 > 0.12 ? 'classicGlazeThin' : 'classicGlaze';
   }
   return top ? lk.top : lk.side;
 }

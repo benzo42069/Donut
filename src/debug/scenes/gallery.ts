@@ -118,7 +118,7 @@ export async function buildDonutGallery(
   const glow = new PointLight(new Color(LIGHT_PALETTE.lampLight), 0.6, 1.6, 2);
   glow.position.set(0, STAND_HEIGHT + 0.3, 0);
   studio.scene.add(glow);
-  const camera = studioCamera(aspect, 30, new Vector3(0, 3.3, 5.4), new Vector3(0, 0.1, -0.15));
+  const camera = studioCamera(aspect, 27, new Vector3(0, 3.3, 5.4), new Vector3(0, 0.02, -0.3));
   return { scene: studio.scene, camera, environment: studio.environment, post: STUDIO_POST };
 }
 

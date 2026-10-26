@@ -1,11 +1,13 @@
 {
   "gate": "M2",
-  "iter": "8",
-  "webglPath": "swiftshader",
-  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "iter": "gpu-final",
+  "webglPath": "gpu",
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
   "flags": [
-    "--use-angle=swiftshader",
-    "--enable-unsafe-swiftshader"
+    "--enable-gpu",
+    "--ignore-gpu-blocklist",
+    "--enable-webgl",
+    "--use-angle=default"
   ],
   "files": [
     "m2-hero_1920x1080.png",
@@ -20,18 +22,18 @@
     "m2-low-tier_844x390.png"
   ],
   "timingsMs": {
-    "m2-hero_1920x1080.png": 55685,
-    "m2-hero_844x390.png": 44863,
-    "m2-ground_1920x1080.png": 68264,
-    "m2-ground_844x390.png": 52557,
-    "m2-closeup-donut_1920x1080.png": 72514,
-    "m2-closeup-donut_844x390.png": 56978,
-    "m2-lagoon-edge_1920x1080.png": 48458,
-    "m2-lagoon-edge_844x390.png": 41193,
-    "m2-low-tier_1920x1080.png": 38225,
-    "m2-low-tier_844x390.png": 33844
+    "m2-hero_1920x1080.png": 7220,
+    "m2-hero_844x390.png": 6992,
+    "m2-ground_1920x1080.png": 8553,
+    "m2-ground_844x390.png": 8466,
+    "m2-closeup-donut_1920x1080.png": 9161,
+    "m2-closeup-donut_844x390.png": 8924,
+    "m2-lagoon-edge_1920x1080.png": 7243,
+    "m2-lagoon-edge_844x390.png": 6985,
+    "m2-low-tier_1920x1080.png": 7198,
+    "m2-low-tier_844x390.png": 6999
   },
-  "totalMs": 514005,
+  "totalMs": 78002,
   "log": [],
   "ok": true
 }

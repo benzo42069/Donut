@@ -1,11 +1,12 @@
 # Progress
 
-## M3 ESCALATED to the user after iter 6 (AGENTIC_LOOP §6): waiting for a decision
+## M3 in progress: resume here (user chose option B; gate iter 7)
 
-M3 is NOT done and the gate has NOT passed. The relay is paused for the user.
-Do not hand off and do not start iter 7 until the user picks an option below.
+M3 is NOT done. After the iter 6 escalation the user chose **option B**: rebaseline
+M2 on the GPU path, then continue iterations 7–8. Escalation (§6) is due after
+iter 8. A new thread resumes from the newest `reviews/M3-iter*.md`.
 
-- **Scores:**
+- **Scores so far:**
 
   | iter | r1 | r2 | gate mean | blockers |
   |---|---|---|---|---|
@@ -16,52 +17,38 @@ Do not hand off and do not start iter 7 until the user picks an option below.
   | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 |
   | 6 | 6.55 | 6.8 | 6.68 | 0 / 1 |
 
-  The bar is 9.0. The mean has been flat at 6.65–6.80 for four iterations,
-  despite two structural changes: the studio lighting model at iter 4, and
-  asset re-authoring at iter 5.
-- **Why I escalated early** (before iter 8). Two of the three causes are
-  decisions only the user can make:
-  1. **The regression baseline depends on the renderer.** `shots/M2/final/` was
-     captured on SwiftShader (the cloud container). Every M3 render and review
-     since iter 2 runs on the Mac's GPU path (ANGLE Metal), whose specular peaks
-     differ. Since iter 4 each review has traded one M2 "regression" blocker for
-     another:
-     - the chimney hot spot (iter 4);
-     - the lost sprinkle glints (iter 5);
-     - glare on the lagoon chocolate donut (iter 6).
-
-     Iter 1's own code on this GPU already shows the lagoon glare (luma 250,
-     against the final's 240). A sweep of specular caps proved no single
-     setting meets both baseline frames on this GPU:
-
-     | cap | lagoon glare | glints |
-     |---|---|---|
-     | 1.6 | luma 243, pass | gone |
-     | 2.5 | luma 247 | gone |
-     | 4.0 | luma 249 | faint |
-     | none | luma 249 | present |
-
-     Changing the baseline is the user's decision.
-  2. **Scope conflict.** Both reviewers score motion (rubric 11) at 5 every
-     round and ask for squash/stretch and the belly wobble. PLAN §M3 defines a
-     turntable gallery, squash and stretch is M4, and the belly wobble is M5.
-  3. **Plateau.** The remaining open findings are large re-authoring jobs:
-     - the rainbow centerpiece;
-     - Glazey's skin and profile;
-     - a translucent classic glaze;
-     - emissive glow;
-     - the props: fence, pretzel trunk, hanging donuts.
-- **Options for the user:**
-  - **A. Accept M3 with follow-ups**, as with M2, and hand off to M4. The open
-    findings are in `reviews/M3-iter6*.md`.
-  - **B. Rebaseline, then continue iters 7–8.** Re-capture `shots/M2/final/` on
-    the GPU path and pin both reviewers to it, so regression checks compare like
-    with like. Optionally also rule motion out of scope for M3.
-  - **C. Allocate a structural rewrite beyond iter 8**: Glazey at a new
-    density or with a new skin approach, the rainbow rebuild, and the props
-    pass.
-- **State:** iter 6 is committed (`01fe42a`), and these reports are committed
-  with this note. The working tree is clean.
+- **Rebaseline (user-approved):** `shots/M2/final/` is now captured on the GPU
+  path (ANGLE Metal, Apple M4) from the accepted M2 commit `51cae65`, so the
+  baseline holds no M3 change. The old SwiftShader set is kept in
+  `shots/M2/final-swiftshader/`. Against the new baseline, HEAD shows the same
+  chimney (`250,221,192` vs `250,221,194`). The lagoon chocolate donut peaks at
+  luma 248 vs 243, with no visible glare halo.
+- **Iter 7 changes:**
+  - M2 parity: the island's wild donuts keep sprinkles (`DonutOptions`,
+    `ISLAND_DONUT`). The library chocolate became plain in M3, which changed
+    the M2 floating donut.
+  - Glazey:
+    - **Bug fixed:** the decal's facing test subtracted `0.6 · gy`, which
+      excluded *upward*-facing surfaces. The camera looks down, so this clipped
+      the belly's top into the flat, low crescent both reviewers flagged for
+      four rounds. It is now `gz + 0.3 · gy`. The belly top reaches 43–44 % of
+      body height (it was about 31 %).
+    - The crown is a soft rounded box (raised power on the upper vertical
+      term) instead of a gumdrop cone. It relaxes to a sphere at belly 5.
+    - The pear taper is halved.
+    - The smile is upturned: its top edge rises toward the corners.
+  - Rainbow: the drips take the color of their own band (no stray-colored
+    slabs, ref 04 Ignore list), and they are shorter.
+  - Classic glaze: thin golden glaze from 12 % below the waist line, and the
+    drip line is raised, so more dough shows. The cool cling-film rim (0.8)
+    is reverted.
+  - Glow: studio `glow` 3.2 and `emissive` 0.35, bloom threshold 1.7 at
+    intensity 0.9, and deeper crystal colors (saturation 0.37 with a halo).
+    The cloth self-glow stays at 0.3; 0.45 with a lower threshold bloomed the
+    whole cloth pink.
+  - Hero camera: FOV 27, aimed lower, so there is less empty cloth on top.
+- **Motion scope:** the user has not yet ruled on motion (rubric 11) for M3.
+  It was asked before the iter 7 reviews.
 
 - **Iter 6 changes (the iter 5 blockers, at their root causes):**
   - **Grey backdrop wedge**, flagged by both reviewers. I had misjudged the

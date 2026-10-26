@@ -73,12 +73,18 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   const rz = lerp(10, 17.5, t);
   const feetH = lerp(2.5, 1.2, t);
   const y0 = feetH + ry;
-  const pear = 0.13 * (1 - t);
+  const pear = 0.07 * (1 - t);
+  // The crown is a soft rounded box (sheet 03), not a gumdrop cone: above the
+  // middle the vertical term is raised to a higher power, flattening the top.
+  // It relaxes back to a plain sphere at belly 5 ("perfectly round").
+  const crown = lerp(3.2, 2, t);
   const body: Sdf = (x, y, z) => {
     const ny = Math.max(-1, Math.min(1, (y - y0) / ry));
     const w = rx * (1 - pear * ny);
     const d = rz * (1 - pear * 0.6 * ny);
-    const k = Math.hypot(x / w, (y - y0) / ry, z / d);
+    const vy = Math.abs(y - y0) / ry;
+    const ey = y > y0 ? Math.pow(vy, crown / 2) : vy;
+    const k = Math.hypot(x / w, ey, z / d);
     return (k - 1) * Math.min(w, ry, d);
   };
   // The belly pushes forward and down as Glazey fills up.
@@ -138,9 +144,9 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     const gx = skin(x + e, y, z) - skin(x - e, y, z);
     const gy = skin(x, y + e, z) - skin(x, y - e, z);
     const gz = skin(x, y, z + e) - skin(x, y, z - e);
-    // Facing a little downward still counts: the camera looks down at Glazey,
-    // and the belly patch must stay a full oval over the round lower body.
-    return gz - 0.6 * gy > FACING * Math.hypot(gx, gy, gz) * 1.17;
+    // The gallery and gameplay cameras look down at Glazey, so a surface tilted
+    // up still faces the viewer (the upper belly), and one tilted down does not.
+    return gz + 0.3 * gy > FACING * Math.hypot(gx, gy, gz);
   };
   // Open a shallow socket under every face feature (shrunk a little, so the
   // decal's clean outline overlaps the body's voxel edge instead of exposing it).
@@ -283,7 +289,8 @@ function faceLayout(
       if (ell(mx, my, mouthRx, mouthRy, s) <= 1)
         return { color: my < -mouthRy * 0.45 ? 'tongueSoft' : 'mouthInside', lift: 0.4 };
     } else {
-      const top = 0.9 - 0.06 * mx * mx - s;
+      // An upturned smile: the top edge rises toward the corners.
+      const top = 0.2 + 0.11 * mx * mx - s;
       if (my < top && ell(mx, my, mouthRx, mouthRy, s) <= 1)
         return { color: my < -mouthRy * 0.4 ? 'tongueSoft' : 'mouthInside', lift: 0.4 };
     }

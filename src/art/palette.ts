@@ -165,8 +165,8 @@ export const VOXEL_PALETTE = {
   flossPink: entry('#F9C4DA', MAT.soft | MAT.smooth | MAT.candy, 0.03),
   flossBlue: entry('#C2DCF8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
   // Rock candy crystals.
-  crystalLilac: entry('#CDB4F0', MAT.gloss | MAT.glow, 0.03),
-  crystalMint: entry('#B2EAD6', MAT.gloss | MAT.glow, 0.03),
+  crystalLilac: entry('#9A6AE8', MAT.gloss | MAT.glow, 0.03),
+  crystalMint: entry('#4FC99A', MAT.gloss | MAT.glow, 0.03),
   // Classic glaze where it runs thin and the golden dough shows through.
   classicGlazeThin: entry('#E8BB8A', MAT.gloss | MAT.translucent, 0.02),
   // Lighthouse lantern: relaxed twins of the deck, rail and glow band, so the

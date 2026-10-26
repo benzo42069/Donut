@@ -201,8 +201,13 @@ export const STUDIO_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
   hueHold: 0.25,
   wrap: 0.2,
-  // A brighter fresnel rim on translucent glazes (classic, jelly), art bible §5.
-  rim: 0.8,
+  // Sprinkles, crystals and the rainbow pop a little more on the cream cloth,
+  // enough to reach the bloom threshold and carry a soft halo (art bible §5).
+  emissive: 0.35,
+  // Lamps and crystals light up against the bright cloth, bright enough to
+  // pass the bloom threshold, so they carry a soft halo (the island's 2.4 is
+  // tuned for the darker meadow).
+  glow: 3.2,
 };
 
 /** Studio post: crisp (no DoF), contact AO scaled to small props, light grade. */
@@ -211,8 +216,8 @@ export const STUDIO_POST: PostSettings = {
   aoFalloff: 0.15,
   aoIntensity: 2.2,
   aoColor: LIGHT_PALETTE.studioOcclusion,
-  bloomThreshold: 1.2,
-  bloomIntensity: 0.4,
+  bloomThreshold: 1.7,
+  bloomIntensity: 0.9,
   grade: 0.1,
   vignette: 0.24,
 };

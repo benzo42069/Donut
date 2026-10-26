@@ -1,9 +1,9 @@
 # Progress
 
-## M3 in progress: resume here (gate iter 5 under review)
+## M3 in progress: resume here (gate iter 6 under review)
 
-M3 is NOT done. Iteration 5 is committed and was sent to two reviewers. If this
-thread stops, a new thread resumes at the iter 5 reports (`reviews/M3-iter5*.md`).
+M3 is NOT done. Iteration 6 is committed and was sent to two reviewers. If this
+thread stops, a new thread resumes at the iter 6 reports (`reviews/M3-iter6*.md`).
 Do not restart the milestone. Escalation (§6) is due after iter 8.
 
 - **Scores so far:**
@@ -14,6 +14,36 @@ Do not restart the milestone. Escalation (§6) is due after iter 8.
   | 2 | 6.55 | 7.0 | 6.78 | 0 / 0 |
   | 3 | 6.6 | 7.0 | 6.80 | 0 / 0 |
   | 4 | 6.65 | 6.9 | 6.78 | 0 / 1 |
+  | 5 | 6.5 | 6.8 | 6.65 | 2 / 1 |
+
+- **Iter 6 changes (the iter 5 blockers, at their root causes):**
+  - **Grey backdrop wedge**, flagged by both reviewers. I had misjudged the
+    corner as warm falloff; it measured saturation 0.03. Outside the key's pool,
+    the cloth got only a weak, low-saturation bounce. Fix: the cloth glows
+    faintly in a saturated peach (`studioClothGlow`, 0.3). Corners now measure
+    saturation 0.14–0.22 and still fall off darker than the center.
+  - **M2 regressions, chimney hot spot vs lost sprinkle glints.** They are the
+    same effect, so no specular clamp could separate them; I tried caps of
+    1.1, 3, 8 and 20. Bisection:
+    - Iteration 1's code on this GPU is clean (`250,221,194`).
+    - Forcing the 4³ normal window everywhere is also clean.
+    - So the cause is the 6³ normal window on a thin drip, where the window
+      is mostly empty and bends the normal toward the sun.
+
+    Fix (`mesh.ts`): use the 6³ normal only where the window is between 36 %
+    and 64 % solid (a broad surface), else keep the 4³ normal. A cosine-
+    agreement test did not catch this corner. All specular clamps are
+    removed. Result:
+    - The chimney is back to `250,221,192`.
+    - The M2 sprinkle glints match the final.
+    - The chocolate keeps its continuous highlight.
+  - The studio translucent rim is 0.8 (`STUDIO_TUNING.rim`), for the classic
+    glaze's fresnel rim.
+- **Scope conflict for the user:** both reviewers ask every round for
+  squash/stretch and belly-wobble motion in the Glazey strip, scoring motion at
+  5. PLAN §M3 defines the gallery with *turntable* lighting; squash and stretch
+  is M4 and the belly wobble is M5. I have not pulled that work forward or
+  changed the reviewer prompt.
 
 - **Iter 5 changes:**
   - **Blocker, M2 regression:** a blown, blooming specular on the `m2-ground`

@@ -258,6 +258,8 @@ export const LIGHT_PALETTE = {
   studioCream: '#F6F3F0',
   // The cloth itself: a warmer cream, so where it falls off it darkens warm.
   studioCloth: '#F6E8DA',
+  // The cloth's faint warm self-glow: a saturated peach that keeps the falloff warm.
+  studioClothGlow: '#E9B48A',
   studioShade: '#D8CCC0',
   studioKey: '#FFE3C2',
   studioFill: '#C4D3F2',

@@ -106,12 +106,15 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   const depth = opts.depth ?? 8;
   const sweep = new Mesh(
     sweepGeometry(opts.width ?? 40, depth, opts.back ?? -3),
-    // The cloth barely sees the cool studio dome, so outside the key's pool it
-    // falls off to the warm hemisphere bounce, never grey-blue.
+    // The cloth barely sees the cool studio dome and glows faintly in its own
+    // warm color, so outside the key's pool it falls off to a deeper warm peach,
+    // never to a hueless grey (art bible §10.6, §4).
     new MeshStandardMaterial({
       color: new Color(LIGHT_PALETTE.studioCloth),
       roughness: 0.92,
       envMapIntensity: 0.1,
+      emissive: new Color(LIGHT_PALETTE.studioClothGlow),
+      emissiveIntensity: 0.3,
     }),
   );
   sweep.receiveShadow = true;
@@ -194,7 +197,13 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
  * wrap of soft materials is short, so the cool fill tints shadow sides (the
  * island's full hold and long wrap keep them flat and warm).
  */
-export const STUDIO_TUNING: VoxelMaterialTuning = { ...DEFAULT_TUNING, hueHold: 0.25, wrap: 0.2 };
+export const STUDIO_TUNING: VoxelMaterialTuning = {
+  ...DEFAULT_TUNING,
+  hueHold: 0.25,
+  wrap: 0.2,
+  // A brighter fresnel rim on translucent glazes (classic, jelly), art bible §5.
+  rim: 0.8,
+};
 
 /** Studio post: crisp (no DoF), contact AO scaled to small props, light grade. */
 export const STUDIO_POST: PostSettings = {

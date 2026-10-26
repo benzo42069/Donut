@@ -224,9 +224,7 @@ const WRAP_LIGHTS = ShaderChunk.lights_physical_pars_fragment.replace(
       float rl = saturate( dot( R, directLight.direction ) );
       float lobe = pow( rl, 90.0 ) * uGlaze + pow( rl, 20.0 ) * uClearcoat;
       float fres = 0.35 + 0.65 * pow( 1.0 - saturate( dot( geometryNormal, geometryViewDir ) ), 3.0 );
-      // Capped: face-on streaks (about 0.56) pass untouched, but a smooth normal
-      // grazing the sun on a thin drip can't blow out into a blooming hot spot.
-      reflectedLight.directSpecular += directLight.color * min( lobe * fres, 0.7 ) * saturate( nlRaw * 2.0 + 0.2 );
+      reflectedLight.directSpecular += directLight.color * lobe * fres * saturate( nlRaw * 2.0 + 0.2 );
     }
   }`,
 );
@@ -240,9 +238,6 @@ if (WRAP_LIGHTS === ShaderChunk.lights_physical_pars_fragment) {
  * frosting coral or mauve. Specular and the env sheen stay tinted.
  */
 const HUE_HOLD = /* glsl */ `#include <lights_fragment_end>
-// Specular peak clamp: a smooth normal that catches the sun at a grazing angle
-// on a thin drip would otherwise make a blown, blooming hot pixel.
-reflectedLight.directSpecular = min( reflectedLight.directSpecular, vec3( 1.1 ) );
 if ( vVoxelMat.z < 0.0 ) {
   const vec3 LUM = vec3( 0.2126, 0.7152, 0.0722 );
   vec3 a = material.diffuseContribution;
@@ -297,6 +292,6 @@ if (vVoxelMat.w >= 5.0) {
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
       .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v12';
+  mat.customProgramCacheKey = () => 'voxel-v15';
   return mat;
 }

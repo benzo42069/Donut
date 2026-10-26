@@ -13,6 +13,8 @@ PALETTE_NAMES.forEach((n, i) => {
   const m = VOXEL_PALETTE[n].mat;
   if (m & (MAT.gloss | MAT.lit | MAT.smooth) && !(m & MAT.crisp)) SMOOTH[i + 1] = 1;
 });
+/** Outside this solid fraction of the 6³ window (or above 1 − it), keep the 4³ normal. */
+const WIDE_FILL = 0.36;
 /** Corner relaxation strength: voxels moved per unit of (solid fraction − ½). */
 const RELAX = 1.5;
 
@@ -257,22 +259,43 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
     solid++;
     if (SMOOTH[pal] !== 1) pinned = true;
   }
-  // The normal uses a wider tent-weighted window, so shading flows smoothly
-  // across voxel steps instead of faceting at every edge: 6×6×6 (BORDER = 3),
-  // since gloss highlights and soft wrap light both show any terrace.
-  const r = 3;
-  for (let oz = -r; oz < r; oz++)
-    for (let oy = -r; oy < r; oy++)
-      for (let ox = -r; ox < r; ox++) {
+  // The normal uses a tent-weighted window, so shading flows smoothly across
+  // voxel steps instead of faceting at every edge. A wide 6×6×6 window
+  // (BORDER = 3) removes terraces from broad gloss and wrap-lit surfaces, but on
+  // thin features (drips, rims) it mostly samples empty space and bends the
+  // normal off the surface, so there the 4×4×4 normal is kept.
+  let nx = 0;
+  let ny = 0;
+  let nz = 0;
+  let filled = 0;
+  for (let oz = -3; oz < 3; oz++)
+    for (let oy = -3; oy < 3; oy++)
+      for (let ox = -3; ox < 3; ox++) {
         if ((padded[paddedIndex(x0 + ox, y0 + oy, z0 + oz)] ?? 0) === 0) continue;
+        filled++;
         const cx = ox + 0.5;
         const cy = oy + 0.5;
         const cz = oz + 0.5;
-        const w = (r - Math.abs(cx)) * (r - Math.abs(cy)) * (r - Math.abs(cz));
+        const w = (3 - Math.abs(cx)) * (3 - Math.abs(cy)) * (3 - Math.abs(cz));
         gx += cx * w;
         gy += cy * w;
         gz += cz * w;
+        if (Math.abs(cx) < 2 && Math.abs(cy) < 2 && Math.abs(cz) < 2) {
+          const n = (2 - Math.abs(cx)) * (2 - Math.abs(cy)) * (2 - Math.abs(cz));
+          nx += cx * n;
+          ny += cy * n;
+          nz += cz * n;
+        }
       }
+  // A broad surface fills about half the wide window; a thin drip or rim fills
+  // far less (and a crevice far more), and there the wide normal is wrong.
+  const fill = filled / 216;
+  const near = Math.hypot(nx, ny, nz);
+  if (near > 0 && (fill < WIDE_FILL || fill > 1 - WIDE_FILL)) {
+    gx = nx;
+    gy = ny;
+    gz = nz;
+  }
   // Solid → empty points outward: the normal is minus the occupancy gradient.
   // A degenerate corner (no gradient) keeps the face normal already written.
   const len = Math.hypot(gx, gy, gz);

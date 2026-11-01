@@ -18,11 +18,11 @@ void mainUv(inout vec2 uv) {
   vec2 d = uv - ripple.xy;
   d.x *= aspect;
   float r = length(d);
-  float x = (r - ripple.z) / 0.05;
+  float x = (r - ripple.z) / 0.07;
   float band = exp(-x * x);
   vec2 dir = d / max(r, 1e-4);
   dir.x /= aspect;
-  uv -= dir * band * ripple.w * 0.03;
+  uv -= dir * band * ripple.w * 0.05;
 }
 `;
 

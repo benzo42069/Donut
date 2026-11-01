@@ -29,7 +29,7 @@ export const CAM = {
    * donut, and swings round to a 3/4 of his face (`focusSide` radians off his
    * facing) so the bite reads.
    */
-  focusDistance: 4.0,
+  focusDistance: 3.2,
   focusAim: 0.68,
   focusPitch: 0.1,
   focusSide: 0.72,

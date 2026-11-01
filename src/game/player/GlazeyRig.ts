@@ -1,4 +1,4 @@
-import { Group, type Material } from 'three';
+import { Group, Quaternion, Vector3, type Material } from 'three';
 import { GLAZEY_VOXEL, type GlazeyModel, type GlazeyPart } from '../../art/models/glazey';
 import type { MesherPool } from '../../engine/voxel/MesherPool';
 import { VoxelObject } from '../../engine/voxel/VoxelObject';
@@ -165,9 +165,9 @@ export class GlazeyRig extends Group {
       const reach = a?.reach ?? 0;
       if (rest)
         g.position.set(
-          rest[0] * (1 - 0.5 * p.tuck - 0.15 * reach),
-          rest[1] - 0.02 * reach,
-          rest[2] + 0.3 * reach,
+          rest[0] * (1 - 0.5 * p.tuck + 0.15 * reach),
+          rest[1] + 0.03 * reach,
+          rest[2] + 0.36 * reach,
         );
       g.scale.setScalar(Math.max(1e-3, 1 - p.tuck));
     });
@@ -184,6 +184,46 @@ export class GlazeyRig extends Group {
       g.rotation.x = -f.pitch;
       g.scale.setScalar(Math.max(1e-3, k));
     });
+  }
+
+  /**
+   * Hands on the held donut (M5): each arm slides its shoulder up to 0.16 m
+   * toward a world-space grip point and points its tip there, blended over
+   * the posed arm by `weight` (0–1). Call after `pose` and a world-matrix update.
+   */
+  grip(points: readonly (Vector3 | null)[], weight: number): void {
+    if (weight <= 0) return;
+    this.arms.forEach((g, i) => {
+      const at = points[i];
+      const rest = this.armRest[i];
+      if (!at || !rest) return;
+      const local = this.squash.worldToLocal(at.clone());
+      const shoulder = new Vector3(...rest);
+      const to = local.clone().sub(shoulder);
+      const reach = this.armLength * 0.8;
+      const slide = Math.min(0.16, Math.max(0, to.length() - reach));
+      shoulder.addScaledVector(to.clone().normalize(), slide);
+      const dir = local.clone().sub(shoulder).normalize();
+      const s = i === 0 ? -1 : 1;
+      const q = new Quaternion().setFromUnitVectors(this.armAxis(s), dir);
+      g.position.lerp(shoulder, weight);
+      g.quaternion.slerp(q, weight);
+    });
+  }
+
+  /** The shoulders (arm joints) in world space, as posed. */
+  shoulders(): Vector3[] {
+    return this.arms.map((g) => g.getWorldPosition(new Vector3()));
+  }
+
+  /** An arm's rest direction (shoulder to tip) in its joint space. */
+  private armAxis(s: number): Vector3 {
+    const a = (this.model.armAngle * Math.PI) / 180;
+    return new Vector3(s * Math.cos(a), -Math.sin(a), -0.08).normalize();
+  }
+
+  private get armLength(): number {
+    return this.model.armLength * GLAZEY_VOXEL;
   }
 
   dispose(): void {

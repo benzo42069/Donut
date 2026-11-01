@@ -10,7 +10,7 @@ import {
   type Scene,
   type WebGLRenderer,
 } from 'three';
-import { biteDonut, donutCenterY } from '../art/models/donut';
+import { biteDonut, donutCenterY, donutSize } from '../art/models/donut';
 import { GLAZEY_VOXEL, glazeyHeight, type GlazeyExpression } from '../art/models/glazey';
 import { LIGHT_PALETTE, PALETTE_INDEX, hash3, type VoxelColorName } from '../art/palette';
 import type { Sfx } from '../engine/audio/Sfx';
@@ -67,9 +67,13 @@ const BURP_END = BURP_AT + 1.1;
  * A held donut's center from his mouth (m, mouth space: +y up, +z forward):
  * below and in front, so its top rim just meets his lips.
  */
-const HOLD = new Vector3(0, 0.04, 0.36);
+const HOLD = new Vector3(0, -0.12, 0.34);
 /** How far the held ring rolls open toward the sky (radians from standing on edge). */
 const HOLD_ROLL = 1.2;
+/** The held donut's size in his arms, against its size on the grass. */
+const HELD_SCALE = 0.62;
+/** Where his hands hold the ring: this far round the rim from his lips (radians). */
+const GRIP_ANGLE = (50 * Math.PI) / 180;
 /** Munch card light strength (candela). */
 const FILL = 1.6;
 /** Belly 3–4: hold jump this long on the ground to curl into a roll. */
@@ -663,7 +667,7 @@ export class Game {
               ? PALETTE_INDEX.bunToasted
               : v.index;
       const at = e.object.localToWorld(new Vector3(v.x + 0.5, v.y + 0.5, v.z + 0.5));
-      if (this.avatar.rig && at.y > lips.y) continue;
+      if (this.avatar.rig && at.y > lips.y - 0.02) continue;
       points.push({ at, index });
     }
     // Out of the bite, away from his body and toward the lens, then down onto
@@ -681,7 +685,7 @@ export class Game {
       count: points.length,
       // One or two voxels of the donut each (art bible §3), a few twice that.
       speed: [0.5, 1.4],
-      up: [-0.1, 0.55],
+      up: [-0.3, 0.3],
       dir: { x: out.x, z: out.z, bias: 0.6 },
       colors: ['crumbFresh'],
       size: [e.voxel * 1.1, e.voxel * 2.1],
@@ -941,13 +945,19 @@ export class Game {
         new Matrix4().makeBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0), new Vector3(0, 0, -1)),
       );
       // Turned so each fresh bite rolls up over the top rim, into view.
-      const spin = new Quaternion().setFromEuler(new Euler(0, -this.camSide * this.munch.turn, 0));
+      const spin = new Quaternion().setFromEuler(
+        new Euler(0, -this.camSide * (this.munch.turn + this.munch.show), 0),
+      );
       // Rolled about his facing so the glaze lies open to the sky and the lens,
       // on whichever side the camera is (gloss: it reflects the bright sky).
       const roll = this.camSide > 0 ? HOLD_ROLL : Math.PI - HOLD_ROLL;
       const tip = new Quaternion().setFromEuler(new Euler(0, 0, roll));
       const heldQ = aq.clone().multiply(tip).multiply(basis).multiply(spin);
       const remain = this.munch.remain;
+      // The scoop: an arc from the grass up into his arms. In his arms the donut
+      // reads a little smaller (sheet 03: the food fits between his hands).
+      const k = this.munch.lift;
+      const size = remain * (1 - (1 - HELD_SCALE) * k);
       const cy = donutCenterY(e.voxel, e.flavor) * e.voxel;
       const reach = HOLD.clone().normalize();
       const center = anchor
@@ -955,17 +965,34 @@ export class Game {
         .add(
           HOLD.clone()
             .addScaledVector(reach, this.munch.pull)
-            .multiplyScalar(remain)
+            .multiplyScalar(size)
             .applyQuaternion(aq),
         );
-      const heldPos = center.sub(new Vector3(0, cy * remain, 0).applyQuaternion(heldQ));
-      // The scoop: an arc from the grass up into his arms.
-      const k = this.munch.lift;
+      const heldPos = center.sub(new Vector3(0, cy * size, 0).applyQuaternion(heldQ));
       const groundQ = new Quaternion().setFromEuler(new Euler(0, e.rotY, 0));
       e.group.position.lerpVectors(e.pos, heldPos, k);
       e.group.position.y += 0.25 * Math.sin(Math.PI * k);
       e.group.quaternion.slerpQuaternions(groundQ, heldQ, k);
-      e.group.scale.setScalar(Math.max(1e-3, remain));
+      e.group.scale.setScalar(Math.max(1e-3, size));
+      // His hands on the ring (sheet 03 "munching": both hands on the food):
+      // each grips the outer rim 50° round from his lips, on its own side, so
+      // the hands sit at the donut's near edge, below and beside his mouth.
+      const ringC = e.group.position
+        .clone()
+        .add(new Vector3(0, cy * size, 0).applyQuaternion(e.group.quaternion));
+      const ringN = new Vector3(0, 1, 0).applyQuaternion(e.group.quaternion);
+      const ringR = (donutSize(e.voxel, e.flavor)[0] / 2) * e.voxel * size * 0.88;
+      const toLips = anchor.clone().sub(ringC);
+      toLips.addScaledVector(ringN, -toLips.dot(ringN)).normalize();
+      const across = new Vector3().crossVectors(ringN, toLips);
+      const grips = rig.shoulders().map((sh) => {
+        const side = Math.sign(sh.sub(ringC).dot(across)) || 1;
+        return ringC
+          .clone()
+          .addScaledVector(toLips, ringR * Math.cos(GRIP_ANGLE))
+          .addScaledVector(across, side * ringR * Math.sin(GRIP_ANGLE));
+      });
+      rig.grip(grips, k * Math.min(1, remain * 3));
       // The card light: up and toward the lens from the ring, lifting the glaze.
       const toCam = this.camera.camera.position.clone().sub(center).setY(0).normalize();
       this.fill.position

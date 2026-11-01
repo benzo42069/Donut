@@ -107,7 +107,7 @@ export function m5Shot(kind: M5Shot) {
       stillTime = stripTimes[1] ?? 0;
     } else {
       // Rolling along the path toward the lens, like the M4 walk.
-      const at = band(116, 0.3);
+      const at = band(116, 0.2);
       const walkYaw = Math.atan2(-Math.sin(116 * DEG), Math.cos(116 * DEG));
       Object.assign(spawn, { x: at.x, z: at.z, yaw: walkYaw, cameraYaw: walkYaw + 30 * DEG });
       const dir = walkYaw + 14 * DEG;

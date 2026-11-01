@@ -1,4 +1,4 @@
-import { PALETTE_INDEX, hash3, type VoxelColorName } from '../palette';
+import { PALETTE_INDEX, type VoxelColorName } from '../palette';
 import { smoothUnion, type Sdf } from '../sdf';
 import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 
@@ -48,6 +48,9 @@ export interface GlazeyModel {
   body: { rx: number; ry: number; rz: number; y0: number };
   /** The middle of the mouth on the face (body voxels): where a munched donut goes. */
   mouth: Vec3;
+  /** Arm length (body voxels) and its droop below horizontal (degrees), for the grip. */
+  armLength: number;
+  armAngle: number;
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -280,8 +283,9 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   // (sheet 03), flattened front to back so they stay inside the side profile. ---
   const shoulderY = y0 - ry * lerp(0.08, 0.12, t);
   const armLen = lerp(5, 4.6, t);
+  const armAngle = lerp(48, 42, t);
   const arm = (s: number): GlazeyPart => {
-    const a = (lerp(48, 42, t) * Math.PI) / 180;
+    const a = (armAngle * Math.PI) / 180;
     const tip: Vec3 = [s * Math.cos(a) * armLen, -Math.sin(a) * armLen, -0.4];
     const cone = roundCone([0, 0, 0], tip, 2.9, 2.35);
     const sdf: Sdf = (x, y, z) => cone(x, y, z / 0.82) * 0.82;
@@ -321,6 +325,8 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     },
     height: Math.ceil(crownY + 6),
     body: { rx, ry, rz, y0 },
+    armLength: armLen,
+    armAngle,
     mouth: (() => {
       const { mouthY } = mouthLayout(t, rx, ry, y0);
       const front = rz * Math.sqrt(Math.max(0, 1 - ((mouthY - y0) / ry) ** 2));
@@ -440,7 +446,8 @@ function faceLayout(
         // viewer squarely, so in a 3/4 view it never stands past the outline.
         const arc = Math.abs(Math.hypot(ex, (ey + 2.1) * 1.05) - 2.7);
         if (arc < 0.42 - s * 0.4 && ey > -0.5)
-          return { color: 'eyeIris', ...flat(0.15), facing: 0.62 };
+          // Matte warm brown (no eye gloss): soft closed eyes, never metal.
+          return { color: 'shingleDark', ...flat(0.15), facing: 0.62 };
       }
       // Blush: a soft oval with a lighter center.
       const c = ell(x - side * cheekX, y - cheekY, 2.5, 1.5, s);
@@ -474,12 +481,11 @@ function faceLayout(
     const egg = tummy.rx * (1 - 0.1 * clamp(dy / tummy.ry, -1, 1));
     const r = ell(x, dy, egg, tummy.ry, s);
     if (r <= 1) {
-      // The outer rim dithers into the coral (sheet 03's soft terraces), so
-      // there is no cut edge and no outline ring.
-      const fade = clamp((r - 0.8) / 0.2, 0, 1);
-      const coral = fade * fade > hash3(Math.floor(x * 3), Math.floor(y * 3), 0, 29);
+      // One soft in-between terrace at the rim (sheet 03), its width wobbling
+      // gently with the angle rather than per voxel: no cut edge, no speckle.
+      const rim = 0.9 + 0.025 * Math.sin(5 * Math.atan2(dy, x));
       return {
-        color: coral ? 'glazeyBody' : 'glazeyBellySoft',
+        color: r > rim ? 'glazeyBellyEdge' : 'glazeyBellySoft',
         ...dome(x, dy, egg, tummy.ry, 0.3, 0.3),
         // Low enough that the oval wraps under the round tummy (no flat cut).
         facing: -0.7,

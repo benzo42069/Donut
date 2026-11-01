@@ -21,7 +21,9 @@ export const MUNCH = {
   /** Happy afterglow before Glazey is free to walk again. */
   after: 0.4,
   /** Turn of the donut between bites (radians), so each bite takes fresh rim. */
-  turn: 1.0,
+  turn: 0.6,
+  /** How far he turns the ring to show off each fresh bite (radians). */
+  show: 1.3,
 } as const;
 
 /** When each beat of a munch happens, from its start. */
@@ -139,6 +141,19 @@ export class Munch {
       a += MUNCH.turn * k * k * (3 - 2 * k);
     }
     return a;
+  }
+
+  /**
+   * Show-off turn (radians, presentation only): through each chew he turns
+   * the ring so the fresh bite faces out, and back before the next wind-up.
+   */
+  get show(): number {
+    if (this.beat !== 'chew') return 0;
+    const since = this.sinceChomp;
+    const last = this.bitesTaken >= MUNCH.bites;
+    const span = last ? MUNCH.gulpDelay : MUNCH.bite - MUNCH.windup;
+    const k = Math.min(1, since / 0.12, Math.max(0, (span - since) / 0.1));
+    return MUNCH.show * k * k * (3 - 2 * k);
   }
 
   /**

@@ -107,6 +107,7 @@ the M4 section below.
 | 1 | 6.44 | 6.3 | 6.37 | blockers: dice-sized crumbs (M3 regression), far squint arc outside the head |
 | 2 | 6.65 | 6.6 | 6.62 | r1 blocker: held glaze matte against the M3 gallery |
 | 3 | 6.63 | 6.7 | 6.67 | r1 blocker narrowed (glaze still chalky); new: the hand reads as a snout |
+| 4 | 6.66 | 6.7 | 6.68 | glaze blocker closed by the card light; r1 blocker: dithered belly edge regresses M4; hands still a snout |
 
 **Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
 under the 0.3 bar, and the same three findings have come back every round
@@ -123,6 +124,24 @@ a re-authored hold**:
   his lips at either side, instead of being pushed forward to the face line;
 - crumbs settle on a contact plane at the blade tips (not the soil under the grass), so the
   scatter stays readable on the lawn.
+
+**Plateau again (§5), before iter 5.** Iter 4 gained 0.06 on iter 2. The
+hands have failed four rounds running because each fix nudged arm offsets
+by eye, and the probe showed why: the rim the hands aimed for was 0.45 m
+from his shoulders, but his arms are 0.16 m long. The donut, at its
+grass size, is wider than he is. Structural change: **a real grip and a
+re-proportioned hold**:
+- `GlazeyRig.grip()` aims each arm (and slides its shoulder up to 0.16 m)
+  at a world-space point; Game feeds it the ring's outer rim 50° either side
+  of his lips;
+- the held donut shrinks to 0.62 of its lawn size as he scoops it (sheet 03:
+  the food fits between his hands) and rides at chest height, below his
+  mouth, so his open mouth and both hands read;
+- through each chew he turns the ring (`Munch.show`, presentation only) so
+  the fresh golden scallop faces out, and turns it back for the next bite;
+- the munch camera comes in from 4.0 to 3.2 m. The belly rim is one clean,
+  slightly wavy terrace (`glazeyBellyEdge`, a third of the way from cream to
+  coral) instead of a per-voxel dither.
 
 ## M4 — Glazey in motion (DONE: accepted by user, option B, gate not passed)
 

@@ -95,7 +95,7 @@ export class BurpWave extends Group {
     // Fast out of the mouth, easing as it widens.
     const travel = BURP.hoopSpeed * this.k * (1 - Math.pow(1 - u, 2)) * BURP.hoopLife * 0.6;
     return {
-      at: this.mouth.clone().addScaledVector(this.fwd, 0.08 + travel),
+      at: this.mouth.clone().addScaledVector(this.fwd, 0.02 + travel),
       radius: 0.1 + BURP.hoopGrow * (0.5 + 0.5 * this.k) * Math.pow(u, 0.55),
       fade: 1 - Math.pow(u, 3),
     };

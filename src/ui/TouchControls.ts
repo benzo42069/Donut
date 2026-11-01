@@ -191,7 +191,7 @@ function injectStyle(): void {
   background: radial-gradient(circle at 50% 38%, ${hex('candyCream')} 0%, ${hex('butter')} 78%, ${hex('doughGolden')} 100%);
   border: min(1.6vh, 10px) solid ${hex('frostingPink')};
   box-shadow: 0 min(1.2vh, 7px) 0 ${hex('frostingPinkShadow')},
-    0 min(2.8vh, 18px) min(4vh, 26px) ${rgba('chocolateDark', 0.35)},
+    0 min(2.4vh, 15px) min(2vh, 12px) ${rgba('chocolateDark', 0.45)},
     inset 0 min(1.4vh, 9px) min(2.4vh, 15px) ${rgba('doughGolden', 0.7)};
   opacity: 0.88; transition: opacity 0.15s; }
 .tc-active .tc-base { opacity: 1; }
@@ -204,13 +204,15 @@ function injectStyle(): void {
   background: radial-gradient(circle at 36% 30%, ${hex('frostingPinkLight')} 0%, ${hex('frostingPink')} 52%, ${hex('frostingPinkShadow')} 100%);
   border: min(1.6vh, 10px) solid ${hex('candyCream')};
   box-shadow: 0 min(1.4vh, 9px) 0 ${hex('doughGolden')},
-    0 min(3vh, 20px) min(4.4vh, 28px) ${rgba('chocolateDark', 0.4)},
+    0 min(2.6vh, 16px) min(2vh, 12px) ${rgba('chocolateDark', 0.45)},
     inset 0 max(-1vh, -6px) min(1.6vh, 10px) ${rgba('frostingPinkShadow', 0.55)};
   transition: transform 0.06s, box-shadow 0.06s; }
 .tc-jump::before { content: ''; position: absolute; left: 17%; top: 9%; width: 42%; height: 24%;
   border-radius: 50%; background: ${cream(0.5)}; transform: rotate(-24deg); filter: blur(1px); }
-.tc-jump img { position: absolute; left: 50%; top: 50%; width: 84%; height: 84%;
-  transform: translate(-50%, -52%);
+.tc-jump::after { content: ''; position: absolute; left: 34%; top: 80%; width: 32%; height: 8%;
+  border-radius: 50%; background: ${rgba('frostingPinkShadow', 0.8)}; filter: blur(1.5px); }
+.tc-jump img { position: absolute; left: 50%; top: 50%; width: 80%; height: 80%;
+  transform: translate(-50%, -60%);
   filter: drop-shadow(0 min(0.8vh, 5px) min(0.6vh, 4px) ${rgba('frostingPinkShadow', 0.9)}); pointer-events: none; }
 .tc-jump.tc-pressed { transform: translateY(min(1.1vh, 7px)) scale(0.97);
   box-shadow: 0 min(0.3vh, 2px) 0 ${hex('doughGolden')},

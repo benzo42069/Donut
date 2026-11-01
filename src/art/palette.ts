@@ -155,6 +155,8 @@ export const VOXEL_PALETTE = {
   // Glazey (D-01): a relaxed coral twin for the rounded body, face details.
   glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth | MAT.candy, 0.03),
   glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  // The belly's soft rim: a shaded cream ring, its occlusion against the coral.
+  glazeyBellyRim: entry('#E2C48E', MAT.soft | MAT.smooth | MAT.candy, 0.02),
   glazeyMouth: entry('#7E2A3A', MAT.matte, 0.02),
   glazeyTongue: entry('#F2788C', MAT.soft, 0.02),
   glazeyCheek: entry('#F4798F', MAT.soft | MAT.smooth | MAT.candy, 0.02),
@@ -265,6 +267,8 @@ export const LIGHT_PALETTE = {
   studioShade: '#D8CCC0',
   studioKey: '#FFE3C2',
   studioFill: '#C4D3F2',
+  // A lilac fill for characters: their core shadow turns rose-lilac (art bible §6).
+  studioLilac: '#B4A2F2',
   studioRim: '#E4ECFF',
   // Studio occlusion tint: crevices darken toward toasted caramel, never grey.
   studioOcclusion: '#7A4424',

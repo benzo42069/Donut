@@ -1,4 +1,4 @@
-import { CircleGeometry, Color, Mesh, MultiplyBlending, ShaderMaterial } from 'three';
+import { CircleGeometry, Color, Mesh, ShaderMaterial } from 'three';
 import { LIGHT_PALETTE } from '../../art/palette';
 
 /**
@@ -12,10 +12,6 @@ export class ContactShadow extends Mesh<CircleGeometry, ShaderMaterial> {
       new CircleGeometry(1, 40).rotateX(-Math.PI / 2),
       new ShaderMaterial({
         transparent: true,
-        // Multiply darkens whatever is below (grass, path, frosting) by the
-        // same amount, so the blob reads on every ground.
-        blending: MultiplyBlending,
-        premultipliedAlpha: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -4,
@@ -35,8 +31,8 @@ uniform float uOpacity;
 varying vec2 vUv2;
 void main() {
   float r2 = dot(vUv2, vUv2);
-  float a = uOpacity * pow(max(0.0, 1.0 - r2), 1.2);
-  gl_FragColor = vec4(mix(vec3(1.0), uColor, a), 1.0);
+  float a = uOpacity * pow(max(0.0, 1.0 - r2), 0.8);
+  gl_FragColor = vec4(uColor, a);
 }`,
       }),
     );
@@ -51,6 +47,6 @@ void main() {
     this.position.set(x, groundY + 0.1, z);
     this.scale.setScalar(0.42 * (1 - 0.4 * h));
     const opacity = this.material.uniforms.uOpacity;
-    if (opacity) opacity.value = 0.85 * (1 - 0.45 * h);
+    if (opacity) opacity.value = 0.9 * (1 - 0.35 * h);
   }
 }

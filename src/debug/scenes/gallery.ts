@@ -176,6 +176,7 @@ export async function buildGlazeyGallery(
     shadowExtent: 3.4,
     keyDir: new Vector3(1, 0.55, 0.05),
     fill: 0.7,
+    fillColor: LIGHT_PALETTE.studioLilac,
   });
   const material = createVoxelMaterial({}, GLAZEY_STUDIO_TUNING);
   const pool = new MesherPool();
@@ -209,7 +210,7 @@ export async function buildGlazeyGallery(
 }
 
 /** Glazey's studio tuning: candy hue held less and a short wrap, so the fill cools his core shadow. */
-const GLAZEY_STUDIO_TUNING: VoxelMaterialTuning = { ...STUDIO_TUNING, hueHold: 0.25, wrap: 0.1 };
+const GLAZEY_STUDIO_TUNING: VoxelMaterialTuning = { ...STUDIO_TUNING, hueHold: 0.35, wrap: 0 };
 
 /** gallery-props: the island's set dressing, shelved like a toy collection. */
 export async function buildPropsGallery(

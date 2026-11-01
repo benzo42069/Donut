@@ -17,15 +17,18 @@ export async function loadTouchIcons(): Promise<TouchIcons> {
   const rig = await GlazeyRig.build(buildGlazey(0, 'happy'), createVoxelMaterial(), pool);
   pool.dispose();
   const hop = restPose();
-  hop.squash = 1.1;
-  for (const a of hop.arms) a.raise = 1.55;
-  for (const f of hop.feet) {
-    f.lift = 0.03;
-    f.pitch = -0.35;
+  hop.squash = 1.2;
+  for (const a of hop.arms) {
+    a.raise = 1.8;
+    a.swing = -0.15;
   }
-  hop.tuft[0] = -0.2;
+  for (const f of hop.feet) {
+    f.lift = 0.05;
+    f.pitch = -0.5;
+  }
+  hop.tuft[0] = 0.35;
   rig.pose(hop);
-  const jump = renderIcon(rig, new Vector3(0.18, 0.22, 1), 160);
+  const jump = renderIcon(rig, new Vector3(0.42, 0.18, 1), 160);
   rig.dispose();
   const knob = await renderVoxelIcon({
     grid: buildDonut('strawberry', 5, DONUT_VOXEL, { sprinkles: true }),

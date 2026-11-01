@@ -159,13 +159,18 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     const k = Math.hypot(x / w, ey, z / d);
     return (k - 1) * Math.min(w, ry, d);
   };
-  // The belly: a centred swell that pushes forward (past the side profile, as in
-  // sheet 03 "SIDE") and grows at every stage.
+  // The belly: a broad, shallow swell over the lower front that stands about
+  // a voxel past the bean (past the side profile, as in sheet 03 "SIDE")
+  // and grows at every stage. Shallow, so from the high 3/4 gameplay view it
+  // follows the body curve instead of jutting out like a bill.
   const bellyR = lerp(8, 13, t);
-  const bellyC: Vec3 = [0, y0 - ry * lerp(0.3, 0.2, t), rz * lerp(0.52, 0.34, t)];
+  const bellyDepth = bellyR * 0.62;
+  const bellyY = y0 - ry * lerp(0.32, 0.22, t);
+  const bellyFront = rz * Math.sqrt(Math.max(0, 1 - ((bellyY - y0) / ry) ** 2)) + 1;
+  const bellyC: Vec3 = [0, bellyY, bellyFront - bellyDepth];
   const skin = smoothUnion(
     bean,
-    ellipsoid(bellyC[0], bellyC[1], bellyC[2], bellyR * 1.05, bellyR, bellyR * 0.95),
+    ellipsoid(bellyC[0], bellyC[1], bellyC[2], bellyR * 1.2, bellyR * 1.1, bellyDepth),
     4,
   );
 
@@ -350,11 +355,12 @@ function faceLayout(
   const cheekY = mouthY + 0.2;
   // The belly patch: a full upright oval (sheet 03 "FRONT"), about 55–60 % of
   // the body width, from just under the mouth to just above the feet.
-  const bellyTop = mouthY - mouthRy - 0.35;
+  // Its top sits well under the smile (about 5 face voxels of coral between).
+  const bellyTop = mouthY - mouthRy - 1.3;
   const bellyBot = FOOT_CREASE + lerp(2.2, 1.6, t);
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
-  const bellyRx = rx * lerp(0.56, 0.6, t);
+  const bellyRx = rx * lerp(0.48, 0.56, t);
   // Normalized radius inside an ellipse, inset by `s` body voxels.
   const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
     Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
@@ -429,8 +435,18 @@ function faceLayout(
     // The cream belly patch: a raised oval swell, slightly narrower on top.
     const dy = y - bellyCy;
     const egg = bellyRx * (1 - 0.12 * clamp(dy / bellyRy, -1, 1));
-    if (ell(x, dy, egg, bellyRy, s) <= 1)
-      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, bellyRy, 0.35, 0.9), facing: 0.08 };
+    const r = ell(x, dy, egg, bellyRy, s);
+    const belly = dome(x, dy, egg, bellyRy, 0.35, 0.9);
+    if (r <= 1)
+      return {
+        // A soft shaded rim, as if the coral occludes the swell's edge.
+        color: r > 0.88 ? 'glazeyBellyRim' : 'glazeyBellySoft',
+        ...belly,
+        // The swell sits under the equator and faces a little down; its
+        // shading leans up toward the sky so the cream stays bright.
+        slope: [belly.slope[0], belly.slope[1] - 0.45],
+        facing: 0.08,
+      };
     return null;
   };
 }

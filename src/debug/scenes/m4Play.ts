@@ -13,7 +13,7 @@ const DEG = Math.PI / 180;
  * with the curve of the ring, the lighthouse and the golden sky behind him.
  */
 const RING_DEG = 120;
-const START = band(RING_DEG, 0.45);
+const START = band(RING_DEG, 0.3);
 /** Tangent along the ring toward increasing angle (counter-clockwise from above). */
 const TANGENT_YAW = Math.atan2(-Math.sin(RING_DEG * DEG), Math.cos(RING_DEG * DEG));
 const WALK_YAW = TANGENT_YAW;

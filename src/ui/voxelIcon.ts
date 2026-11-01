@@ -66,7 +66,7 @@ export function renderIcon(object: Object3D, view: Vector3, cssPx: number): stri
   });
   gl.setClearColor(0x000000, 0);
   gl.toneMapping = AgXToneMapping;
-  gl.toneMappingExposure = 1.35;
+  gl.toneMappingExposure = 1.0;
   gl.outputColorSpace = SRGBColorSpace;
 
   const scene = new Scene();
@@ -74,7 +74,7 @@ export function renderIcon(object: Object3D, view: Vector3, cssPx: number): stri
     new HemisphereLight(
       new Color(LIGHT_PALETTE.studioFill),
       new Color(LIGHT_PALETTE.studioCloth),
-      1.8,
+      1.1,
     ),
   );
   const key = new DirectionalLight(new Color(LIGHT_PALETTE.studioKey), 3.6);

@@ -5,7 +5,10 @@ import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 /**
  * Sprinkle-ball tree (RF-06, reference 01): a short, gently curving dough-bark
  * trunk under a lumpy ball of glossy frosting foliage studded with sprinkles.
- * 1/32 m voxels; the base center of the trunk is at (size/2, 0, size/2).
+ * 1/32 m voxels at `res` 1; `res` 2 builds the same tree at 1/64 m (the play
+ * camera comes close enough that 1/32 m canopies read as Lego, art bible §3),
+ * with sprinkles half the size and four times as many. The base center of the
+ * trunk is at (size·res/2, 0, size·res/2).
  */
 export const TREE_SIZE = [100, 132, 100] as const;
 
@@ -28,10 +31,12 @@ const SPRINKLES: VoxelColorName[] = [
   'frostingPinkLight',
 ];
 
-export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): VoxelGrid {
+export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1, res = 1): VoxelGrid {
   const grid = new VoxelGrid();
   const cx = TREE_SIZE[0] / 2;
   const cz = TREE_SIZE[2] / 2;
+  // Fine-grid coordinates → the 1/32 m design space the shapes are written in.
+  const q = 1 / res;
   const crownY = 78 * height;
   const crownR = 29 + hash3(seed, 1, 1, 9) * 5;
   const lean = (hash3(seed, 2, 1, 9) - 0.5) * 6;
@@ -72,35 +77,38 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
   const [leafA, leafB, leafC] = LEAVES[leaf];
   voxelize(
     grid,
-    (x, y, z) => {
+    (fx, fy, fz) => {
+      const x = fx * q;
+      const y = fy * q;
+      const z = fz * q;
       const c = crown(x - cx - lean, y - crownY, z - cz);
-      if (y > crownY + 4) return c;
+      if (y > crownY + 4) return c * res;
       const [tx, tz, tr] = trunkAt(Math.max(0, y));
       const trunk = Math.hypot(x - tx, z - tz) - tr;
-      return Math.min(c, trunk);
+      return Math.min(c, trunk) * res;
     },
     [0, 0, 0],
-    TREE_SIZE,
+    [TREE_SIZE[0] * res, TREE_SIZE[1] * res, TREE_SIZE[2] * res],
     (x, y, z) => {
-      const px = x + 0.5 - cx - lean;
-      const py = y + 0.5 - crownY;
-      const pz = z + 0.5 - cz;
+      const px = (x + 0.5) * q - cx - lean;
+      const py = (y + 0.5) * q - crownY;
+      const pz = (z + 0.5) * q - cz;
       if (crown(px, py, pz) <= 0) {
         const h = hash3(x, y, z, seed + 31);
         if (leaf === 'pink') {
           // Frosted crown: fine per-voxel grain darkening toward the underside,
           // never big patches (two-tone blotches read as camouflage).
-          const k = py / 60 + (h - 0.5) * 0.9;
+          const k = py / 60 + (h - 0.5) * 0.9 * q;
           return PALETTE_INDEX[k < -0.55 ? leafC : k < 0.05 ? leafB : leafA];
         }
-        const n = fbm3(x / 9 + seed * 3, y / 9, z / 9, 2, 17);
+        const n = fbm3((x * q) / 9 + seed * 3, (y * q) / 9, (z * q) / 9, 2, 17);
         if (h > 0.975) return PALETTE_INDEX[leafC];
         // Darker underside, lighter crown top.
         // Soft, dithered shading split (no hard two-tone band).
         const k = n + py / 110 + (hash3(x, y, z, seed + 37) - 0.5) * 0.18;
         return PALETTE_INDEX[k < 0.4 ? leafB : leafA];
       }
-      const band = (y + Math.sin((x + z) * 0.4) * 1.5) % 7;
+      const band = (y * q + Math.sin((x + z) * q * 0.4) * 1.5) % 7;
       return band < 1.2
         ? PALETTE_INDEX.woodDark
         : hash3(x, y, z, 3) > 0.8
@@ -111,9 +119,12 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
 
   // Sprinkles stuck all over the crown: 1×1×3 capsules lying on the surface.
   let placed = 0;
-  for (let i = 0; i < 8000 && placed < 480; i++) {
-    const u = hash3(i, seed, 1, 47) * 2 - 1;
-    const phi = hash3(i, seed, 2, 47) * Math.PI * 2;
+  // Directions on a jittered Fibonacci sphere: evenly scattered, no bands.
+  const want = 480 * res * res;
+  const tries = Math.round(want * 1.9);
+  for (let i = 0; i < tries && placed < want; i++) {
+    const u = 1 - (2 * (i + 0.2 + 0.6 * hash3(i, seed, 1, 47))) / tries;
+    const phi = i * 2.399963 + (hash3(i, seed, 2, 47) - 0.5) * 0.8;
     if (u < -0.45) continue; // not under the crown
     const s = Math.sqrt(1 - u * u);
     const dir = [Math.cos(phi) * s, u, Math.sin(phi) * s] as const;
@@ -122,10 +133,10 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1): Vox
     let y = 0;
     let z = 0;
     let found = false;
-    for (let d = crownR * 1.9; d > 0; d -= 0.5) {
-      x = Math.floor(cx + lean + dir[0] * d);
-      y = Math.floor(crownY + dir[1] * d);
-      z = Math.floor(cz + dir[2] * d);
+    for (let d = crownR * 1.9 * res; d > 0; d -= 0.5) {
+      x = Math.floor((cx + lean) * res + dir[0] * d);
+      y = Math.floor(crownY * res + dir[1] * d);
+      z = Math.floor(cz * res + dir[2] * d);
       if (grid.get(x, y, z) !== 0) {
         found = true;
         break;

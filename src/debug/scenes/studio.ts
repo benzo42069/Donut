@@ -42,6 +42,8 @@ export interface StudioOptions {
   back?: number;
   /** Cool fill strength (default 1.1); character shots want a deeper lilac core. */
   fill?: number;
+  /** Cool fill color (default `studioFill`). */
+  fillColor?: string;
 }
 
 /** A floor that curves up into a backdrop, with gentle cloth folds on the wall. */
@@ -151,7 +153,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   // sides without turning the far cloth grey-blue; a warm hemisphere bounce is
   // all that lights the cloth outside the pool, so the edges fall off warm.
   const fill = new SpotLight(
-    new Color(LIGHT_PALETTE.studioFill),
+    new Color(opts.fillColor ?? LIGHT_PALETTE.studioFill),
     opts.fill ?? 1.1,
     0,
     angle * 1.3,

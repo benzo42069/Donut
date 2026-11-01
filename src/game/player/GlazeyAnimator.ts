@@ -103,7 +103,7 @@ export class GlazeyAnimator {
     const target = groundTarget * (1 - this.air) + airTarget * this.air;
     springStep(this.squash, target, ANIM.stiffness, ANIM.damping, dt);
     // The tuft trails: it flops back after each footfall and whips on landings.
-    const flop = 0.32 * this.walk * Math.sin(2 * this.phase - 0.9);
+    const flop = 0.45 * this.walk * Math.sin(2 * this.phase - 0.9);
     springStep(this.tuft, -this.lean * 1.6 + flop + clamp(m.vy * -0.035, -0.3, 0.3), 120, 6, dt);
     springStep(this.tuftSide, this.roll * 1.8 + 0.05 * Math.sin(this.t * 1.7), 120, 6, dt);
 
@@ -133,8 +133,10 @@ export class GlazeyAnimator {
     const idleSway = 0.06 * Math.sin(this.t * 1.9) * (1 - w);
     p.arms.forEach((a, i) => {
       const side = i === 0 ? 1 : -1;
-      a.swing = -0.7 * w * Math.cos(this.phase) * side * (1 - this.air);
-      a.raise = 0.12 * w + idleSway + this.air * (1.5 + 0.25 * Math.sin(this.flap + i * 0.6));
+      // Held a little out from the body while walking, so the swing shows
+      // past the silhouette from the 3/4 camera; thrown up and out to the sides at the apex.
+      a.swing = -0.95 * w * Math.cos(this.phase) * side * (1 - this.air) - 0.15 * this.air;
+      a.raise = 0.38 * w + idleSway + this.air * (1.75 + 0.2 * Math.sin(this.flap + i * 0.6));
     });
     p.tuft[0] = this.tuft.x;
     p.tuft[1] = this.tuftSide.x;

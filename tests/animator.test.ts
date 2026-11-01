@@ -46,4 +46,13 @@ describe('Glazey animator', () => {
     expect(a.pose().squash).toBeGreaterThan(1.05);
     expect(a.pose().arms[0].raise).toBeGreaterThan(0.6);
   });
+
+  it('throws the arms up by the apex of a jump', () => {
+    const a = new GlazeyAnimator();
+    for (let i = 0; i < 60; i++) a.step(DT, { speed: 2, vy: 0, grounded: true, turnRate: 0 });
+    a.step(DT, { speed: 2, vy: 6, grounded: false, turnRate: 0, jumped: true });
+    for (let i = 0; i < 18; i++)
+      a.step(DT, { speed: 2, vy: 6 - i * 0.35, grounded: false, turnRate: 0 });
+    for (const arm of a.pose().arms) expect(arm.raise).toBeGreaterThan(1.4);
+  });
 });

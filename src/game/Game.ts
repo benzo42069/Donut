@@ -122,7 +122,6 @@ export class Game {
     // One step settles the broad phase so queries see the static world.
     physics.step();
     const player = new PlayerController(R, physics);
-    const material = createVoxelMaterial();
     const pool = new MesherPool();
     // The hero gets his own soft fill and rim so he reads a clear step above the
     // grass he walks on, even backlit at golden hour (art bible §6 value read).
@@ -146,11 +145,13 @@ export class Game {
       return hit ? hit.timeOfImpact : max;
     };
     const camera = new FollowCamera(aspect, probe, ground, opts.fov);
+    // Dust shares the hero's soft fill, so the puffs read warm and lit.
     const dust = new VoxelParticles(
-      material,
+      hero,
       [
         'powderedSugar',
         'candyCream',
+        'donutSugar',
         'sprinkleRed',
         'sprinkleYellow',
         'sprinkleBlue',
@@ -280,12 +281,12 @@ export class Game {
         );
         this.dust.emit({
           at,
-          count: 7,
+          count: 12,
           speed: [0.4, 0.9],
           up: [1.1, 1.8],
           dir: { x: -fwd.x, z: -fwd.z, bias: 0.6 },
-          colors: ['steam', 'steam', 'candyCream'],
-          size: [0.04, 0.062],
+          colors: ['candyCream', 'donutSugar', 'powderedSugar'],
+          size: [0.022, 0.034],
           life: [0.55, 0.85],
         });
       }
@@ -294,11 +295,11 @@ export class Game {
     if (m.jumped) {
       this.dust.emit({
         at: p.clone().setY(p.y + 0.1),
-        count: 12,
+        count: 18,
         speed: [0.7, 1.4],
         up: [0.8, 1.5],
-        colors: ['steam', 'steam', 'candyCream'],
-        size: [0.04, 0.062],
+        colors: ['candyCream', 'donutSugar', 'powderedSugar'],
+        size: [0.022, 0.034],
         life: [0.6, 0.9],
       });
     }
@@ -309,8 +310,8 @@ export class Game {
         count: Math.round(10 + 14 * k),
         speed: [0.9, 1.6 + 1.6 * k],
         up: [0.8, 1.8 + 1.4 * k],
-        colors: ['steam', 'steam', 'steam', 'candyCream'],
-        size: [0.034, 0.056],
+        colors: ['candyCream', 'donutSugar', 'powderedSugar', 'candyCream'],
+        size: [0.024, 0.036],
         life: [0.6, 1.0],
       });
       this.dust.emit({

@@ -150,7 +150,10 @@ export async function buildMeadowDiorama(
   );
   // The environment map is fill and gloss, not the key: keep it soft.
   scene.environmentIntensity = 0.6;
-  const sky = createSky(SUN_DIR);
+  // Play looks out low, toward the sun: the gradient climbs faster and the sun
+  // glow is tighter, so the band of sky in frame shades from peach to lilac
+  // blue instead of a flat glow (art bible §6).
+  const sky = createSky(SUN_DIR, 400, opts.microDecor ? { rise: 0.32, glowFalloff: 14 } : {});
   scene.add(sky);
   const environment = new Scene();
   // Reflections see a warm studio-like world: sky above, toasty bounce below,
@@ -304,7 +307,10 @@ export async function buildMeadowDiorama(
     rotY: Math.PI - pierTheta,
   });
 
-  // Sprinkle-ball trees (RF-06).
+  // Sprinkle-ball trees (RF-06). In play the camera roams close, so they are
+  // built at 1/64 m there (the M2 hero view keeps its 1/32 m trees).
+  // The low tier (phones) keeps 1/32 m: at its resolution they stay fine.
+  const treeRes = opts.microDecor && !low ? 2 : 1;
   const trees: [number, number, TreeLeaf, number][] = [
     [-28, 0.84, 'green', 1.0],
     [178, 0.82, 'mint', 0.9],
@@ -320,9 +326,9 @@ export async function buildMeadowDiorama(
   trees.forEach(([deg, u, leaf, h], i) => {
     const p = offPath(band(deg, u));
     placed.push({
-      grid: buildSprinkleTree(i + 3, leaf, h),
-      voxel: PROP,
-      pivot: [TREE_SIZE[0] / 2, 0, TREE_SIZE[2] / 2],
+      grid: buildSprinkleTree(i + 3, leaf, h, treeRes),
+      voxel: PROP / treeRes,
+      pivot: [(TREE_SIZE[0] * treeRes) / 2, 0, (TREE_SIZE[2] * treeRes) / 2],
       pos: at(p, -0.06),
       rotY: hash3(i, 1, 1, 3) * Math.PI * 2,
     });
@@ -426,6 +432,20 @@ export async function buildMeadowDiorama(
     [-9, -6.5, -9, 1.3],
     [10, -7, 4, 1.3],
   ];
+  if (opts.microDecor) {
+    // Play roams all round the island: a loose ring of distant clouds just
+    // above the horizon, so every heading has some in the sky.
+    for (let i = 0; i < 11; i++) {
+      const a = (i / 11) * Math.PI * 2 + hash3(i, 4, 4, 2) * 0.4;
+      const r = 30 + hash3(i, 5, 5, 2) * 10;
+      clouds.push([
+        Math.cos(a) * r,
+        3.5 + hash3(i, 6, 6, 2) * 3,
+        Math.sin(a) * r,
+        1 + hash3(i, 7, 7, 2) * 0.4,
+      ]);
+    }
+  }
   clouds.forEach(([x, y, z, s], i) => {
     placed.push({
       grid: buildCloud(i + 1, s),

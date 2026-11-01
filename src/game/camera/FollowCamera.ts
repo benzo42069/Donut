@@ -3,14 +3,15 @@ import { PerspectiveCamera, Vector3 } from 'three';
 /** Camera feel (PLAN M4: third-person auto camera with collision). */
 export const CAM = {
   /**
-   * A toy-diorama distance: Glazey (1 m) stands about 195 px tall at 1080p, so
-   * his 1/32 m voxels stay near the art bible's 6 px density limit (§3).
+   * Glazey (1 m) stands about a quarter of the frame tall: big enough to read
+   * his face, far enough that his 1/32 m voxels stay near the art bible's
+   * density limit (§3).
    */
-  distance: 8,
-  /** Elevation above the horizon (radians). */
-  pitch: 0.42,
-  /** Aim point above Glazey's soles (meters). */
-  aimHeight: 0.6,
+  distance: 6.4,
+  /** Elevation above the horizon (radians): low, so the sky shows up top (ref 02). */
+  pitch: 0.3,
+  /** Aim point above Glazey's soles (meters): he sits on the lower third. */
+  aimHeight: 1.1,
   fov: 38,
   /** Manual orbit speed (rad/s at full input). */
   orbit: 2.4,

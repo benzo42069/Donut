@@ -40,6 +40,8 @@ export interface StudioOptions {
   width?: number;
   /** Where the floor starts curving up into the wall (z, meters). */
   back?: number;
+  /** Cool fill strength (default 1.1); character shots want a deeper lilac core. */
+  fill?: number;
 }
 
 /** A floor that curves up into a backdrop, with gentle cloth folds on the wall. */
@@ -148,7 +150,14 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
   // cool fill). It is a soft spot over the subjects, so it cools their shadow
   // sides without turning the far cloth grey-blue; a warm hemisphere bounce is
   // all that lights the cloth outside the pool, so the edges fall off warm.
-  const fill = new SpotLight(new Color(LIGHT_PALETTE.studioFill), 1.1, 0, angle * 1.3, 1, 0);
+  const fill = new SpotLight(
+    new Color(LIGHT_PALETTE.studioFill),
+    opts.fill ?? 1.1,
+    0,
+    angle * 1.3,
+    1,
+    0,
+  );
   fill.position.set(-0.8, 0.35, 0.6).normalize().multiplyScalar(dist);
   fill.target.position.copy(key.target.position);
   scene.add(fill, fill.target);

@@ -35,7 +35,7 @@ import {
 import { CLOUD_SIZE, buildCloud } from '../../art/models/smallProps';
 import { TREE_SIZE, buildSprinkleTree } from '../../art/models/sprinkleTree';
 import type { QualitySettings } from '../../engine/quality';
-import { createVoxelMaterial } from '../../engine/render/Materials';
+import { createVoxelMaterial, type VoxelMaterialTuning } from '../../engine/render/Materials';
 import { MesherPool } from '../../engine/voxel/MesherPool';
 import { placeModel, type Placed } from '../../engine/voxel/placeModel';
 import type { ShotScene } from '../shotTypes';
@@ -170,22 +170,31 @@ export async function buildGlazeyGallery(
   aspect: number,
   quality: QualitySettings,
 ): Promise<ShotScene> {
-  const studio = createStudio(quality, { shadowExtent: 4.6 });
-  const material = createVoxelMaterial({}, STUDIO_TUNING);
+  // The key comes from further round the side and the cool fill is stronger,
+  // so the shadow side of each figure turns lilac (warm key, cool fill).
+  const studio = createStudio(quality, {
+    shadowExtent: 3.4,
+    keyDir: new Vector3(1, 0.55, 0.05),
+    fill: 0.7,
+  });
+  const material = createVoxelMaterial({}, GLAZEY_STUDIO_TUNING);
   const pool = new MesherPool();
-  const spacing = 1.4;
   const rigs = await Promise.all(
     [0, 1, 2, 3, 4, 5].map((b) =>
       GlazeyRig.build(buildGlazey(b, b === 5 ? 'bliss' : 'happy'), material, pool),
     ),
   );
   pool.dispose();
+  // Two rows of three: the small stages in front, the round ones behind and
+  // set between them, so every face and belly shows and the six fill the frame.
   rigs.forEach((rig, b) => {
-    rig.position.set((b - 2.5) * spacing, 0, 0);
+    const back = b >= 3;
+    const col = b % 3;
+    rig.position.set((col - 1) * 1.65 + (back ? 0.5 : -0.5), 0, back ? -1.5 : 0.9);
     rig.pose(restPose());
     studio.scene.add(rig);
   });
-  const camera = studioCamera(aspect, 19, new Vector3(0, 2.6, 14.2), new Vector3(0, 0.48, 0));
+  const camera = studioCamera(aspect, 17, new Vector3(0, 4.6, 10.4), new Vector3(0, 0.5, -0.3));
   return {
     scene: studio.scene,
     camera,
@@ -198,6 +207,9 @@ export async function buildGlazeyGallery(
     stripTimes: [0, Math.PI / 2, Math.PI],
   };
 }
+
+/** Glazey's studio tuning: candy hue held less and a short wrap, so the fill cools his core shadow. */
+const GLAZEY_STUDIO_TUNING: VoxelMaterialTuning = { ...STUDIO_TUNING, hueHold: 0.25, wrap: 0.1 };
 
 /** gallery-props: the island's set dressing, shelved like a toy collection. */
 export async function buildPropsGallery(

@@ -2,7 +2,7 @@ import { VOXEL_PALETTE } from '../art/palette';
 import { idleFrame, type InputFrame, type InputSource } from '../engine/input/Input';
 
 export interface TouchIcons {
-  /** The jump button's voxel arrow. */
+  /** The jump button's icon: a voxel Glazey mid-hop. */
   jump: string;
   /** The stick knob: a little voxel donut. */
   knob: string;
@@ -17,9 +17,9 @@ const rgba = (name: keyof typeof VOXEL_PALETTE, a: number): string => {
 
 /**
  * Candy-like touch controls (art bible §9, PLAN M4): a floating stick on the
- * left half (it appears under the thumb; its knob is a voxel donut) and a big
- * strawberry jump button on the right with a voxel arrow, a soft drop shadow
- * and a pressed state. Dragging anywhere else on the right orbits the camera.
+ * left half (a cream candy plate under the thumb; its knob is a voxel donut)
+ * and a big strawberry jump button on the right, ringed in cream, showing a
+ * voxel Glazey mid-hop, with a soft drop shadow and a pressed state. Dragging anywhere else on the right orbits the camera.
  * No text anywhere: a 6-year-old who can't read can play.
  */
 export class TouchControls implements InputSource {
@@ -188,12 +188,12 @@ function injectStyle(): void {
 .tc-stick { position: absolute; left: max(28px, 5vw); bottom: max(22px, 6vh);
   width: min(36vh, 230px); height: min(36vh, 230px); }
 .tc-base { position: absolute; inset: 0; border-radius: 50%;
-  background: radial-gradient(circle at 50% 40%, ${cream(0.62)} 0%, ${cream(0.4)} 62%, ${rgba('frostingPinkShadow', 0.22)} 100%);
-  border: min(1.8vh, 11px) solid ${rgba('frostingPinkLight', 0.92)};
-  box-shadow: 0 min(1.2vh, 7px) 0 ${rgba('frostingPinkShadow', 0.75)},
-    0 min(2.6vh, 16px) min(4vh, 26px) ${rgba('chocolateDark', 0.25)},
-    inset 0 min(1vh, 6px) min(2vh, 12px) ${rgba('chocolateDark', 0.16)};
-  opacity: 0.8; transition: opacity 0.15s; }
+  background: radial-gradient(circle at 50% 38%, ${hex('candyCream')} 0%, ${hex('butter')} 78%, ${hex('doughGolden')} 100%);
+  border: min(1.6vh, 10px) solid ${hex('frostingPink')};
+  box-shadow: 0 min(1.2vh, 7px) 0 ${hex('frostingPinkShadow')},
+    0 min(2.8vh, 18px) min(4vh, 26px) ${rgba('chocolateDark', 0.35)},
+    inset 0 min(1.4vh, 9px) min(2.4vh, 15px) ${rgba('doughGolden', 0.7)};
+  opacity: 0.88; transition: opacity 0.15s; }
 .tc-active .tc-base { opacity: 1; }
 .tc-knob { position: absolute; left: 50%; top: 50%; width: 52%; height: 52%;
   filter: drop-shadow(0 min(1.2vh, 7px) min(1.2vh, 6px) ${rgba('chocolateDark', 0.35)});
@@ -202,17 +202,18 @@ function injectStyle(): void {
 .tc-jump { position: absolute; right: max(30px, 5.5vw); bottom: max(26px, 7vh);
   width: min(28vh, 176px); height: min(28vh, 176px); border-radius: 50%;
   background: radial-gradient(circle at 36% 30%, ${hex('frostingPinkLight')} 0%, ${hex('frostingPink')} 52%, ${hex('frostingPinkShadow')} 100%);
-  box-shadow: 0 min(1.4vh, 9px) 0 ${hex('frostingPinkShadow')},
-    0 min(3vh, 18px) min(4.4vh, 28px) ${rgba('chocolateDark', 0.32)},
+  border: min(1.6vh, 10px) solid ${hex('candyCream')};
+  box-shadow: 0 min(1.4vh, 9px) 0 ${hex('doughGolden')},
+    0 min(3vh, 20px) min(4.4vh, 28px) ${rgba('chocolateDark', 0.4)},
     inset 0 max(-1vh, -6px) min(1.6vh, 10px) ${rgba('frostingPinkShadow', 0.55)};
   transition: transform 0.06s, box-shadow 0.06s; }
 .tc-jump::before { content: ''; position: absolute; left: 17%; top: 9%; width: 42%; height: 24%;
   border-radius: 50%; background: ${cream(0.5)}; transform: rotate(-24deg); filter: blur(1px); }
-.tc-jump img { position: absolute; left: 50%; top: 50%; width: 56%; height: 56%;
-  transform: translate(-50%, -54%);
-  filter: drop-shadow(0 min(0.8vh, 5px) 0 ${rgba('frostingPinkShadow', 0.9)}); pointer-events: none; }
+.tc-jump img { position: absolute; left: 50%; top: 50%; width: 84%; height: 84%;
+  transform: translate(-50%, -52%);
+  filter: drop-shadow(0 min(0.8vh, 5px) min(0.6vh, 4px) ${rgba('frostingPinkShadow', 0.9)}); pointer-events: none; }
 .tc-jump.tc-pressed { transform: translateY(min(1.1vh, 7px)) scale(0.97);
-  box-shadow: 0 min(0.3vh, 2px) 0 ${hex('frostingPinkShadow')},
+  box-shadow: 0 min(0.3vh, 2px) 0 ${hex('doughGolden')},
     0 min(1vh, 6px) min(2vh, 12px) ${rgba('chocolateDark', 0.3)},
     inset 0 max(-1vh, -6px) min(1.6vh, 10px) ${rgba('frostingPinkShadow', 0.55)}; }
 `;

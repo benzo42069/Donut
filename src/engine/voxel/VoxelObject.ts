@@ -106,7 +106,11 @@ export class VoxelObject extends Group {
   }
 }
 
-/** Overwrites the smooth normals of mesher output with an analytic field. */
+/**
+ * Overwrites the smooth normals of mesher output with an analytic field, and
+ * drops the baked per-vertex AO there: on a relaxed staircase it prints the
+ * voxel steps as a light/dark checker; screen-space AO still grounds the part.
+ */
 function applyNormalField(
   data: MeshData,
   field: (x: number, y: number, z: number) => readonly number[],
@@ -119,4 +123,6 @@ function applyNormalField(
     sn[i + 1] = Math.round((n[1] ?? 0) * 127);
     sn[i + 2] = Math.round((n[2] ?? 0) * 127);
   }
+  const v = data.voxel;
+  for (let i = 1; i < v.length; i += 2) v[i] = (v[i] ?? 0) | 3;
 }

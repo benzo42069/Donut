@@ -65,6 +65,8 @@ export interface DetailPatch {
 export interface TerrainOptions {
   /** Fraction of meadow cells with a 1/32 m grass blade. */
   grassDensity: number;
+  /** Bake 1/32 m grass blades into the skin (default). Off when micro-decor replaces them. */
+  blades?: boolean;
   /** Near-field macro patches (ground-level shots only). */
   detail?: readonly DetailPatch[];
   /** Spots kept clear of macro grass (e.g. under a donut): x, z, radius. */
@@ -290,7 +292,13 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
     }
 
     // Micro-voxel grass blades on the meadow (RF-04).
-    if (!macro && c.zone === Zone.Meadow && c.zoneDepth > 0.04 && drop === 0) {
+    if (
+      opts.blades !== false &&
+      !macro &&
+      c.zone === Zone.Meadow &&
+      c.zoneDepth > 0.04 &&
+      drop === 0
+    ) {
       const g = hash3(fx, 7, fz, 37);
       const lush = valueNoise3(x * 1.3, 2, z * 1.3, 41);
       if (g < opts.grassDensity * (0.55 + lush)) {

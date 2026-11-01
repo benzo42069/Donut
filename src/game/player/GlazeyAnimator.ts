@@ -18,7 +18,7 @@ export interface MotionInput {
 /** Feel constants (art bible §7: squash and stretch on every jump and land). */
 export const ANIM = {
   /** Ground covered by one full walk cycle (two steps), meters. */
-  cycle: 0.74,
+  cycle: 1.0,
   /** Speed at which the walk is at full swing (m/s). */
   fullWalk: 2.6,
   stepLift: 0.09,
@@ -98,16 +98,21 @@ export class GlazeyAnimator {
     const breathe = 0.016 * Math.sin((this.t * Math.PI * 2) / 2.3) * (1 - this.walk);
     // Squash a little at each foot contact, stretch on the pass; in the air,
     // stretch with speed and relax toward the apex.
-    const groundTarget = 1 + breathe - 0.1 * this.walk * (1 - Math.abs(s)) + 0.05 * this.walk;
+    const groundTarget = 1 + breathe;
     const airTarget = 1 + clamp(Math.abs(m.vy) * 0.03, 0, 0.16);
     const target = groundTarget * (1 - this.air) + airTarget * this.air;
     springStep(this.squash, target, ANIM.stiffness, ANIM.damping, dt);
-    springStep(this.tuft, -this.lean * 1.6 + clamp(m.vy * -0.035, -0.3, 0.3), 120, 6, dt);
+    // The tuft trails: it flops back after each footfall and whips on landings.
+    const flop = 0.32 * this.walk * Math.sin(2 * this.phase - 0.9);
+    springStep(this.tuft, -this.lean * 1.6 + flop + clamp(m.vy * -0.035, -0.3, 0.3), 120, 6, dt);
     springStep(this.tuftSide, this.roll * 1.8 + 0.05 * Math.sin(this.t * 1.7), 120, 6, dt);
 
     const p = this.out;
     const w = this.walk;
-    p.squash = clamp(this.squash.x, 0.62, 1.4);
+    // Each footfall squashes (-8 %), each pass stretches (+5 %): a direct
+    // waveform at step rate, since the jelly spring is too slow to follow it.
+    const stepWave = Math.abs(s);
+    p.squash = clamp(this.squash.x + w * (0.13 * stepWave - 0.08), 0.62, 1.4);
     p.bob = ANIM.bob * w * Math.abs(s) + 0.012 * this.air;
     p.lean = this.lean * (1 - 0.5 * this.air);
     // Weight shifts over the planted foot; the hips twist with the stride.

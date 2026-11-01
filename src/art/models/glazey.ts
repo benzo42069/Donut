@@ -162,7 +162,7 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   // The belly: a centred swell that pushes forward (past the side profile, as in
   // sheet 03 "SIDE") and grows at every stage.
   const bellyR = lerp(8, 13, t);
-  const bellyC: Vec3 = [0, y0 - ry * lerp(0.3, 0.2, t), rz * lerp(0.44, 0.3, t)];
+  const bellyC: Vec3 = [0, y0 - ry * lerp(0.3, 0.2, t), rz * lerp(0.52, 0.34, t)];
   const skin = smoothUnion(
     bean,
     ellipsoid(bellyC[0], bellyC[1], bellyC[2], bellyR * 1.05, bellyR, bellyR * 0.95),
@@ -185,7 +185,7 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     // view nothing stands proud of the silhouette (the far eye).
     const [, , gz] = gradient(skin, x, y, z, 0.5);
     const flush = clamp((gz - 0.45) / 0.35, 0, 1);
-    return { ...f, lift: 0.12 + (f.lift - 0.12) * flush };
+    return { ...f, lift: f.lift * flush };
   };
   const W = rx + 2;
   const D = Math.max(rz, bellyC[2] + bellyR) + 2;
@@ -430,7 +430,7 @@ function faceLayout(
     const dy = y - bellyCy;
     const egg = bellyRx * (1 - 0.12 * clamp(dy / bellyRy, -1, 1));
     if (ell(x, dy, egg, bellyRy, s) <= 1)
-      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, bellyRy, 0.4, 0.55), facing: 0.08 };
+      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, bellyRy, 0.35, 0.9), facing: 0.08 };
     return null;
   };
 }

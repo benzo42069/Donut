@@ -4,10 +4,15 @@ import { buildGlazey } from '../art/models/glazey';
 import type { InputFrame, InputSource } from '../engine/input/Input';
 import { heightfieldDesc, loadRapier, ringWallDesc, type Rapier } from '../engine/physics/Physics';
 import type { QualitySettings } from '../engine/quality';
-import { createVoxelMaterial } from '../engine/render/Materials';
+import {
+  DEFAULT_TUNING,
+  createVoxelMaterial,
+  type VoxelMaterialTuning,
+} from '../engine/render/Materials';
 import type { PostSettings } from '../engine/render/Renderer';
 import { MesherPool } from '../engine/voxel/MesherPool';
 import { FollowCamera } from './camera/FollowCamera';
+import { ContactShadow } from './fx/ContactShadow';
 import { VoxelParticles } from './fx/VoxelParticles';
 import { GlazeyAnimator, type MotionInput } from './player/GlazeyAnimator';
 import { GlazeyRig } from './player/GlazeyRig';
@@ -17,6 +22,13 @@ import { buildMeadowDiorama, type Diorama, type Obstacle } from './world/MeadowD
 import { innerRadius, outerRadius } from './world/islandShape';
 
 /** The fixed simulation step: physics and animation are deterministic per step. */
+const HERO_TUNING: VoxelMaterialTuning = {
+  ...DEFAULT_TUNING,
+  selfLight: 0.5,
+  heroRim: 0.8,
+  wrap: 0.7,
+};
+
 export const STEP = 1 / 60;
 
 /** Where a session starts: Glazey's spot and facing, and the camera's azimuth. */
@@ -60,6 +72,8 @@ export class Game {
   private animator: GlazeyAnimator;
   private readonly physics: RAPIER.World;
   private readonly dust: VoxelParticles;
+  private readonly shadow = new ContactShadow();
+  private readonly groundBelow: (p: Vector3) => number;
   private readonly spawn: Spawn;
   private input: GameInput;
   private time = 0;
@@ -76,6 +90,7 @@ export class Game {
     dust: VoxelParticles,
     spawn: Spawn,
     input: GameInput,
+    groundBelow: (p: Vector3) => number,
   ) {
     this.world = world;
     this.scene = world.scene;
@@ -86,8 +101,9 @@ export class Game {
     this.dust = dust;
     this.spawn = spawn;
     this.input = input;
+    this.groundBelow = groundBelow;
     this.animator = new GlazeyAnimator();
-    this.scene.add(rig, dust);
+    this.scene.add(rig, dust, this.shadow);
     this.reset();
   }
 
@@ -98,7 +114,7 @@ export class Game {
     opts: GameOptions,
   ): Promise<Game> {
     const [world, R] = await Promise.all([
-      buildMeadowDiorama(quality, { detail: opts.detail }),
+      buildMeadowDiorama(quality, { detail: opts.detail, microDecor: true }),
       loadRapier(),
     ]);
     const physics = new R.World({ x: 0, y: 0, z: 0 });
@@ -108,7 +124,10 @@ export class Game {
     const player = new PlayerController(R, physics);
     const material = createVoxelMaterial();
     const pool = new MesherPool();
-    const rig = await GlazeyRig.build(buildGlazey(0, 'happy'), material, pool);
+    // The hero gets his own soft fill and rim so he reads a clear step above the
+    // grass he walks on, even backlit at golden hour (art bible §6 value read).
+    const hero = createVoxelMaterial({}, HERO_TUNING);
+    const rig = await GlazeyRig.build(buildGlazey(0, 'happy'), hero, pool);
     pool.dispose();
     const ground = (x: number, z: number): number => world.shape.surface(x, z);
     const probe = (from: Vector3, dir: Vector3, max: number): number => {
@@ -139,7 +158,19 @@ export class Game {
       ],
       ground,
     );
-    return new Game(world, physics, player, rig, camera, dust, opts.spawn, input);
+    // The first thing under Glazey: ground, a donut, a rock.
+    const groundBelow = (p: Vector3): number => {
+      const hit = physics.castRay(
+        new R.Ray({ x: p.x, y: p.y + 0.2, z: p.z }, { x: 0, y: -1, z: 0 }),
+        20,
+        true,
+        undefined,
+        undefined,
+        player.collider,
+      );
+      return hit ? p.y + 0.2 - hit.timeOfImpact : ground(p.x, p.z);
+    };
+    return new Game(world, physics, player, rig, camera, dust, opts.spawn, input, groundBelow);
   }
 
   get environment(): Scene {
@@ -244,17 +275,17 @@ export class Game {
         // The foot that just planted: about 0.13 m out to the side, a little ahead.
         const at = new Vector3(
           p.x + fwd.z * side * 0.13 + fwd.x * 0.12,
-          p.y,
+          p.y + 0.1,
           p.z - fwd.x * side * 0.13 + fwd.z * 0.12,
         );
         this.dust.emit({
           at,
-          count: 5,
-          speed: [0.3, 0.8],
-          up: [0.8, 1.5],
+          count: 7,
+          speed: [0.4, 0.9],
+          up: [1.1, 1.8],
           dir: { x: -fwd.x, z: -fwd.z, bias: 0.6 },
-          colors: ['powderedSugar', 'candyCream'],
-          size: [0.032, 0.05],
+          colors: ['steam', 'steam', 'candyCream'],
+          size: [0.04, 0.062],
           life: [0.55, 0.85],
         });
       }
@@ -262,28 +293,28 @@ export class Game {
     this.lastPhase = phase;
     if (m.jumped) {
       this.dust.emit({
-        at: p.clone(),
-        count: 8,
-        speed: [0.6, 1.3],
-        up: [0.4, 1.0],
-        colors: ['powderedSugar', 'candyCream'],
-        size: [0.032, 0.05],
-        life: [0.5, 0.8],
+        at: p.clone().setY(p.y + 0.1),
+        count: 12,
+        speed: [0.7, 1.4],
+        up: [0.8, 1.5],
+        colors: ['steam', 'steam', 'candyCream'],
+        size: [0.04, 0.062],
+        life: [0.6, 0.9],
       });
     }
     if (m.landed && m.landed > 2) {
       const k = Math.min(1, m.landed / 9);
       this.dust.emit({
-        at: p.clone(),
+        at: p.clone().setY(p.y + 0.1),
         count: Math.round(10 + 14 * k),
         speed: [0.9, 1.6 + 1.6 * k],
         up: [0.8, 1.8 + 1.4 * k],
-        colors: ['powderedSugar', 'powderedSugar', 'candyCream', 'candyCream'],
+        colors: ['steam', 'steam', 'steam', 'candyCream'],
         size: [0.034, 0.056],
         life: [0.6, 1.0],
       });
       this.dust.emit({
-        at: p.clone(),
+        at: p.clone().setY(p.y + 0.1),
         count: Math.round(3 + 5 * k),
         speed: [1.0, 2.0],
         up: [1.6, 2.6],
@@ -299,6 +330,9 @@ export class Game {
     this.rig.position.copy(this.player.position);
     this.rig.quaternion.copy(new Quaternion().setFromEuler(new Euler(0, this.player.yaw, 0)));
     this.rig.pose(this.animator.pose());
+    const p = this.player.position;
+    const g = this.groundBelow(p);
+    this.shadow.place(p.x, g, p.z, p.y - g);
   }
 
   dispose(): void {

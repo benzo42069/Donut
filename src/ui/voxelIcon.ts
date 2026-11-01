@@ -9,6 +9,7 @@ import {
   Scene,
   Vector3,
   WebGLRenderer,
+  type Object3D,
 } from 'three';
 import { LIGHT_PALETTE } from '../art/palette';
 import { createVoxelMaterial } from '../engine/render/Materials';
@@ -27,14 +28,34 @@ export interface IconSpec {
   px: number;
 }
 
-/**
- * Renders a voxel model to a transparent PNG for the UI (art bible §9: icons
- * in the same voxel style, rendered from voxel models), lit like a studio
- * product shot: warm key, cool fill.
- */
+/** Renders one voxel model to a transparent PNG (see `renderIcon`). */
 export async function renderVoxelIcon(spec: IconSpec): Promise<string> {
+  const pool = new MesherPool();
+  const { group, ready } = placeModel(
+    {
+      grid: spec.grid,
+      voxel: spec.voxel,
+      pivot: [spec.size[0] / 2, spec.size[1] / 2, spec.size[2] / 2],
+      pos: new Vector3(),
+      rotY: 0,
+      shadow: false,
+    },
+    createVoxelMaterial(),
+    pool,
+  );
+  await ready;
+  pool.dispose();
+  return renderIcon(group, spec.view, spec.px);
+}
+
+/**
+ * Renders a meshed voxel object to a transparent PNG for the UI (art bible §9:
+ * icons in the same voxel style, rendered from voxel models), lit like a studio
+ * product shot: a warm key over the viewer's shoulder, cool fill and rim.
+ */
+export function renderIcon(object: Object3D, view: Vector3, cssPx: number): string {
   const canvas = document.createElement('canvas');
-  const px = spec.px * 2;
+  const px = cssPx * 2;
   canvas.width = px;
   canvas.height = px;
   const gl = new WebGLRenderer({
@@ -56,35 +77,18 @@ export async function renderVoxelIcon(spec: IconSpec): Promise<string> {
       1.8,
     ),
   );
-  // The key comes from over the viewer's left shoulder, so the icon's face is lit.
   const key = new DirectionalLight(new Color(LIGHT_PALETTE.studioKey), 3.6);
-  key.position.copy(spec.view.clone().normalize().multiplyScalar(3)).add(new Vector3(-1.4, 1.6, 0));
+  key.position.copy(view.clone().normalize().multiplyScalar(3)).add(new Vector3(-1.4, 1.6, 0));
   const rim = new DirectionalLight(new Color(LIGHT_PALETTE.studioRim), 1.2);
   rim.position.set(2, 1, -1.5);
-  scene.add(key, rim);
+  scene.add(key, rim, object);
 
-  const pool = new MesherPool();
-  const { group, ready } = placeModel(
-    {
-      grid: spec.grid,
-      voxel: spec.voxel,
-      pivot: [spec.size[0] / 2, spec.size[1] / 2, spec.size[2] / 2],
-      pos: new Vector3(),
-      rotY: 0,
-      shadow: false,
-    },
-    createVoxelMaterial(),
-    pool,
-  );
-  scene.add(group);
-  await ready;
-  pool.dispose();
-
-  const box = new Box3().setFromObject(group);
+  object.updateMatrixWorld(true);
+  const box = new Box3().setFromObject(object);
   const radius = box.getSize(new Vector3()).length() / 2;
   const center = box.getCenter(new Vector3());
   const cam = new OrthographicCamera(-radius, radius, radius, -radius, 0.01, radius * 8);
-  cam.position.copy(center).addScaledVector(spec.view.clone().normalize(), radius * 3);
+  cam.position.copy(center).addScaledVector(view.clone().normalize(), radius * 3);
   cam.lookAt(center);
   // Tighten the frame to the projected silhouette.
   cam.updateMatrixWorld();
@@ -99,6 +103,7 @@ export async function renderVoxelIcon(spec: IconSpec): Promise<string> {
 
   gl.render(scene, cam);
   const url = canvas.toDataURL('image/png');
+  scene.remove(object);
   gl.dispose();
   gl.forceContextLoss();
   return url;

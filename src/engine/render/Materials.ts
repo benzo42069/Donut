@@ -44,6 +44,10 @@ export interface VoxelMaterialTuning {
   clearcoat: number;
   /** How much `MAT.candy` entries keep their own hue under tinted light (0–1). */
   hueHold: number;
+  /** Self-light on every voxel (a soft fill that only this material gets: the hero). */
+  selfLight: number;
+  /** Fresnel rim on every voxel, candy entries included (the hero's silhouette lift). */
+  heroRim: number;
   /** How far gloss voxels bend their shading normal toward the smooth normal. */
   smooth: number;
   /** 0 = no baked AO, 1 = AO level 0 is black. */
@@ -67,6 +71,8 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   glaze: 1.6,
   clearcoat: 0.4,
   hueHold: 0.9,
+  selfLight: 0,
+  heroRim: 0,
   smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,
@@ -160,6 +166,7 @@ varying vec3 vSNormal;
 uniform vec3 uSssTint;
 uniform float uGlaze;
 uniform float uClearcoat;
+uniform vec4 uTune2;
 flat varying vec4 vPal;
 flat varying vec4 vVoxelMat;
 varying vec3 vCell;
@@ -197,7 +204,8 @@ const FRAGMENT_EMISSIVE = /* glsl */ `
 #include <emissivemap_fragment>
 {
   float fres = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0);
-  totalEmissiveRadiance += diffuseColor.rgb * (vVoxelMat.y + max(vVoxelMat.z, 0.0) * fres);
+  totalEmissiveRadiance += diffuseColor.rgb
+    * (vVoxelMat.y + uTune2.y + (max(vVoxelMat.z, 0.0) + uTune2.z) * fres);
 }
 `;
 
@@ -262,7 +270,7 @@ export function createVoxelMaterial(
       value: new Vector4(t.roughMatte, t.roughGloss, t.roughRough, t.emissive),
     };
     shader.uniforms.uTune1 = { value: new Vector4(t.glow, t.lit, t.rim, t.wrap) };
-    shader.uniforms.uTune2 = { value: new Vector4(t.hueHold, 0, 0, 0) };
+    shader.uniforms.uTune2 = { value: new Vector4(t.hueHold, t.selfLight, t.heroRim, 0) };
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
     shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.82, 0.68) };

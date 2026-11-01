@@ -1,3 +1,4 @@
+import { buildMicroDecor } from './MicroDecor';
 import {
   Color,
   DirectionalLight,
@@ -108,6 +109,13 @@ const faceToward = (from: { x: number; z: number }, to: { x: number; z: number }
 export interface DioramaOptions {
   /** Near-field macro patches around a ground-level camera (LOD follows the camera). */
   detail?: DetailPatch[];
+  /**
+   * Play mode: grass, flowers and frosting sprinkles become instanced 1/64 m
+   * micro-decor over the whole island (`MicroDecor.ts`) instead of 1/32 m voxels
+   * in the terrain skin, so the roaming camera never finds Lego-sized decor.
+   * The M2 diorama shots keep the baked decor.
+   */
+  microDecor?: boolean;
 }
 
 export async function buildMeadowDiorama(
@@ -161,6 +169,7 @@ export async function buildMeadowDiorama(
   const donutClear = 0.4;
   const terrain = buildIslandTerrain(shape, {
     grassDensity: low ? 0.08 : 0.16,
+    blades: !opts.microDecor,
     detail,
     clear: [[HERO_DONUT.x, HERO_DONUT.z, donutClear]],
   });
@@ -180,7 +189,7 @@ export async function buildMeadowDiorama(
       if (hash3(i, k, 3, 51) > (drift - 0.35) * (low ? 0.6 : 1.3)) continue;
       const c = shape.column(x, z);
       if (c.zone !== Zone.Meadow || c.zoneDepth < 0.12 || c.u < 0.05 || c.u > 0.95) continue;
-      if (inDetail(detail, x, z)) continue;
+      if (inDetail(detail, x, z) || opts.microDecor) continue;
       stamp(
         fineGrid,
         flowerStamp(i * 131 + k),
@@ -214,7 +223,7 @@ export async function buildMeadowDiorama(
       const c = shape.column(x, z);
       if (c.zone !== Zone.Frosting || c.zoneDepth < 0.1) continue;
       if (c.r < c.ri + 0.18 || c.r > c.ro - 0.05) continue;
-      if (inDetail(detail, x, z)) continue;
+      if (inDetail(detail, x, z) || opts.microDecor) continue;
       const fx = Math.floor(x / FINE);
       const fz = Math.floor(z / FINE);
       const alongX = hash3(i, k, 7, 53) > 0.5;
@@ -437,6 +446,17 @@ export async function buildMeadowDiorama(
   const fine = new VoxelObject(fineGrid, FINE, material, pool);
   scene.add(coarse, fine);
   const objects: Promise<unknown>[] = [coarse.update(), fine.update()];
+  let decorCounts: Record<string, number> = {};
+  if (opts.microDecor) {
+    const decor = buildMicroDecor(shape, material, {
+      low,
+      clear: obstacles.flatMap((o) =>
+        o.kind === 'cylinder' ? [[o.x, o.z, o.radius + 0.06] as const] : [],
+      ),
+    });
+    scene.add(decor.group);
+    decorCounts = decor.counts;
+  }
   if (terrain.macro) {
     const macro = new VoxelObject(terrain.macro, MACRO, material, pool);
     scene.add(macro);
@@ -535,6 +555,7 @@ export async function buildMeadowDiorama(
       meshMs: performance.now() - t0,
       flowers,
       sprinkles,
+      ...decorCounts,
     },
   };
 }

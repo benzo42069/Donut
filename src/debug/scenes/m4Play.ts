@@ -1,6 +1,5 @@
 import type { QualitySettings } from '../../engine/quality';
 import { Game, STEP, type Spawn, type WorldInput } from '../../game/Game';
-import type { DetailPatch } from '../../game/world/IslandTerrain';
 import { band } from '../../game/world/meadowLayout';
 import { TouchControls } from '../../ui/TouchControls';
 import { loadTouchIcons } from '../../ui/touchIcons';
@@ -9,29 +8,24 @@ import type { ShotScene } from '../shotTypes';
 const DEG = Math.PI / 180;
 
 /**
- * The M4 gate stage: Glazey crosses the meadow near the lagoon rim, seen from
- * the hero direction (reference 01) with the golden sun at the upper right.
- * The gameplay camera starts out front and to his right, so the 3/4 face
- * shows, with the milk lagoon and the far side of the ring behind him.
+ * The M4 gate stage: Glazey strolls along the meadow ring toward the gameplay
+ * camera, which trails ahead of him over the island, so his 3/4 face shows
+ * with the curve of the ring, the lighthouse and the golden sky behind him.
  */
-/** Bearing of the hero camera from the island center (yaw). */
-const HERO_YAW = Math.atan2(-8, 32.5);
-const START = band(97, 0.32);
-const WALK_YAW = HERO_YAW + 24 * DEG;
-const SPAWN: Spawn = { x: START.x, z: START.z, yaw: WALK_YAW, cameraYaw: HERO_YAW };
+const RING_DEG = 120;
+const START = band(RING_DEG, 0.45);
+/** Tangent along the ring toward increasing angle (counter-clockwise from above). */
+const TANGENT_YAW = Math.atan2(-Math.sin(RING_DEG * DEG), Math.cos(RING_DEG * DEG));
+const WALK_YAW = TANGENT_YAW;
+const SPAWN: Spawn = {
+  x: START.x,
+  z: START.z,
+  yaw: WALK_YAW,
+  cameraYaw: WALK_YAW + 28 * DEG,
+};
 /** Stick magnitude: a brisk walk, not a run. */
 const PACE = 0.78;
 const JUMP_AT = 0.9;
-
-/** Macro terrain under the walk, where the gameplay lens comes closest. */
-function walkDetail(): DetailPatch[] {
-  const out: DetailPatch[] = [];
-  const dx = Math.sin(WALK_YAW);
-  const dz = Math.cos(WALK_YAW);
-  for (let d = -1; d <= 4; d += 1.6)
-    out.push({ x: START.x + dx * d, z: START.z + dz * d, radius: 2.6 });
-  return out;
-}
 
 const walking =
   (jumpAt: number | null) =>
@@ -75,7 +69,7 @@ export function m4Shot(kind: M4Shot) {
       quality,
       aspect,
       { kind: 'scripted', at: walking(jumpAt) },
-      { spawn: SPAWN, detail: walkDetail() },
+      { spawn: SPAWN },
     );
     let stillTime: number;
     let stripTimes: number[] | undefined;

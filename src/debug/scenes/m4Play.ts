@@ -28,7 +28,9 @@ function stage(ringDeg: number, u: number, cameraOffsetDeg: number): Stage {
 }
 
 /** The walk: the lighthouse over the lagoon behind him. */
-const WALK_STAGE = stage(112, 0.3, 28);
+const WALK_STAGE = stage(112, 0.3, 24);
+/** The jump: further out on open lawn, so he takes off with grass, not the lagoon rim, below him. */
+const JUMP_STAGE = stage(112, 0.6, 24);
 /** Stick magnitude: a brisk walk, not a run. */
 const PACE = 0.78;
 const JUMP_AT = 0.9;
@@ -71,7 +73,7 @@ export type M4Shot = 'walk' | 'jump' | 'touch';
 export function m4Shot(kind: M4Shot) {
   return async (aspect: number, quality: QualitySettings): Promise<ShotScene> => {
     const jumpAt = kind === 'jump' ? JUMP_AT : null;
-    const st = WALK_STAGE;
+    const st = kind === 'jump' ? JUMP_STAGE : WALK_STAGE;
     const game = await Game.create(
       quality,
       aspect,

@@ -24,11 +24,11 @@ import { innerRadius, outerRadius } from './world/islandShape';
 /** The fixed simulation step: physics and animation are deterministic per step. */
 const HERO_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
-  selfLight: 0.35,
+  selfLight: 0.15,
   heroRim: 1.2,
   // A soft sheen on the candy coral, so his form models in the sun.
   roughMatte: 0.55,
-  wrap: 0.7,
+  wrap: 0.25,
 };
 
 export const STEP = 1 / 60;

@@ -14,6 +14,7 @@
   | 3 | 6.6 | 6 | 1 |
   | 4 | 6.8 | 6 | 0 |
   | 5 | 6.7 | 5 | 1 |
+  | 6 | 6.9 | 6 | 1 |
 
   Reports are in `reviews/M4-iter*.md`.
 - **Plateau (§5), before iter 5.** Iters 3 and 4 gained less than 0.3, so
@@ -41,6 +42,22 @@
   stronger rim and sheen with less self-light on Glazey in play, warm dust,
   a higher camera aim so the lighthouse donut stays in frame, and a camera that
   follows 70 % of the jump rise.
+- **Plateau (§5) again, before iter 7.** Iters 5 and 6 (6.7 → 6.9) stayed
+  under +0.3 per iteration, and the belly form is still the blocker. Iter 7 makes three structural changes:
+  1. **The belly is geometry.** One shared `bellyLayout` drives both the
+     body SDF swell and the cream oval, so the oval sits on a real convex
+     tummy (about 2 voxels proud) just under the smile and shades from that
+     form. It no longer uses an upward normal tilt on a flat patch.
+  2. **Hero lighting with a terminator.** Glazey's play material drops most
+     of its wrap and self-light (wrap 0.7 → 0.25, selfLight 0.35 → 0.15), so
+     the sun side and core shadow separate.
+  3. **A separate jump stage on open lawn.** The jump stage sits further out
+     on the ring (u 0.6), and the camera follows only 45 % of the rise, so the
+     jump shows ground and a shadow under him. The camera pitch is flatter
+     (0.2 → 0.13), so the whole lighthouse and its donut sit in frame.
+
+  Smaller changes: the studio's back row sits deeper (no overlap), with a
+  stronger lilac fill and less bounce.
 
 ## Handoff → M4 (Glazey in motion)
 

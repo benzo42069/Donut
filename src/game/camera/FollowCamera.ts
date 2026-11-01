@@ -9,7 +9,7 @@ export const CAM = {
    */
   distance: 6.4,
   /** Elevation above the horizon (radians): low, so the sky shows up top (ref 02). */
-  pitch: 0.2,
+  pitch: 0.13,
   /** Aim point above Glazey's soles (meters): he sits on the lower third. */
   aimHeight: 1.3,
   fov: 38,
@@ -85,7 +85,7 @@ export class FollowCamera {
     // Ride the ground height; in the air, follow most of the rise, so he stays
     // framed against the lawn with the ground (and his shadow) below him.
     if (grounded) this.groundY = approach(this.groundY, target.y, 6, dt);
-    const lift = grounded ? 0 : Math.max(0, target.y - this.groundY) * 0.7;
+    const lift = grounded ? 0 : Math.max(0, target.y - this.groundY) * 0.45;
     const ax = approach(this.aim.x, target.x, 10, dt);
     const az = approach(this.aim.z, target.z, 10, dt);
     this.aim.set(ax, approach(this.aim.y, this.groundY + lift, 8, dt), az);

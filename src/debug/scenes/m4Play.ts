@@ -12,7 +12,7 @@ const DEG = Math.PI / 180;
  * camera, which trails ahead of him over the island, so his 3/4 face shows
  * with the curve of the ring, the lighthouse and the golden sky behind him.
  */
-const RING_DEG = 120;
+const RING_DEG = 112;
 const START = band(RING_DEG, 0.3);
 /** Tangent along the ring toward increasing angle (counter-clockwise from above). */
 const TANGENT_YAW = Math.atan2(-Math.sin(RING_DEG * DEG), Math.cos(RING_DEG * DEG));

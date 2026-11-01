@@ -11,12 +11,19 @@ export const CAM = {
   /** Elevation above the horizon (radians): low, so the sky shows up top (ref 02). */
   pitch: 0.2,
   /** Aim point above Glazey's soles (meters): he sits on the lower third. */
-  aimHeight: 1.0,
+  aimHeight: 1.12,
   fov: 38,
   /** Manual orbit speed (rad/s at full input). */
   orbit: 2.4,
   /** Clearance kept from walls and terrain (meters). */
   clearance: 0.25,
+  /**
+   * Look-ahead framing (art bible §7 composition): how far across the screen
+   * his facing must point (sine) for him to sit fully on a vertical third,
+   * with the frame's room ahead of him, and how fast the framing eases there.
+   */
+  leadAcross: 0.4,
+  leadRate: 2.2,
 } as const;
 
 const approach = (cur: number, target: number, rate: number, dt: number): number =>
@@ -41,6 +48,8 @@ export class FollowCamera {
   private readonly leash = new Vector3();
   private groundY = 0;
   private dist: number = CAM.distance;
+  /** Framing pan, −1…1 thirds (+ = the look point slides to screen right). */
+  private frame = 0;
   private readonly probe: CameraProbe;
   private readonly floor: (x: number, z: number) => number;
 
@@ -61,10 +70,18 @@ export class FollowCamera {
     this.aim.copy(target);
     this.groundY = target.y;
     this.dist = CAM.distance;
+    this.frame = 0;
     this.place();
   }
 
-  update(dt: number, target: Vector3, grounded: boolean, look: number): void {
+  update(dt: number, target: Vector3, grounded: boolean, look: number, facing?: number): void {
+    // Lead the frame the way he faces: the more his facing points across the
+    // screen, the further he sits toward the opposite third (look room ahead).
+    if (dt > 0 && facing !== undefined) {
+      const across = Math.sin(facing - this.yaw);
+      const want = Math.max(-1, Math.min(1, across / CAM.leadAcross));
+      this.frame = approach(this.frame, want, CAM.leadRate, dt);
+    }
     // Ride the ground height; in the air, lift the aim only part way.
     if (grounded) this.groundY = approach(this.groundY, target.y, 6, dt);
     const lift = grounded ? 0 : Math.max(0, target.y - this.groundY) * 0.45;
@@ -96,7 +113,10 @@ export class FollowCamera {
     const eye = aim.clone().addScaledVector(dir, this.dist);
     eye.y = Math.max(eye.y, this.floor(eye.x, eye.z) + CAM.clearance);
     this.camera.position.copy(eye);
-    this.camera.lookAt(aim);
+    // Pan the look point toward a third: a third of the half-width at his distance.
+    const halfW = this.dist * Math.tan((this.camera.fov * Math.PI) / 360) * this.camera.aspect;
+    const pan = (this.frame * halfW) / 3;
+    this.camera.lookAt(aim.x + Math.cos(this.yaw) * pan, aim.y, aim.z - Math.sin(this.yaw) * pan);
   }
 
   /** Turns a screen-space stick into a world direction on the ground. */

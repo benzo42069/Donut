@@ -174,7 +174,7 @@ export async function buildGlazeyGallery(
   // so the shadow side of each figure turns lilac (warm key, cool fill).
   const studio = createStudio(quality, {
     shadowExtent: 3.4,
-    keyDir: new Vector3(1, 0.55, 0.05),
+    keyDir: new Vector3(0.9, 0.6, 0.35),
     fill: 0.7,
     fillColor: LIGHT_PALETTE.studioLilac,
   });
@@ -211,7 +211,7 @@ export async function buildGlazeyGallery(
 }
 
 /** Glazey's studio tuning: candy hue held less and a short wrap, so the fill cools his core shadow. */
-const GLAZEY_STUDIO_TUNING: VoxelMaterialTuning = { ...STUDIO_TUNING, hueHold: 0.35, wrap: 0 };
+const GLAZEY_STUDIO_TUNING: VoxelMaterialTuning = { ...STUDIO_TUNING, wrap: 0 };
 
 /** gallery-props: the island's set dressing, shelved like a toy collection. */
 export async function buildPropsGallery(

@@ -24,8 +24,8 @@ import { innerRadius, outerRadius } from './world/islandShape';
 /** The fixed simulation step: physics and animation are deterministic per step. */
 const HERO_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
-  selfLight: 0.5,
-  heroRim: 0.8,
+  selfLight: 0.6,
+  heroRim: 1.0,
   wrap: 0.7,
 };
 
@@ -78,7 +78,7 @@ export class Game {
     aoFalloff: 0.35,
     aoIntensity: 2.2,
     grade: 0.2,
-    vignette: 0.34,
+    vignette: 0.45,
     saturation: 1.14,
     contrast: 0.24,
   };
@@ -162,7 +162,7 @@ export class Game {
     const dust = new VoxelParticles(
       hero,
       [
-        'powderedSugar',
+        'butter',
         'candyCream',
         'donutSugar',
         'sprinkleRed',
@@ -266,7 +266,7 @@ export class Game {
     this.animator.step(STEP, m);
     this.effects(m);
     const look = this.input.kind === 'live' ? (this.lastFrame?.look ?? 0) : 0;
-    this.camera.update(STEP, this.player.position, this.player.grounded, look);
+    this.camera.update(STEP, this.player.position, this.player.grounded, look, this.player.yaw);
     this.dust.update(STEP);
     this.time += STEP;
     this.world.update(this.time);
@@ -298,7 +298,7 @@ export class Game {
           speed: [0.4, 0.9],
           up: [1.1, 1.8],
           dir: { x: -fwd.x, z: -fwd.z, bias: 0.6 },
-          colors: ['candyCream', 'donutSugar', 'powderedSugar'],
+          colors: ['candyCream', 'butter', 'donutSugar'],
           size: [0.022, 0.034],
           life: [0.55, 0.85],
         });
@@ -309,9 +309,9 @@ export class Game {
       this.dust.emit({
         at: p.clone().setY(p.y + 0.1),
         count: 18,
-        speed: [0.7, 1.4],
-        up: [0.8, 1.5],
-        colors: ['candyCream', 'donutSugar', 'powderedSugar'],
+        speed: [0.4, 0.9],
+        up: [0.6, 1.1],
+        colors: ['candyCream', 'butter', 'donutSugar'],
         size: [0.022, 0.034],
         life: [0.6, 0.9],
       });
@@ -323,7 +323,7 @@ export class Game {
         count: Math.round(10 + 14 * k),
         speed: [0.9, 1.6 + 1.6 * k],
         up: [0.8, 1.8 + 1.4 * k],
-        colors: ['candyCream', 'donutSugar', 'powderedSugar', 'candyCream'],
+        colors: ['candyCream', 'butter', 'donutSugar', 'candyCream'],
         size: [0.024, 0.036],
         life: [0.6, 1.0],
       });

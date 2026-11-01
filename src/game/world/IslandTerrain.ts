@@ -65,6 +65,8 @@ export interface DetailPatch {
 export interface TerrainOptions {
   /** Fraction of meadow cells with a 1/32 m grass blade. */
   grassDensity: number;
+  /** Play-mode meadow ground in the warm tuft greens (see `meadowColor`). */
+  warmMeadow?: boolean;
   /** Bake 1/32 m grass blades into the skin (default). Off when micro-decor replaces them. */
   blades?: boolean;
   /** Near-field macro patches (ground-level shots only). */
@@ -125,18 +127,30 @@ function doughColor(x: number, y: number, z: number, theta: number, aboveBottom:
   return P.doughGolden;
 }
 
-function meadowColor(x: number, z: number, res: number): number {
+function meadowColor(x: number, z: number, res: number, warm = false): number {
   const patch =
     valueNoise3(x * 0.8, 0, z * 0.8, 17) + (valueNoise3(x * 3, 1, z * 3, 18) - 0.5) * 0.35;
   const h = hash3(Math.floor(x * res), 0, Math.floor(z * res), 19);
   // Mostly light candy mint, with deep green only in small pockets (the hero
   // meadow read as a dark carpet).
+  if (warm) {
+    // Play: the ground between the warm tufts in the same sunny green family,
+    // a step darker than the blades (no mint-teal carpet under them).
+    return patch > 0.55 || h > 0.92 ? P.tuftMid : P.grassDeep;
+  }
   if (patch > 0.5 || h > 0.9) return P.grassLight;
   if (patch < 0.18 || h < 0.03) return P.grassDeep;
   return P.grassMint;
 }
 
-function surfaceColor(c: Column, x: number, z: number, res: number, slope: number): number {
+function surfaceColor(
+  c: Column,
+  x: number,
+  z: number,
+  res: number,
+  slope: number,
+  warm = false,
+): number {
   switch (c.zone) {
     case Zone.Frosting:
       return P.frostingPinkLight;
@@ -153,7 +167,7 @@ function surfaceColor(c: Column, x: number, z: number, res: number, slope: numbe
       void slope;
       return c.zone === Zone.Sugar ? P.powderedSugar : P.gingerCrag;
     default:
-      return meadowColor(x, z, res);
+      return meadowColor(x, z, res, warm);
   }
 }
 
@@ -272,7 +286,7 @@ export function buildIslandTerrain(shape: IslandShape, opts: TerrainOptions): Is
       } else if (c.zone === Zone.Syrup && below < 0.06) {
         color = P.syrupPool;
       } else if (topVoxel) {
-        color = surfaceColor(c, x, z, 32, slope);
+        color = surfaceColor(c, x, z, 32, slope, opts.warmMeadow);
       } else if (c.zone === Zone.Meadow && below < 0.2) {
         // Deep enough that banks (syrup channel, patch edges) show turf, not dough.
         color = P.grassDeep;

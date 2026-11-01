@@ -173,6 +173,7 @@ export async function buildMeadowDiorama(
   const terrain = buildIslandTerrain(shape, {
     grassDensity: low ? 0.08 : 0.16,
     blades: !opts.microDecor,
+    warmMeadow: opts.microDecor,
     detail,
     clear: [[HERO_DONUT.x, HERO_DONUT.z, donutClear]],
   });

@@ -23,7 +23,7 @@ export const ANIM = {
   fullWalk: 2.6,
   stepLift: 0.09,
   stepReach: 0.12,
-  bob: 0.045,
+  bob: 0.075,
   /** Squash spring: a stiff, under-damped jelly wobble. */
   stiffness: 230,
   damping: 8.5,
@@ -112,7 +112,7 @@ export class GlazeyAnimator {
     // Each footfall squashes (-8 %), each pass stretches (+5 %): a direct
     // waveform at step rate, since the jelly spring is too slow to follow it.
     const stepWave = Math.abs(s);
-    p.squash = clamp(this.squash.x + w * (0.13 * stepWave - 0.08), 0.62, 1.4);
+    p.squash = clamp(this.squash.x + w * (0.2 * stepWave - 0.11), 0.62, 1.4);
     p.bob = ANIM.bob * w * Math.abs(s) + 0.012 * this.air;
     p.lean = this.lean * (1 - 0.5 * this.air);
     // Weight shifts over the planted foot; the hips twist with the stride.

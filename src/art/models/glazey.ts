@@ -355,8 +355,8 @@ function faceLayout(
   const cheekY = mouthY + 0.2;
   // The belly patch: a full upright oval (sheet 03 "FRONT"), about 55–60 % of
   // the body width, from just under the mouth to just above the feet.
-  // Its top sits well under the smile (about 5 face voxels of coral between).
-  const bellyTop = mouthY - mouthRy - 1.3;
+  // Its top sits well under the smile (about 8 face voxels of coral between).
+  const bellyTop = mouthY - mouthRy - 2;
   const bellyBot = FOOT_CREASE + lerp(2.2, 1.6, t);
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
@@ -436,19 +436,21 @@ function faceLayout(
     const dy = y - bellyCy;
     const egg = bellyRx * (1 - 0.12 * clamp(dy / bellyRy, -1, 1));
     const r = ell(x, dy, egg, bellyRy, s);
-    const belly = dome(x, dy, egg, bellyRy, 0.35, 0.9);
-    if (r <= 1)
+    // A soft convex swell: nearly flush at its edge, lit by the swell's own
+    // curvature (no darker outline ring), with a dithered edge that melts into
+    // the coral over the outer tenth instead of a hard sticker line.
+    const belly = dome(x, dy, egg, bellyRy, 0.08, 0.75);
+    if (r <= 1) {
+      const fade = clamp((r - 0.9) / 0.1, 0, 1);
+      const coral = hash3(Math.floor(x * FACE_SCALE), Math.floor(y * FACE_SCALE), 0, 77) < fade;
       return {
-        // A soft shaded rim, as if the coral occludes the swell's edge.
-        color: r > 0.88 ? 'glazeyBellyRim' : 'glazeyBellySoft',
+        color: coral ? 'glazeyBody' : 'glazeyBellySoft',
         ...belly,
-        // The swell sits under the equator and faces a little down; its
-        // shading leans up toward the sky so the cream stays bright.
-        slope: [belly.slope[0], belly.slope[1] - 0.25],
         // Only where the swell faces the viewer: in 3/4 the patch stops short
         // of the outline instead of wrapping onto it like a bill.
         facing: 0.3,
       };
+    }
     return null;
   };
 }

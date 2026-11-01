@@ -1,5 +1,38 @@
 # Progress
 
+## M4 in progress (Glazey in motion)
+
+- **Thread exception:** M4 runs in the same thread as M3, because the user asked
+  for it ("Please run M4 in this thread"). This overrides CLAUDE.md's
+  one-milestone-per-thread rule for M4 only.
+- **Gate history:**
+
+  | iter | mean | min | blockers |
+  |---|---|---|---|
+  | 1 | 5.9 | 4 | 2 |
+  | 2 | 6.6 | 5 | 1 |
+  | 3 | 6.6 | 6 | 1 |
+  | 4 | 6.8 | 6 | 0 |
+
+  Reports are in `reviews/M4-iter*.md`.
+- **Plateau (§5), before iter 5.** Iters 3 and 4 gained less than 0.3, so
+  iter 5 makes two structural changes instead of tuning:
+  1. **Look-ahead framing in the gameplay camera.** `FollowCamera` pans its
+     look point toward a vertical third based on which way Glazey faces
+     across the screen, leaving lead room ahead of him. The M4 stage moves to
+     112° on the ring, so the lighthouse stands fully in frame over the lagoon.
+     Composition has scored 6 in every play shot for three iterations.
+  2. **A re-authored belly.** The belly is now:
+     - a shallow, flush swell whose shading comes from its own curvature;
+     - edged with a dithered fade into the coral, not a darker rim ring;
+     - set lower under the smile.
+
+     Glazey's body loses its hue hold, so its shadow side can take the cool
+     fill while the cream belly keeps its colour.
+
+  Two smaller changes support these: the play-mode ground uses the warm tuft
+  greens, and clouds ramp through a middle tone.
+
 ## Handoff → M4 (Glazey in motion)
 
 **M3 status: DONE, accepted by the user (option B), gate NOT passed.** After 8

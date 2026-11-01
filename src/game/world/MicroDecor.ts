@@ -50,7 +50,7 @@ export function buildMicroDecor(
 
   // Grass: a jittered lattice, thinned by a soft "lushness" field so the meadow
   // has clumps and clearings rather than an even carpet.
-  const gStep = opts.low ? 0.13 : 0.095;
+  const gStep = opts.low ? 0.13 : 0.078;
   for (let gx = -12; gx < 12; gx += gStep) {
     for (let gz = -12; gz < 12; gz += gStep) {
       const i = Math.round(gx / gStep);

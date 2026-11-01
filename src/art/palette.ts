@@ -102,6 +102,8 @@ export const VOXEL_PALETTE = {
   syrupLight: entry('#F6BA5A', MAT.gloss | MAT.translucent | MAT.lit, 0.03),
   cloud: entry('#FFF8F4', MAT.lit, 0.02),
   cloudShade: entry('#E6DCF3', MAT.lit, 0.02),
+  // Between the two: the cloud underside ramps instead of stepping.
+  cloudMid: entry('#F3EBF5', MAT.lit, 0.02),
   steam: entry('#FFF4EC', MAT.lit, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),
@@ -157,10 +159,9 @@ export const VOXEL_PALETTE = {
   // Bitten crumb interior (K-07): airy crumb with darker pores.
   crumbPore: entry('#DDAE6E', MAT.soft, 0.06),
   // Glazey (D-01): a relaxed coral twin for the rounded body, face details.
-  glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  // No hue hold: his shadow side takes the cool fill (lilac core, art bible §6).
+  glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth, 0.03),
   glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
-  // The belly's soft rim: a shaded cream ring, its occlusion against the coral.
-  glazeyBellyRim: entry('#E2C48E', MAT.soft | MAT.smooth | MAT.candy, 0.02),
   glazeyMouth: entry('#7E2A3A', MAT.matte, 0.02),
   glazeyTongue: entry('#F2788C', MAT.soft, 0.02),
   glazeyCheek: entry('#F4798F', MAT.soft | MAT.smooth | MAT.candy, 0.02),

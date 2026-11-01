@@ -111,11 +111,8 @@ export function buildCloud(seed: number, size = 1): VoxelGrid {
     return d + (fbm3(x / 9 + seed, y / 9, z / 9, 2, 3) - 0.5) * 5;
   };
   voxelize(grid, sdf, [0, 0, 0], CLOUD_SIZE, (x, y, z) => {
-    // A three-step ramp with a fine dither at each step, so the shaded
-    // underside fades up into the white instead of stopping at a hard line.
-    const shade =
-      y + (fbm3(x / 6, y / 6, z / 6 + seed, 2, 7) - 0.5) * 8 + (hash3(x, y, z, seed + 5) - 0.5) * 3;
-    return shade < 14 ? P.cloudShade : shade < 20 ? P.cloudMid : P.cloud;
+    const shade = y + (fbm3(x / 6, y / 6, z / 6 + seed, 2, 7) - 0.5) * 8;
+    return shade < 17 ? P.cloudShade : P.cloud;
   });
   grid.takeDirty();
   return grid;

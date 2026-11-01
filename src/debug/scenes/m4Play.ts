@@ -12,27 +12,33 @@ const DEG = Math.PI / 180;
  * camera, which trails ahead of him over the island, so his 3/4 face shows
  * with the curve of the ring, the lighthouse and the golden sky behind him.
  */
-const RING_DEG = 112;
-const START = band(RING_DEG, 0.3);
-/** Tangent along the ring toward increasing angle (counter-clockwise from above). */
-const TANGENT_YAW = Math.atan2(-Math.sin(RING_DEG * DEG), Math.cos(RING_DEG * DEG));
-const WALK_YAW = TANGENT_YAW;
-const SPAWN: Spawn = {
-  x: START.x,
-  z: START.z,
-  yaw: WALK_YAW,
-  cameraYaw: WALK_YAW + 28 * DEG,
-};
+interface Stage {
+  spawn: Spawn;
+  /** Walk heading (yaw): along the ring, counter-clockwise seen from above. */
+  walkYaw: number;
+}
+
+function stage(ringDeg: number, u: number, cameraOffsetDeg: number): Stage {
+  const start = band(ringDeg, u);
+  const walkYaw = Math.atan2(-Math.sin(ringDeg * DEG), Math.cos(ringDeg * DEG));
+  return {
+    spawn: { x: start.x, z: start.z, yaw: walkYaw, cameraYaw: walkYaw + cameraOffsetDeg * DEG },
+    walkYaw,
+  };
+}
+
+/** The walk: the lighthouse over the lagoon behind him. */
+const WALK_STAGE = stage(112, 0.3, 28);
 /** Stick magnitude: a brisk walk, not a run. */
 const PACE = 0.78;
 const JUMP_AT = 0.9;
 
 const walking =
-  (jumpAt: number | null) =>
+  (yaw: number, jumpAt: number | null) =>
   (t: number): WorldInput => {
     const jump = jumpAt !== null && t >= jumpAt && t < jumpAt + 0.35;
     return {
-      move: { x: Math.sin(WALK_YAW) * PACE, z: Math.cos(WALK_YAW) * PACE },
+      move: { x: Math.sin(yaw) * PACE, z: Math.cos(yaw) * PACE },
       jump,
       jumpPressed: jumpAt !== null && t >= jumpAt && t < jumpAt + STEP,
     };
@@ -65,11 +71,12 @@ export type M4Shot = 'walk' | 'jump' | 'touch';
 export function m4Shot(kind: M4Shot) {
   return async (aspect: number, quality: QualitySettings): Promise<ShotScene> => {
     const jumpAt = kind === 'jump' ? JUMP_AT : null;
+    const st = WALK_STAGE;
     const game = await Game.create(
       quality,
       aspect,
-      { kind: 'scripted', at: walking(jumpAt) },
-      { spawn: SPAWN },
+      { kind: 'scripted', at: walking(st.walkYaw, jumpAt) },
+      { spawn: st.spawn },
     );
     let stillTime: number;
     let stripTimes: number[] | undefined;

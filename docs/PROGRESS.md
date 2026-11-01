@@ -13,6 +13,7 @@
   | 2 | 6.6 | 5 | 1 |
   | 3 | 6.6 | 6 | 1 |
   | 4 | 6.8 | 6 | 0 |
+  | 5 | 6.7 | 5 | 1 |
 
   Reports are in `reviews/M4-iter*.md`.
 - **Plateau (§5), before iter 5.** Iters 3 and 4 gained less than 0.3, so
@@ -32,6 +33,14 @@
 
   Two smaller changes support these: the play-mode ground uses the warm tuft
   greens, and clouds ramp through a middle tone.
+- **Iter 6.** The re-authored belly regressed against the approved M3 gallery
+  (iter 5 blocker), so the belly goes back to a clean, full cream oval just
+  under the smile with no dithered edge. The cloud ramp is reverted to the
+  approved M2 cloud. The look-ahead camera stays. Also: a stronger lilac studio
+  fill with a weaker warm bounce, a wider gap between the gallery rows, a
+  stronger rim and sheen with less self-light on Glazey in play, warm dust,
+  a higher camera aim so the lighthouse donut stays in frame, and a camera that
+  follows 70 % of the jump rise.
 
 ## Handoff → M4 (Glazey in motion)
 

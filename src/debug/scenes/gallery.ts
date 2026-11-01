@@ -175,7 +175,8 @@ export async function buildGlazeyGallery(
   const studio = createStudio(quality, {
     shadowExtent: 3.4,
     keyDir: new Vector3(0.9, 0.6, 0.35),
-    fill: 0.7,
+    fill: 1.0,
+    bounce: 0.12,
     fillColor: LIGHT_PALETTE.studioLilac,
   });
   const material = createVoxelMaterial({}, GLAZEY_STUDIO_TUNING);
@@ -192,7 +193,7 @@ export async function buildGlazeyGallery(
   rigs.forEach((rig, b) => {
     const back = b < 3;
     const col = b % 3;
-    rig.position.set((col - 1) * 1.65 + (back ? -0.65 : 0.15), 0, back ? -1.7 : 0.9);
+    rig.position.set((col - 1) * 1.65 + (back ? -0.65 : 0.15), 0, back ? -2.1 : 0.9);
     rig.pose(restPose());
     studio.scene.add(rig);
   });

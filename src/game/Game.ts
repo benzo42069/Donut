@@ -24,8 +24,10 @@ import { innerRadius, outerRadius } from './world/islandShape';
 /** The fixed simulation step: physics and animation are deterministic per step. */
 const HERO_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
-  selfLight: 0.6,
-  heroRim: 1.0,
+  selfLight: 0.35,
+  heroRim: 1.2,
+  // A soft sheen on the candy coral, so his form models in the sun.
+  roughMatte: 0.55,
   wrap: 0.7,
 };
 
@@ -164,7 +166,7 @@ export class Game {
       [
         'butter',
         'candyCream',
-        'donutSugar',
+        'doughGolden',
         'sprinkleRed',
         'sprinkleYellow',
         'sprinkleBlue',
@@ -298,7 +300,7 @@ export class Game {
           speed: [0.4, 0.9],
           up: [1.1, 1.8],
           dir: { x: -fwd.x, z: -fwd.z, bias: 0.6 },
-          colors: ['candyCream', 'butter', 'donutSugar'],
+          colors: ['butter', 'doughGolden', 'candyCream'],
           size: [0.022, 0.034],
           life: [0.55, 0.85],
         });
@@ -311,7 +313,7 @@ export class Game {
         count: 18,
         speed: [0.4, 0.9],
         up: [0.6, 1.1],
-        colors: ['candyCream', 'butter', 'donutSugar'],
+        colors: ['butter', 'doughGolden', 'candyCream'],
         size: [0.022, 0.034],
         life: [0.6, 0.9],
       });
@@ -323,7 +325,7 @@ export class Game {
         count: Math.round(10 + 14 * k),
         speed: [0.9, 1.6 + 1.6 * k],
         up: [0.8, 1.8 + 1.4 * k],
-        colors: ['candyCream', 'butter', 'donutSugar', 'candyCream'],
+        colors: ['butter', 'doughGolden', 'candyCream', 'butter'],
         size: [0.024, 0.036],
         life: [0.6, 1.0],
       });

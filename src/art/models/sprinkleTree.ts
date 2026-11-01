@@ -100,9 +100,9 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1, res 
           // never big patches (two-tone blotches read as camouflage).
           // The fine (play) build shades more strongly top to bottom with less
           // grain, so the ball reads as a lit form, not a checker.
-          const k = res > 1 ? py / 30 + (h - 0.5) * 0.7 : py / 60 + (h - 0.5) * 0.9;
+          const k = res > 1 ? py / 30 + (h - 0.5) * 0.3 : py / 60 + (h - 0.5) * 0.9;
           return PALETTE_INDEX[
-            k < (res > 1 ? -0.75 : -0.55) ? leafC : k < (res > 1 ? -0.2 : 0.05) ? leafB : leafA
+            k < (res > 1 ? -0.85 : -0.55) ? leafC : k < (res > 1 ? -0.35 : 0.05) ? leafB : leafA
           ];
         }
         const n = fbm3((x * q) / 9 + seed * 3, (y * q) / 9, (z * q) / 9, 2, 17);

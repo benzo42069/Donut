@@ -44,6 +44,8 @@ export interface StudioOptions {
   fill?: number;
   /** Cool fill color (default `studioFill`). */
   fillColor?: string;
+  /** Warm hemisphere bounce strength (default 0.4); lower lets the fill cool shadow sides. */
+  bounce?: number;
 }
 
 /** A floor that curves up into a backdrop, with gentle cloth folds on the wall. */
@@ -167,7 +169,7 @@ export function createStudio(quality: QualitySettings, opts: StudioOptions = {})
     new HemisphereLight(
       new Color(LIGHT_PALETTE.studioCloth),
       new Color(LIGHT_PALETTE.studioClothGlow),
-      0.4,
+      opts.bounce ?? 0.4,
     ),
   );
   // Cool rim from the back left, so silhouettes separate from the cream sweep.

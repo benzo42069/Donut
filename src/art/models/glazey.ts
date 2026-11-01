@@ -355,12 +355,12 @@ function faceLayout(
   const cheekY = mouthY + 0.2;
   // The belly patch: a full upright oval (sheet 03 "FRONT"), about 55–60 % of
   // the body width, from just under the mouth to just above the feet.
-  // Its top sits well under the smile (about 8 face voxels of coral between).
-  const bellyTop = mouthY - mouthRy - 2;
+  // From just under the smile to just above the feet.
+  const bellyTop = mouthY - mouthRy - 0.45;
   const bellyBot = FOOT_CREASE + lerp(2.2, 1.6, t);
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
-  const bellyRx = rx * lerp(0.6, 0.62, t);
+  const bellyRx = rx * lerp(0.56, 0.6, t);
   // Normalized radius inside an ellipse, inset by `s` body voxels.
   const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
     Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
@@ -436,21 +436,18 @@ function faceLayout(
     const dy = y - bellyCy;
     const egg = bellyRx * (1 - 0.12 * clamp(dy / bellyRy, -1, 1));
     const r = ell(x, dy, egg, bellyRy, s);
-    // A soft convex swell: nearly flush at its edge, lit by the swell's own
-    // curvature (no darker outline ring), with a dithered edge that melts into
-    // the coral over the outer tenth instead of a hard sticker line.
-    const belly = dome(x, dy, egg, bellyRy, 0.08, 0.75);
-    if (r <= 1) {
-      const fade = clamp((r - 0.9) / 0.1, 0, 1);
-      const coral = hash3(Math.floor(x * FACE_SCALE), Math.floor(y * FACE_SCALE), 0, 77) < fade;
+    // A clean upright oval (sheet 03, M3 final), standing a little proud and
+    // domed, so it reads as a convex tummy with one crisp edge. Its shading
+    // leans up toward the sky: the swell sits under the equator and would
+    // otherwise face down into shadow and go khaki.
+    const belly = dome(x, dy, egg, bellyRy, 0.3, 0.6);
+    if (r <= 1)
       return {
-        color: coral ? 'glazeyBody' : 'glazeyBellySoft',
+        color: 'glazeyBellySoft',
         ...belly,
-        // Only where the swell faces the viewer: in 3/4 the patch stops short
-        // of the outline instead of wrapping onto it like a bill.
-        facing: 0.3,
+        slope: [belly.slope[0], belly.slope[1] - 0.4],
+        facing: 0.08,
       };
-    }
     return null;
   };
 }

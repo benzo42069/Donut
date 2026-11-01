@@ -102,8 +102,6 @@ export const VOXEL_PALETTE = {
   syrupLight: entry('#F6BA5A', MAT.gloss | MAT.translucent | MAT.lit, 0.03),
   cloud: entry('#FFF8F4', MAT.lit, 0.02),
   cloudShade: entry('#E6DCF3', MAT.lit, 0.02),
-  // Between the two: the cloud underside ramps instead of stepping.
-  cloudMid: entry('#F3EBF5', MAT.lit, 0.02),
   steam: entry('#FFF4EC', MAT.lit, 0.02),
   pebble: entry('#D9B48C', MAT.matte, 0.05),
   milkFloor: entry('#F3DDB8', MAT.soft, 0.04),

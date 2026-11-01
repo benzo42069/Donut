@@ -131,10 +131,11 @@ export class Munch {
 
   /** How far the donut has turned in his hands (radians). */
   get turn(): number {
-    // Each turn eases in during the chew after a chomp.
+    // Each turn eases in at the end of the chew, just before the next wind-up,
+    // so the fresh bite stays on show through the chew.
     let a = 0;
     for (const c of this.tl.chomps.slice(0, -1)) {
-      const k = Math.min(1, Math.max(0, (this.t - c - 0.2) / 0.25));
+      const k = Math.min(1, Math.max(0, (this.t - c - 0.36) / 0.22));
       a += MUNCH.turn * k * k * (3 - 2 * k);
     }
     return a;

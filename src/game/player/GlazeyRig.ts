@@ -7,6 +7,8 @@ import { VoxelObject } from '../../engine/voxel/VoxelObject';
 export interface ArmPose {
   swing: number;
   raise: number;
+  /** Shoulder slid forward and in (0–1): the hug that grips a held donut (M5). */
+  reach?: number;
 }
 
 /** One foot, relative to its rest spot: lifted, moved forward, toe pitched up (+). */
@@ -160,7 +162,13 @@ export class GlazeyRig extends Group {
       if (a) g.rotation.set(a.swing, 0, s * a.raise, 'XZY');
       // Tucked: drawn into the body and shrunk away (rolling ball).
       const rest = this.armRest[i];
-      if (rest) g.position.set(rest[0] * (1 - 0.5 * p.tuck), rest[1], rest[2]);
+      const reach = a?.reach ?? 0;
+      if (rest)
+        g.position.set(
+          rest[0] * (1 - 0.5 * p.tuck - 0.3 * reach),
+          rest[1] - 0.06 * reach,
+          rest[2] + 0.17 * reach,
+        );
       g.scale.setScalar(Math.max(1e-3, 1 - p.tuck));
     });
     this.feet.forEach((g, i) => {

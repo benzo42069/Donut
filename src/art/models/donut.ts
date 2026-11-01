@@ -607,6 +607,11 @@ export function biteDonut(
   bite: Bite,
   voxel: number,
   seed = 0,
+  /**
+   * Golden crumb: in play the bite is seen in raking golden-hour light, so the
+   * interior is a warmer, more saturated dough with sparse pores (K-07, ref 04).
+   */
+  golden = false,
 ): RemovedVoxel[] {
   const size = donutSize(voxel, flavor);
   const center: [number, number, number] = [size[0] / 2, donutCenterY(voxel, flavor), size[2] / 2];
@@ -625,6 +630,19 @@ export function biteDonut(
     // Light, open crumb: pale gold with small single-voxel pores, never big
     // dark patches (AO alone deepens the pits).
     const h = hash3(x, y, z, seed + 13);
+    if (golden) {
+      grid.set(
+        x,
+        y,
+        z,
+        h > 0.92
+          ? PALETTE_INDEX.crumbFreshPore
+          : h > 0.55
+            ? PALETTE_INDEX.bunGolden
+            : PALETTE_INDEX.crumbFresh,
+      );
+      return;
+    }
     grid.set(x, y, z, h > 0.84 ? PALETTE_INDEX.crumbFreshPore : PALETTE_INDEX.crumbFresh);
   });
   grid.takeDirty();

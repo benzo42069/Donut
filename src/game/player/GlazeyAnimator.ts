@@ -126,7 +126,7 @@ export class GlazeyAnimator {
     }
     // The chomp: a hard squash that wobbles out like jelly (art bible §7).
     if (m.chomped) {
-      this.squash.v -= 3.4;
+      this.squash.v -= 4.4;
       this.tuft.v += 5;
     }
     if (m.gulped) this.squash.v += 2.2;
@@ -138,7 +138,7 @@ export class GlazeyAnimator {
     }
     const burping = m.burp !== undefined;
     if (burping && m.burp !== undefined && m.burp >= BURP_AT && m.burp - dt < BURP_AT) {
-      this.squash.v -= 2.6;
+      this.squash.v -= 3.2;
       this.tuft.v -= 7;
     }
     springStep(this.size, 1, 170, 6.5, dt);
@@ -159,7 +159,7 @@ export class GlazeyAnimator {
       m.munch?.beat === 'chew'
         ? 0.05 * Math.sin(m.munch.since * 26) * Math.exp(-m.munch.since * 2)
         : 0;
-    const groundTarget = 1 + breathe + (blasting ? 0 : 0.12 * inhale) + chew;
+    const groundTarget = 1 + breathe + (blasting ? 0 : 0.17 * inhale) + chew;
     const airTarget = 1 + clamp(Math.abs(m.vy) * 0.03, 0, 0.16);
     const target = groundTarget * (1 - this.air) + airTarget * this.air;
     springStep(this.squash, target, ANIM.stiffness, ANIM.damping, dt);
@@ -191,6 +191,8 @@ export class GlazeyAnimator {
     p.scale = this.size.x;
     p.tuck = this.tuck;
     p.spin = this.spin * this.tuck;
+    // A rolling ball sags onto the ground a little and boings as it turns.
+    p.squash *= 1 - this.tuck * (0.06 - 0.025 * Math.sin(this.spin * 2));
     if (this.tuck > 0.01) p.lean *= 1 - this.tuck;
     // Weight shifts over the planted foot; the hips twist with the stride.
     p.roll = this.roll + 0.1 * w * s;
@@ -214,14 +216,16 @@ export class GlazeyAnimator {
       // past the silhouette from the 3/4 camera; thrown up and out to the sides at the apex.
       a.swing = -0.95 * w * Math.cos(this.phase) * side * (1 - this.air) - 0.15 * this.air;
       a.raise = 0.38 * w + idleSway + this.air * (1.75 + 0.2 * Math.sin(this.flap + i * 0.6));
+      a.reach = 0;
     });
     // Munch: both arms up at the donut, hugging it to his mouth (sheet 03 "MUNCHING").
     if (this.munchW > 0.01) {
       const k = this.munchW;
       const hug = m.munch?.beat === 'chew' ? 0.12 * Math.sin((m.munch.since ?? 0) * 26) : 0;
       p.arms.forEach((a) => {
-        a.swing = a.swing * (1 - k) + (-1.25 + hug) * k;
-        a.raise = a.raise * (1 - k) + 0.55 * k;
+        a.swing = a.swing * (1 - k) + (-1.35 + hug) * k;
+        a.raise = a.raise * (1 - k) + 0.25 * k;
+        a.reach = k;
       });
     }
     // Burp: arms flung back on the blast, out wide on the inhale.

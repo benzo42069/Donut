@@ -175,7 +175,7 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   const tummy = bellyLayout(t, rx, ry, y0);
   const bellyDepth = lerp(4.5, 6, t);
   const bellyFront =
-    rz * Math.sqrt(Math.max(0, 1 - ((tummy.cy - y0) / ry) ** 2)) + lerp(1.6, 2.2, t);
+    rz * Math.sqrt(Math.max(0, 1 - ((tummy.cy - y0) / ry) ** 2)) + lerp(0.9, 1.4, t);
   const bellyC: Vec3 = [0, tummy.cy, bellyFront - bellyDepth];
   const bellyR = Math.max(tummy.rx, tummy.ry);
   const skin = smoothUnion(
@@ -435,10 +435,12 @@ function faceLayout(
           return { ...hit, color: 'eyeIris' };
         }
       } else {
-        // Closed happy eyes: a smooth ^ arc.
-        const arc = Math.abs(Math.hypot(ex, (ey + 1.7) * 1.15) - 2.9);
-        if (arc < 0.6 - s * 0.5 && ey > -1.1)
-          return { color: 'eyePupil', ...flat(0.4), facing: 0.45 };
+        // Closed happy eyes (sheet 03 "munching", "giant burp"): a thin,
+        // warm-brown ^ arc, laid flush and only where the head faces the
+        // viewer squarely, so in a 3/4 view it never stands past the outline.
+        const arc = Math.abs(Math.hypot(ex, (ey + 2.1) * 1.05) - 2.7);
+        if (arc < 0.42 - s * 0.4 && ey > -0.5)
+          return { color: 'eyeIris', ...flat(0.15), facing: 0.62 };
       }
       // Blush: a soft oval with a lighter center.
       const c = ell(x - side * cheekX, y - cheekY, 2.5, 1.5, s);

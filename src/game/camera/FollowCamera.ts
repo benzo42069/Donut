@@ -29,10 +29,10 @@ export const CAM = {
    * donut, and swings round to a 3/4 of his face (`focusSide` radians off his
    * facing) so the bite reads.
    */
-  focusDistance: 3.5,
-  focusAim: 0.62,
-  focusPitch: 0.12,
-  focusSide: 0.95,
+  focusDistance: 4.0,
+  focusAim: 0.68,
+  focusPitch: 0.1,
+  focusSide: 0.72,
   focusRate: 3.2,
 } as const;
 
@@ -62,6 +62,8 @@ export class FollowCamera {
   private frame = 0;
   /** Close-up amount wanted (0–1) and the eased amount. */
   focus = 0;
+  /** Swing round to a 3/4 of his face while focused (the munch); off for the roll close-up. */
+  swing = true;
   private zoom = 0;
   /** Glazey's facing while focused (the 3/4 swing). */
   focusFacing = 0;
@@ -117,7 +119,7 @@ export class FollowCamera {
     if (Math.hypot(bx, bz) > 0.5) this.yaw = Math.atan2(bx, bz);
     if (Math.abs(look) > 0.05) this.yaw += look * CAM.orbit * dt;
     this.zoom = approach(this.zoom, this.focus, CAM.focusRate, dt);
-    if (this.focus > 0 && dt > 0) {
+    if (this.focus > 0 && this.swing && dt > 0) {
       // Swing round toward a 3/4 of his face, on whichever side is nearer.
       const off = Math.atan2(
         Math.sin(this.yaw - this.focusFacing),

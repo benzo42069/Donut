@@ -132,7 +132,7 @@ export class BurpWave extends Group {
     if (shock) {
       const fade = Math.min(1, shock.strength / Math.max(0.01, this.k) + 0.15);
       // Two rows per band: a bold rainbow ribbon lying on the grass tops.
-      const width = BURP.cube * 1.9;
+      const width = BURP.cube * 1.3;
       this.bands.forEach((mesh, band) => {
         for (let row = 0; row < 2; row++) {
           const r = shock.radius - band * width - row * width * 0.5;
@@ -142,9 +142,15 @@ export class BurpWave extends Group {
             const a = ((i + row * 0.5) / n) * Math.PI * 2;
             const x = shock.x + Math.cos(a) * r;
             const z = shock.z + Math.sin(a) * r;
+            // Only on the lawn: skip steep ground (the frosting rim's wall).
+            const gy = this.ground(x, z);
+            const slope = Math.abs(
+              this.ground(x + Math.cos(a) * 0.08, z + Math.sin(a) * 0.08) - gy,
+            );
+            if (slope > 0.04) continue;
             p.set(x, this.ground(x, z) + 0.07 + 0.025 * Math.sin(a * 7 + time * 9), z);
             q.setFromAxisAngle(up, -a);
-            s.setScalar(BURP.cube * 1.25 * fade);
+            s.setScalar(BURP.cube * 0.85 * fade);
             mesh.setMatrixAt(mesh.count++, m.compose(p, q, s));
           }
         }

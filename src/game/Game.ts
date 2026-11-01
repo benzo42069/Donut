@@ -53,7 +53,7 @@ const HERO_TUNING: VoxelMaterialTuning = {
 /** FX voxels (burp ring, power sparkles) glow a little, so they pop and bloom. */
 const FX_TUNING: VoxelMaterialTuning = {
   ...DEFAULT_TUNING,
-  emissive: 0.9,
+  emissive: 2.2,
   selfLight: 0.45,
   heroRim: 0.6,
 };
@@ -67,7 +67,7 @@ const BURP_END = BURP_AT + 1.1;
  * A held donut's center from his mouth (m, mouth space: +y up, +z forward):
  * below and in front, so its top rim just meets his lips.
  */
-const HOLD = new Vector3(0, -0.13, 0.31);
+const HOLD = new Vector3(0, -0.01, 0.36);
 /** Belly 3–4: hold jump this long on the ground to curl into a roll. */
 const ROLL_HOLD = 0.25;
 
@@ -174,6 +174,8 @@ export class Game {
   private readonly swirl: PowerSwirl;
   private readonly glow: PointLight;
   private readonly shadow = new ContactShadow();
+  /** Under a held donut, so it reads as lifted off the lawn. */
+  private readonly donutShadow = new ContactShadow();
   private readonly groundBelow: (p: Vector3) => number;
   private spawn: Spawn;
   private readonly start: { belly: number; power?: PowerName };
@@ -237,7 +239,16 @@ export class Game {
     this.glow.position.y = 0.7;
     this.avatar.add(this.glow);
     this.animator = new GlazeyAnimator();
-    this.scene.add(avatar, fx.dust, fx.crumbs, fx.sparkles, wave, swirl, this.shadow);
+    this.scene.add(
+      avatar,
+      fx.dust,
+      fx.crumbs,
+      fx.sparkles,
+      wave,
+      swirl,
+      this.shadow,
+      this.donutShadow,
+    );
     this.reset();
   }
 
@@ -606,7 +617,8 @@ export class Game {
     this.lastMotion = motion;
     this.effects(m, motion);
 
-    this.camera.focus = this.munch.active ? 1 : 0;
+    this.camera.focus = this.munch.active ? 1 : this.rolling || this.burpT !== null ? 0.45 : 0;
+    this.camera.swing = this.munch.active;
     this.camera.focusFacing = this.player.yaw;
     const look = this.input.kind === 'live' ? (this.lastFrame?.look ?? 0) : 0;
     this.camera.update(STEP, this.player.position, this.player.grounded, look, this.player.yaw);
@@ -625,24 +637,30 @@ export class Game {
     this.present();
     // In his hands the donut's local +x is up and +z points back at him, so
     // the rim nearest his mouth is at this angle; each bite takes fresh rim.
-    const angle = Math.atan2(HOLD.z, -HOLD.y) + k * MUNCH.turn;
-    const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.19 }, e.voxel, 31 + k * 7);
+    // The donut has turned by `turn` in his hands (about its own axis), so the
+    // rim at his lips sits that much further back in its own frame.
+    const angle = Math.atan2(HOLD.z, -HOLD.y) + this.munch.turn;
+    const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.19 }, e.voxel, 31 + k * 7, true);
     for (const c of e.grid.chunkCoords()) e.grid.markDirty(c.cx, c.cy, c.cz);
     this.track(e.object.update());
     e.object.updateMatrixWorld(true);
     // Crumbs: a spread of the removed voxels, thrown out of the bite and down.
-    const n = Math.min(removed.length, 64);
+    const n = Math.min(removed.length, 110);
     const points: { at: Vector3; index: number }[] = [];
     for (let i = 0; i < n; i++) {
       const v = removed[Math.floor(hash3(i, k, 3, 211) * removed.length)];
       if (!v) continue;
-      // Mostly crumb: frosting and sprinkle bits only now and then.
-      const crumb = hash3(i, k, 5, 211) < 0.7;
-      const index = crumb
-        ? hash3(i, k, 6, 211) < 0.75
+      // Mostly crumb in three tones (light, golden, toasted grains that read
+      // against the cream glaze), with a frosting or sprinkle bit now and then.
+      const r = hash3(i, k, 5, 211);
+      const index =
+        r < 0.42
           ? PALETTE_INDEX.crumbFresh
-          : PALETTE_INDEX.crumbFreshPore
-        : v.index;
+          : r < 0.64
+            ? PALETTE_INDEX.bunGolden
+            : r < 0.8
+              ? PALETTE_INDEX.bunToasted
+              : v.index;
       points.push({
         at: e.object.localToWorld(new Vector3(v.x + 0.5, v.y + 0.5, v.z + 0.5)),
         index,
@@ -653,13 +671,15 @@ export class Game {
       at: points[0]?.at ?? this.player.position.clone(),
       points,
       count: points.length,
-      speed: [0.5, 1.5],
-      up: [0.6, 1.9],
-      dir: { x: Math.sin(yaw), z: Math.cos(yaw), bias: 0.45 },
+      // A fan out of the bite and down onto the lawn: one or two voxels of
+      // the donut each (art bible §3), a few twice that.
+      speed: [0.6, 1.7],
+      up: [0.4, 1.3],
+      dir: { x: Math.sin(yaw), z: Math.cos(yaw), bias: 0.35 },
       colors: ['crumbFresh'],
-      size: [0.022, 0.04],
+      size: [e.voxel * 1.1, e.voxel * 2.1],
       life: [3.6, 4.4],
-      drag: 1.2,
+      drag: 0.7,
     });
     this.sfx?.play('chomp');
   }
@@ -740,9 +760,9 @@ export class Game {
       this.sinceFx = 0;
       this.dust.emit({
         at: p.clone().setY(p.y + 0.05),
-        count: 5,
-        speed: [0.3, 0.8],
-        up: [0.8, 1.6],
+        count: 9,
+        speed: [0.4, 1.0],
+        up: [0.9, 1.8],
         dir: { x: -fwd.x, z: -fwd.z, bias: 0.8 },
         colors: ['butter', 'doughGolden', 'candyCream', 'sprinkleYellow'],
         size: [0.022, 0.034],
@@ -882,6 +902,7 @@ export class Game {
   /** The held donut rides in his arms; the rest sit on the grass. */
   private presentDonuts(): void {
     const target = this.munch.target;
+    this.donutShadow.visible = false;
     this.world.edibles.forEach((e, i) => {
       const held = target?.index === i;
       if (!held) {
@@ -902,8 +923,11 @@ export class Game {
       const basis = new Quaternion().setFromRotationMatrix(
         new Matrix4().makeBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0), new Vector3(0, 0, -1)),
       );
-      const spin = new Quaternion().setFromEuler(new Euler(0, -this.munch.turn, 0));
-      const heldQ = aq.clone().multiply(basis).multiply(spin);
+      // Turned so each fresh bite rolls up over the top rim, into view.
+      const spin = new Quaternion().setFromEuler(new Euler(0, this.munch.turn, 0));
+      // Tipped back a little about his facing, so the glaze catches the sky (gloss).
+      const tip = new Quaternion().setFromEuler(new Euler(0, 0, 0.32));
+      const heldQ = aq.clone().multiply(tip).multiply(basis).multiply(spin);
       const remain = this.munch.remain;
       const cy = donutCenterY(e.voxel, e.flavor) * e.voxel;
       const reach = HOLD.clone().normalize();
@@ -923,6 +947,13 @@ export class Game {
       e.group.position.y += 0.25 * Math.sin(Math.PI * k);
       e.group.quaternion.slerpQuaternions(groundQ, heldQ, k);
       e.group.scale.setScalar(Math.max(1e-3, remain));
+      const c = e.group.position
+        .clone()
+        .add(new Vector3(0, cy * remain, 0).applyQuaternion(e.group.quaternion));
+      const g = this.world.shape.surface(c.x, c.z);
+      this.donutShadow.visible = remain > 0.05;
+      this.donutShadow.place(c.x, g, c.z, c.y - g);
+      this.donutShadow.scale.multiplyScalar(0.85 * remain);
     });
   }
 

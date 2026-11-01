@@ -15,7 +15,7 @@ import { PALETTE_INDEX, hash3, type VoxelColorName } from '../../art/palette';
  * A unit voxel cube (centered) carrying the voxel material's attributes: one
  * palette index, no baked occlusion, flat normals.
  */
-function voxelCube(color: number): BufferGeometry {
+export function voxelCube(color: number): BufferGeometry {
   const faces: [number[], number[], number[], number[]][] = [];
   const quad = (n: number[], u: number[], v: number[]): void => {
     const c = n.map((x) => x * 0.5);
@@ -55,7 +55,13 @@ interface Particle {
   size: number;
   bounces: number;
   spin: number;
+  /** Accumulated tumble (radians) about the particle's own axis. */
+  angle: number;
+  axis: Vector3;
   layer: number;
+  gravity: number;
+  drag: number;
+  resting: boolean;
 }
 
 export interface Burst {
@@ -69,9 +75,18 @@ export interface Burst {
   colors: VoxelColorName[];
   size: [number, number];
   life: [number, number];
+  /**
+   * Per-particle start points and palette colors (crumbs thrown from the
+   * voxels a bite removed). `count` particles are drawn from it in order.
+   */
+  points?: readonly { at: Vector3; index: number }[];
+  /** Gravity scale (1 = 9.8 m/s²) and air drag per second. */
+  gravity?: number;
+  drag?: number;
 }
 
 const MAX = 160;
+const UP = new Vector3(0, 1, 0);
 
 /**
  * Voxel particles (art bible §8: no flat sprites in the 3D world): tiny cubes
@@ -82,18 +97,21 @@ export class VoxelParticles extends Group {
   private readonly kinds: { mesh: InstancedMesh; color: number }[] = [];
   private readonly live: Particle[] = [];
   private readonly ground: (x: number, z: number) => number;
+  private readonly max: number;
   private seq = 0;
 
   constructor(
     material: Material,
     colors: VoxelColorName[],
     ground: (x: number, z: number) => number,
+    max = MAX,
   ) {
     super();
     this.ground = ground;
+    this.max = max;
     for (const name of colors) {
       const color = PALETTE_INDEX[name];
-      const mesh = new InstancedMesh(voxelCube(color), material, MAX);
+      const mesh = new InstancedMesh(voxelCube(color), material, max);
       mesh.instanceMatrix.setUsage(DynamicDrawUsage);
       mesh.count = 0;
       mesh.frustumCulled = false;
@@ -123,19 +141,30 @@ export class VoxelParticles extends Group {
       }
       const sp = b.speed[0] + (b.speed[1] - b.speed[0]) * this.rand(2);
       const up = b.up[0] + (b.up[1] - b.up[0]) * this.rand(3);
+      const point = b.points?.[i % Math.max(1, b.points.length)];
       const name = b.colors[Math.floor(this.rand(4) * b.colors.length)] ?? b.colors[0];
-      const layer = this.kinds.findIndex((l) => l.color === PALETTE_INDEX[name ?? 'candyCream']);
+      const want = point ? point.index : PALETTE_INDEX[name ?? 'candyCream'];
+      let layer = this.kinds.findIndex((l) => l.color === want);
+      // A crumb of a color this system doesn't carry falls back to the burst's colors.
+      if (layer < 0 && point)
+        layer = this.kinds.findIndex((l) => l.color === PALETTE_INDEX[name ?? 'candyCream']);
       if (layer < 0) continue;
-      if (this.live.length >= MAX) this.live.shift();
+      if (this.live.length >= this.max) this.live.shift();
+      const axis = new Vector3(this.rand(8) - 0.5, this.rand(9) - 0.5, this.rand(10) - 0.5);
       this.live.push({
-        pos: b.at.clone().add(new Vector3(dx * 0.06, 0.03, dz * 0.06)),
+        pos: point ? point.at.clone() : b.at.clone().add(new Vector3(dx * 0.06, 0.03, dz * 0.06)),
         vel: new Vector3(dx * sp, up, dz * sp),
         age: 0,
         life: b.life[0] + (b.life[1] - b.life[0]) * this.rand(5),
         size: b.size[0] + (b.size[1] - b.size[0]) * this.rand(6),
         bounces: 0,
         spin: (this.rand(7) - 0.5) * 14,
+        angle: this.rand(11) * Math.PI * 2,
+        axis: axis.lengthSq() > 1e-4 ? axis.normalize() : new Vector3(0, 1, 0),
         layer,
+        gravity: b.gravity ?? 1,
+        drag: b.drag ?? 1.6,
+        resting: false,
       });
     }
   }
@@ -143,7 +172,6 @@ export class VoxelParticles extends Group {
   update(dt: number): void {
     const m = new Matrix4();
     const q = new Quaternion();
-    const axis = new Vector3(0.4, 1, 0.3).normalize();
     const scale = new Vector3();
     for (const l of this.kinds) l.mesh.count = 0;
     for (let i = this.live.length - 1; i >= 0; i--) {
@@ -154,29 +182,35 @@ export class VoxelParticles extends Group {
         this.live.splice(i, 1);
         continue;
       }
-      p.vel.y -= 9.8 * dt;
-      p.vel.multiplyScalar(Math.exp(-1.6 * dt));
+      if (p.resting) continue;
+      p.vel.y -= 9.8 * p.gravity * dt;
+      p.vel.multiplyScalar(Math.exp(-p.drag * dt));
       p.pos.addScaledVector(p.vel, dt);
+      p.angle += p.spin * dt;
       const floor = this.ground(p.pos.x, p.pos.z) + p.size / 2;
-      if (p.pos.y < floor) {
+      if (p.pos.y < floor && p.gravity > 0) {
         p.pos.y = floor;
         if (p.bounces < 2 && p.vel.y < -0.4) {
+          // Bounce once or twice (art bible §8), losing most of the energy.
           p.vel.y *= -0.38;
           p.vel.x *= 0.6;
           p.vel.z *= 0.6;
+          p.spin *= 0.6;
           p.bounces++;
         } else {
-          p.vel.set(p.vel.x * 0.5, 0, p.vel.z * 0.5);
-          p.spin *= 0.5;
+          // Settle: snap the tumble to the nearest flat face and stay put.
+          p.vel.set(0, 0, 0);
+          p.angle = Math.round(p.angle / (Math.PI / 2)) * (Math.PI / 2);
+          p.resting = true;
         }
       }
     }
     for (const p of this.live) {
       const layer = this.kinds[p.layer];
       if (!layer) continue;
-      // Shrink away over the last third of the life.
-      const fade = Math.min(1, (p.life - p.age) / (p.life * 0.35));
-      q.setFromAxisAngle(axis, p.spin * p.age);
+      // Shrink away at the end: the last third of a short life, the last 0.6 s of a long one.
+      const fade = Math.min(1, (p.life - p.age) / Math.min(p.life * 0.35, 0.6));
+      q.setFromAxisAngle(p.resting ? UP : p.axis, p.angle);
       scale.setScalar(p.size * fade);
       m.compose(p.pos, q, scale);
       layer.mesh.setMatrixAt(layer.mesh.count++, m);

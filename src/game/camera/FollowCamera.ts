@@ -24,6 +24,16 @@ export const CAM = {
    */
   leadAcross: 0.4,
   leadRate: 2.2,
+  /**
+   * Munch close-up (PLAN M5): the camera eases in to frame his face and the
+   * donut, and swings round to a 3/4 of his face (`focusSide` radians off his
+   * facing) so the bite reads.
+   */
+  focusDistance: 3.5,
+  focusAim: 0.62,
+  focusPitch: 0.12,
+  focusSide: 0.95,
+  focusRate: 3.2,
 } as const;
 
 const approach = (cur: number, target: number, rate: number, dt: number): number =>
@@ -50,6 +60,11 @@ export class FollowCamera {
   private dist: number = CAM.distance;
   /** Framing pan, −1…1 thirds (+ = the look point slides to screen right). */
   private frame = 0;
+  /** Close-up amount wanted (0–1) and the eased amount. */
+  focus = 0;
+  private zoom = 0;
+  /** Glazey's facing while focused (the 3/4 swing). */
+  focusFacing = 0;
   private readonly probe: CameraProbe;
   private readonly floor: (x: number, z: number) => number;
 
@@ -71,7 +86,12 @@ export class FollowCamera {
     this.groundY = target.y;
     this.dist = CAM.distance;
     this.frame = 0;
+    this.zoom = this.focus;
     this.place();
+  }
+
+  private get distance(): number {
+    return CAM.distance + (CAM.focusDistance - CAM.distance) * this.zoom;
   }
 
   update(dt: number, target: Vector3, grounded: boolean, look: number, facing?: number): void {
@@ -96,19 +116,35 @@ export class FollowCamera {
     const bz = this.leash.z - this.aim.z;
     if (Math.hypot(bx, bz) > 0.5) this.yaw = Math.atan2(bx, bz);
     if (Math.abs(look) > 0.05) this.yaw += look * CAM.orbit * dt;
+    this.zoom = approach(this.zoom, this.focus, CAM.focusRate, dt);
+    if (this.focus > 0 && dt > 0) {
+      // Swing round toward a 3/4 of his face, on whichever side is nearer.
+      const off = Math.atan2(
+        Math.sin(this.yaw - this.focusFacing),
+        Math.cos(this.yaw - this.focusFacing),
+      );
+      const want = this.focusFacing + (off >= 0 ? CAM.focusSide : -CAM.focusSide);
+      const d = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
+      this.yaw += d * (1 - Math.exp(-CAM.focusRate * 0.8 * this.focus * dt));
+      this.frame = approach(this.frame, 0, CAM.focusRate, dt);
+    }
     this.place(dt);
   }
 
   private place(dt = 0): void {
-    const aim = new Vector3(this.aim.x, this.aim.y + CAM.aimHeight, this.aim.z);
+    const z = this.zoom;
+    const aimH = CAM.aimHeight + (CAM.focusAim - CAM.aimHeight) * z;
+    const pitch = CAM.pitch + (CAM.focusPitch - CAM.pitch) * z;
+    const full = this.distance;
+    const aim = new Vector3(this.aim.x, this.aim.y + aimH, this.aim.z);
     const dir = new Vector3(
-      Math.sin(this.yaw) * Math.cos(CAM.pitch),
-      Math.sin(CAM.pitch),
-      Math.cos(this.yaw) * Math.cos(CAM.pitch),
+      Math.sin(this.yaw) * Math.cos(pitch),
+      Math.sin(pitch),
+      Math.cos(this.yaw) * Math.cos(pitch),
     );
-    this.leash.copy(aim).addScaledVector(dir, CAM.distance);
-    const free = this.probe(aim, dir, CAM.distance + CAM.clearance) - CAM.clearance;
-    const want = Math.max(0.8, Math.min(CAM.distance, free));
+    this.leash.copy(aim).addScaledVector(dir, full);
+    const free = this.probe(aim, dir, full + CAM.clearance) - CAM.clearance;
+    const want = Math.max(0.8, Math.min(full, free));
     // Pull in at once, ease back out.
     this.dist = want < this.dist || dt === 0 ? want : approach(this.dist, want, 2.5, dt);
     const eye = aim.clone().addScaledVector(dir, this.dist);

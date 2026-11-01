@@ -24,5 +24,9 @@
   "M4": {
     "shots": ["m4-walk-strip", "m4-jump-apex", "m4-touch-ui", "gallery-glazey-belly"],
     "strips": ["m4-walk-strip", "gallery-glazey-belly"]
+  },
+  "M5": {
+    "shots": ["m5-bite-1", "m5-bite-3", "m5-crumbs-strip", "m5-burp-strip", "m5-belly-5-roll"],
+    "strips": ["m5-crumbs-strip", "m5-burp-strip"]
   }
 }

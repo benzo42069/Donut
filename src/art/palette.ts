@@ -158,8 +158,8 @@ export const VOXEL_PALETTE = {
   crumbPore: entry('#DDAE6E', MAT.soft, 0.06),
   // Glazey (D-01): a relaxed coral twin for the rounded body, face details.
   // No hue hold: his shadow side takes the cool fill (lilac core, art bible §6).
-  glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth, 0.03),
-  glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth | MAT.candy, 0.03),
+  glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth, 0.018),
+  glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth | MAT.candy, 0.015),
   glazeyMouth: entry('#7E2A3A', MAT.matte, 0.02),
   glazeyTongue: entry('#F2788C', MAT.soft, 0.02),
   glazeyCheek: entry('#F4798F', MAT.soft | MAT.smooth | MAT.candy, 0.02),

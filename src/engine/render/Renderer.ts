@@ -25,6 +25,7 @@ import {
 } from 'three';
 import type { QualitySettings } from '../quality';
 import { ColorGradeEffect, GamutEffect } from './ColorGrade';
+import { RippleEffect } from './Ripple';
 
 /** Per-scene post settings (look-dev knobs; every field optional). */
 export interface PostSettings {
@@ -46,6 +47,8 @@ export interface PostSettings {
   /** Grade saturation and contrast (defaults 1.06 and 0.18). */
   saturation?: number;
   contrast?: number;
+  /** Screen ripple pass for the burp (`RIPPLE`); play mode only. */
+  ripple?: boolean;
 }
 
 export interface RendererInfo {
@@ -139,6 +142,9 @@ export class Renderer {
     if (post.tiltShift && q.tier !== 'low') {
       composer.addPass(new EffectPass(camera, new TiltShiftEffect(post.tiltShift)));
     }
+
+    // The ripple bends the whole lit image, so it runs in its own pass before the grade.
+    if (post.ripple) composer.addPass(new EffectPass(camera, new RippleEffect()));
 
     const effects: Effect[] = [new GamutEffect()];
     if (q.bloom) {

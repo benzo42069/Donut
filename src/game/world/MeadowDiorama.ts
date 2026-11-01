@@ -38,6 +38,7 @@ import { DEFAULT_TUNING, createVoxelMaterial } from '../../engine/render/Materia
 import { createSky } from '../../engine/render/Sky';
 import { createMilk, type Milk } from '../../engine/render/Water';
 import { MesherPool } from '../../engine/voxel/MesherPool';
+import type { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 import { VoxelObject } from '../../engine/voxel/VoxelObject';
 import { placeModel, type Placed } from '../../engine/voxel/placeModel';
 import {
@@ -86,12 +87,36 @@ export type Obstacle = (
 ) & {
   /** Big enough to block the camera (buildings); trunks and donuts never do. */
   blocksCamera?: boolean;
+  /** Index into `Diorama.edibles`: the collider goes away once it is eaten. */
+  edible?: number;
 };
+
+/**
+ * A wild donut Glazey can munch (PLAN M5): its own carvable voxel object, so a
+ * bite is a real carve of its grid (art bible §8), and the pristine grid to
+ * come back to on a replay.
+ */
+export interface Edible {
+  flavor: DonutFlavor;
+  grid: VoxelGrid;
+  voxel: number;
+  /** Posed group (position, yaw); the voxel object hangs inside it at the pivot. */
+  group: Group;
+  object: VoxelObject;
+  /** Base center on the ground (world) and yaw. */
+  pos: Vector3;
+  rotY: number;
+  /** Grid voxels at the model origin (the base center). */
+  pivot: readonly [number, number, number];
+  pristine: Map<number, Uint8Array>;
+}
 
 export interface Diorama {
   scene: Scene;
   /** Solid props Glazey bumps into or hops onto. */
   obstacles: Obstacle[];
+  /** Donuts Glazey can eat (play mode only; empty in the vista diorama). */
+  edibles: Edible[];
   environment: Scene;
   shape: IslandShape;
   sun: DirectionalLight;
@@ -366,18 +391,26 @@ export async function buildMeadowDiorama(
     [-100, 0.6, 'chocolate'],
   ];
   const spots: Record<string, Vector3> = {};
+  const edibleSpecs: Placed[] = [];
+  const edibleFlavors: DonutFlavor[] = [];
   grassDonuts.forEach(([deg, u, flavor], i) => {
-    // Donut 4 is the hero: the close-up subject, at close-up density.
-    const hero = i === 4;
-    const p = hero ? HERO_DONUT : offPath(band(deg, u));
+    // Donut 4 is the hero: the close-up subject, at close-up density. In play
+    // every grass donut is edible, so every one is authored at close-up
+    // density: the munch camera comes in close (art bible §3).
+    const hero = i === 4 || opts.microDecor === true;
+    const p = i === 4 ? HERO_DONUT : offPath(band(deg, u));
     spots[`donut${i}`] = at(p);
-    placed.push({
+    const spec: Placed = {
       grid: buildDonut(flavor, i + 1, hero ? DONUT_HERO_VOXEL : DONUT_VOXEL, ISLAND_DONUT),
       voxel: hero ? DONUT_HERO_VOXEL : DONUT_VOXEL,
       pivot: hero ? [hs[0] / 2, 0, hs[2] / 2] : donutPivot,
       pos: at(p, -0.03),
       rotY: hash3(i, 2, 2, 7) * Math.PI * 2,
-    });
+    };
+    if (opts.microDecor) {
+      edibleSpecs.push(spec);
+      edibleFlavors.push(flavor);
+    } else placed.push(spec);
     // Low enough to hop onto.
     const v = hero ? DONUT_HERO_VOXEL : DONUT_VOXEL;
     const size = hero ? hs : ds;
@@ -386,6 +419,7 @@ export async function buildMeadowDiorama(
       ...at(p, -0.03),
       radius: size[0] * v * 0.46,
       height: size[1] * v,
+      edible: opts.microDecor ? edibleSpecs.length - 1 : undefined,
     });
   });
   const floaters: [number, number, DonutFlavor][] = [
@@ -479,7 +513,8 @@ export async function buildMeadowDiorama(
   const objects: Promise<unknown>[] = [coarse.update(), fine.update()];
   let decorCounts: Record<string, number> = {};
   if (opts.microDecor) {
-    const decor = buildMicroDecor(shape, material, {
+    // Decor bends with the burp shockwave (art bible §8).
+    const decor = buildMicroDecor(shape, createVoxelMaterial({}, DEFAULT_TUNING, { shock: true }), {
       low,
       clear: obstacles.flatMap((o) =>
         o.kind === 'cylinder' ? [[o.x, o.z, o.radius + 0.06] as const] : [],
@@ -500,6 +535,25 @@ export async function buildMeadowDiorama(
     scene.add(group);
     objects.push(ready);
   }
+  const edibles: Edible[] = edibleSpecs.map((p, i) => {
+    const pristine = p.grid.snapshot();
+    const { group, ready } = placeModel(p, material, pool);
+    scene.add(group);
+    objects.push(ready);
+    const object = group.children[0];
+    if (!(object instanceof VoxelObject)) throw new Error('placeModel: no voxel object');
+    return {
+      flavor: edibleFlavors[i] ?? 'strawberry',
+      grid: p.grid,
+      voxel: p.voxel,
+      group,
+      object,
+      pos: p.pos.clone(),
+      rotY: p.rotY,
+      pivot: p.pivot,
+      pristine,
+    };
+  });
 
   // Chimney steam: voxel puffs drifting up and away from the sun.
   const chimney = new Vector3(...BAKERY_CHIMNEY)
@@ -561,11 +615,13 @@ export async function buildMeadowDiorama(
   scene.add(milk.mesh);
 
   await Promise.all(objects);
-  pool.dispose();
+  // Edible donuts remesh after every bite, so play mode keeps the pool alive.
+  if (!edibles.length) pool.dispose();
 
   return {
     scene,
     obstacles,
+    edibles,
     environment,
     shape,
     sun,

@@ -6,6 +6,9 @@ export interface TouchIcons {
   jump: string;
   /** The stick knob: a little voxel donut. */
   knob: string;
+  /** Munch: a bitten voxel donut. Burp: Glazey's giant-burp face. */
+  munch: string;
+  burp: string;
 }
 
 const hex = (name: keyof typeof VOXEL_PALETTE): string => VOXEL_PALETTE[name].hex;
@@ -16,10 +19,13 @@ const rgba = (name: keyof typeof VOXEL_PALETTE, a: number): string => {
 };
 
 /**
- * Candy-like touch controls (art bible §9, PLAN M4): a floating stick on the
- * left half (a cream candy plate under the thumb; its knob is a voxel donut)
- * and a big strawberry jump button on the right, ringed in cream, showing a
- * voxel Glazey mid-hop, with a soft drop shadow and a pressed state. Dragging anywhere else on the right orbits the camera.
+ * Candy-like touch controls (art bible §9, game design §10): a floating stick
+ * on the left half (a cream candy plate under the thumb; its knob is a voxel
+ * donut) and three round candy buttons on the right, ringed in cream with a
+ * soft drop shadow and a pressed state: a big green jump button (a voxel
+ * Glazey mid-hop), a big pink munch button (a bitten donut) that pulses when a
+ * donut is in reach, and a yellow burp button that grows with the belly.
+ * Dragging anywhere else on the right orbits the camera.
  * No text anywhere: a 6-year-old who can't read can play.
  */
 export class TouchControls implements InputSource {
@@ -27,6 +33,10 @@ export class TouchControls implements InputSource {
   private readonly base: HTMLDivElement;
   private readonly knob: HTMLImageElement;
   private readonly jumpBtn: HTMLDivElement;
+  private readonly munchBtn: HTMLDivElement;
+  private readonly burpBtn: HTMLDivElement;
+  private munchTap = false;
+  private burpTap = false;
   private stickId: number | null = null;
   private lookId: number | null = null;
   private origin = { x: 0, y: 0 };
@@ -46,12 +56,18 @@ export class TouchControls implements InputSource {
     this.knob.src = icons.knob;
     this.knob.alt = '';
     stick.append(this.base, this.knob);
-    this.jumpBtn = el('div', 'tc-jump');
-    const arrow = document.createElement('img');
-    arrow.src = icons.jump;
-    arrow.alt = '';
-    this.jumpBtn.append(arrow);
-    this.root.append(stick, this.jumpBtn);
+    const button = (cls: string, icon: string): HTMLDivElement => {
+      const b = el('div', `tc-btn ${cls}`);
+      const img = document.createElement('img');
+      img.src = icon;
+      img.alt = '';
+      b.append(img);
+      return b;
+    };
+    this.jumpBtn = button('tc-jump', icons.jump);
+    this.munchBtn = button('tc-munch', icons.munch);
+    this.burpBtn = button('tc-burp', icons.burp);
+    this.root.append(stick, this.jumpBtn, this.munchBtn, this.burpBtn);
     parent.append(this.root);
 
     this.root.addEventListener('pointerdown', (e) => this.down(e));
@@ -71,6 +87,16 @@ export class TouchControls implements InputSource {
 
   show(on: boolean): void {
     this.root.classList.toggle('tc-on', on);
+  }
+
+  /** The munch button pulses while a donut is in reach (game design §10). */
+  setMunchReady(on: boolean): void {
+    this.munchBtn.classList.toggle('tc-ready', on);
+  }
+
+  /** The burp button grows with the belly (0–5). */
+  setBelly(belly: number): void {
+    this.burpBtn.style.setProperty('--belly', String(belly / 5));
   }
 
   /** Displays a stick deflection (x right, y up) without a finger: the shot harness. */
@@ -95,6 +121,18 @@ export class TouchControls implements InputSource {
   }
 
   private down(e: PointerEvent): void {
+    for (const [btn, tap] of [
+      [this.munchBtn, 'munch'],
+      [this.burpBtn, 'burp'],
+    ] as const) {
+      if (e.target instanceof Node && btn.contains(e.target)) {
+        if (tap === 'munch') this.munchTap = true;
+        else this.burpTap = true;
+        btn.classList.add('tc-pressed');
+        window.setTimeout(() => btn.classList.remove('tc-pressed'), 140);
+        return;
+      }
+    }
     if (e.target instanceof Node && this.jumpBtn.contains(e.target)) {
       this.jump = true;
       this.jumpBtn.setPointerCapture(e.pointerId);
@@ -162,6 +200,10 @@ export class TouchControls implements InputSource {
     f.jump = this.jump;
     f.jumpPressed = this.jump && !this.jumpWas;
     f.look = this.look;
+    f.munchPressed = this.munchTap;
+    f.burpPressed = this.burpTap;
+    this.munchTap = false;
+    this.burpTap = false;
     this.jumpWas = this.jump;
     return f;
   }
@@ -199,25 +241,39 @@ function injectStyle(): void {
   filter: drop-shadow(0 min(1.2vh, 7px) min(1.2vh, 6px) ${rgba('chocolateDark', 0.35)});
   opacity: 0.92; transition: opacity 0.15s; pointer-events: none; }
 .tc-active .tc-knob { opacity: 1; }
-.tc-jump { position: absolute; right: max(30px, 5.5vw); bottom: max(26px, 7vh);
-  width: min(28vh, 176px); height: min(28vh, 176px); border-radius: 50%;
-  background: radial-gradient(circle at 36% 30%, ${hex('frostingPinkLight')} 0%, ${hex('frostingPink')} 52%, ${hex('frostingPinkShadow')} 100%);
+.tc-btn { position: absolute; border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, var(--lit) 0%, var(--mid) 52%, var(--dark) 100%);
   border: min(1.6vh, 10px) solid ${hex('candyCream')};
   box-shadow: 0 min(1.4vh, 9px) 0 ${hex('doughGolden')},
     0 min(2.6vh, 16px) min(2vh, 12px) ${rgba('chocolateDark', 0.45)},
-    inset 0 max(-1vh, -6px) min(1.6vh, 10px) ${rgba('frostingPinkShadow', 0.55)};
+    inset 0 max(-1vh, -6px) min(1.6vh, 10px) var(--dark);
   transition: transform 0.06s, box-shadow 0.06s; }
-.tc-jump::before { content: ''; position: absolute; left: 17%; top: 9%; width: 42%; height: 24%;
+.tc-btn::before { content: ''; position: absolute; left: 17%; top: 9%; width: 42%; height: 24%;
   border-radius: 50%; background: ${cream(0.5)}; transform: rotate(-24deg); filter: blur(1px); }
-.tc-jump::after { content: ''; position: absolute; left: 34%; top: 80%; width: 32%; height: 8%;
-  border-radius: 50%; background: ${rgba('frostingPinkShadow', 0.8)}; filter: blur(1.5px); }
-.tc-jump img { position: absolute; left: 50%; top: 50%; width: 80%; height: 80%;
-  transform: translate(-50%, -60%);
-  filter: drop-shadow(0 min(0.8vh, 5px) min(0.6vh, 4px) ${rgba('frostingPinkShadow', 0.9)}); pointer-events: none; }
-.tc-jump.tc-pressed { transform: translateY(min(1.1vh, 7px)) scale(0.97);
+.tc-btn img { position: absolute; left: 50%; top: 50%; width: 80%; height: 80%;
+  transform: translate(-50%, -55%);
+  filter: drop-shadow(0 min(0.8vh, 5px) min(0.6vh, 4px) var(--dark)); pointer-events: none; }
+.tc-btn.tc-pressed { transform: translateY(min(1.1vh, 7px)) scale(0.97);
   box-shadow: 0 min(0.3vh, 2px) 0 ${hex('doughGolden')},
     0 min(1vh, 6px) min(2vh, 12px) ${rgba('chocolateDark', 0.3)},
-    inset 0 max(-1vh, -6px) min(1.6vh, 10px) ${rgba('frostingPinkShadow', 0.55)}; }
+    inset 0 max(-1vh, -6px) min(1.6vh, 10px) var(--dark); }
+/* Jump: the big green button. */
+.tc-jump { right: max(30px, 5.5vw); bottom: max(26px, 7vh);
+  width: min(28vh, 176px); height: min(28vh, 176px);
+  --lit: ${hex('leafMint')}; --mid: ${hex('leafGreen')}; --dark: ${hex('leafDeep')}; }
+.tc-jump img { transform: translate(-50%, -60%); }
+/* Munch: the big pink button, left of jump; it pulses when a donut is in reach. */
+.tc-munch { right: calc(max(30px, 5.5vw) + min(30vh, 190px)); bottom: max(20px, 5vh);
+  width: min(23vh, 146px); height: min(23vh, 146px);
+  --lit: ${hex('frostingPinkLight')}; --mid: ${hex('frostingPink')}; --dark: ${hex('frostingPinkShadow')}; }
+.tc-munch.tc-ready { animation: tc-pulse 0.9s ease-in-out infinite; }
+@keyframes tc-pulse { 50% { transform: scale(1.09); } }
+/* Burp: yellow, above jump; it swells with the belly. */
+.tc-burp { right: calc(max(30px, 5.5vw) + min(5vh, 30px)); bottom: calc(max(26px, 7vh) + min(31vh, 196px));
+  width: min(17vh, 108px); height: min(17vh, 108px);
+  transform: scale(calc(0.85 + 0.35 * var(--belly, 0))); transform-origin: 50% 100%;
+  --lit: ${hex('butter')}; --mid: ${hex('sprinkleYellow')}; --dark: ${hex('doughGolden')}; }
+.tc-burp.tc-pressed { transform: translateY(min(1.1vh, 7px)) scale(calc(0.82 + 0.35 * var(--belly, 0))); }
 `;
   document.head.append(s);
 }

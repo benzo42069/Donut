@@ -5,6 +5,7 @@ import { SHOTS } from './debug/shots';
 import type { ShotScene } from './debug/shotTypes';
 import { GamepadInput, KeyboardInput, MergedInput } from './engine/input/Input';
 import { Game } from './game/Game';
+import { Sfx } from './engine/audio/Sfx';
 import { TouchControls } from './ui/TouchControls';
 import { loadTouchIcons } from './ui/touchIcons';
 
@@ -76,11 +77,14 @@ async function play(params: URLSearchParams): Promise<void> {
   const touch = new TouchControls(document.body, await loadTouchIcons());
   if (params.has('touch')) touch.show(true);
   const input = new MergedInput(new KeyboardInput(), new GamepadInput(), touch);
+  const sfx = new Sfx();
+  for (const ev of ['pointerdown', 'keydown'] as const)
+    window.addEventListener(ev, () => sfx.unlock(), { capture: true });
   const game = await Game.create(
     QUALITY[tier],
     window.innerWidth / window.innerHeight,
     { kind: 'live', source: input },
-    { spawn: SPAWN },
+    { spawn: SPAWN, sfx },
   );
   const camera = game.camera.camera;
   renderer.setEnvironment(game.scene, game.environment);
@@ -98,6 +102,8 @@ async function play(params: URLSearchParams): Promise<void> {
     timer.update(timestamp);
     const dt = Math.min(timer.getDelta(), 0.1);
     game.update(dt);
+    touch.setMunchReady(game.munchReady);
+    touch.setBelly(game.belly);
     renderer.render(dt);
     requestAnimationFrame(loop);
   };
@@ -134,7 +140,7 @@ async function boot(): Promise<void> {
   if (!params.has('live')) {
     // Frozen clock: only setTime() advances the scene.
     const setTime = async (t: number): Promise<void> => {
-      shot.update?.(t);
+      await shot.update?.(t);
       // Two frames so lazily created targets settle, then wait for the GPU so
       // "ready" means the frame is really drawn (SwiftShader queues seconds of work).
       for (let i = 0; i < 2; i++) {
@@ -157,7 +163,7 @@ async function boot(): Promise<void> {
         const t0 = performance.now();
         for (let i = 0; i < frames; i++) {
           info.reset();
-          shot.update?.(i / 60);
+          void shot.update?.(i / 60);
           renderer.render(1 / 60);
           renderer.finish();
         }

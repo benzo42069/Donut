@@ -3,6 +3,7 @@ import { buildTerrainScene } from './scenes/m1Terrain';
 import { buildTestCubeScene } from './scenes/testCube';
 import { m2Shot } from './scenes/m2Meadow';
 import { m4Shot } from './scenes/m4Play';
+import { m5Shot } from './scenes/m5Munch';
 import {
   buildBiteGallery,
   buildDonutGallery,
@@ -32,4 +33,9 @@ export const SHOTS: Record<string, ShotDefinition> = {
   'm4-walk-strip': { build: m4Shot('walk') },
   'm4-jump-apex': { build: m4Shot('jump') },
   'm4-touch-ui': { build: m4Shot('touch') },
+  'm5-bite-1': { build: m5Shot('bite1') },
+  'm5-bite-3': { build: m5Shot('bite3') },
+  'm5-crumbs-strip': { build: m5Shot('crumbs') },
+  'm5-burp-strip': { build: m5Shot('burp') },
+  'm5-belly-5-roll': { build: m5Shot('roll') },
 };

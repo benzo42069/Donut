@@ -256,6 +256,39 @@ export class VoxelGrid {
     }
   }
 
+  /** A copy of every chunk (undo point for carves; deterministic replays). */
+  snapshot(): Map<number, Uint8Array> {
+    return new Map([...this.chunks].map(([k, c]) => [k, c.slice()]));
+  }
+
+  /** Returns to a `snapshot()`, marking every chunk that changed dirty. */
+  restoreSnapshot(snap: ReadonlyMap<number, Uint8Array>): void {
+    const touched: number[] = [];
+    for (const [k, c] of this.chunks) {
+      const s = snap.get(k);
+      if (!s) {
+        this.chunks.delete(k);
+        touched.push(k);
+      } else if (!equalBytes(c, s)) {
+        c.set(s);
+        touched.push(k);
+      }
+    }
+    for (const [k, s] of snap) {
+      if (this.chunks.has(k)) continue;
+      this.chunks.set(k, s.slice());
+      touched.push(k);
+    }
+    for (const k of touched) {
+      const { cx, cy, cz } = unpackChunkKey(k);
+      // Neighbors read this chunk's border, so they remesh too.
+      for (let dz = -1; dz <= 1; dz++)
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -1; dx <= 1; dx++) this.markDirty(cx + dx, cy + dy, cz + dz);
+      if (!this.chunks.has(k)) this.dirty.add(k);
+    }
+  }
+
   /** Number of solid voxels. */
   count(): number {
     let n = 0;
@@ -297,4 +330,10 @@ export class VoxelGrid {
     }
     return out;
   }
+}
+
+function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }

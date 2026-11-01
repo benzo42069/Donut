@@ -11,6 +11,9 @@ export interface InputFrame {
   jumpPressed: boolean;
   /** Camera orbit input, -1..1 (right stick, touch drag). */
   look: number;
+  /** Munch and Burp pressed on this frame (game design §10). */
+  munchPressed: boolean;
+  burpPressed: boolean;
 }
 
 export interface InputSource {
@@ -23,6 +26,8 @@ export const idleFrame = (): InputFrame => ({
   jump: false,
   jumpPressed: false,
   look: 0,
+  munchPressed: false,
+  burpPressed: false,
 });
 
 /** Clamps a stick to the unit disc with a radial dead zone. */
@@ -44,16 +49,28 @@ const MOVE_KEYS: Record<string, [number, number]> = {
   ArrowRight: [1, 0],
 };
 const JUMP_KEYS = new Set(['Space', 'KeyJ', 'KeyK']);
-const LOOK_KEYS: Record<string, number> = { KeyQ: -1, KeyE: 1 };
+// Q and E were the camera in M4; E is Munch (game design §10), so the camera moves to Z / C.
+const LOOK_KEYS: Record<string, number> = { KeyQ: -1, KeyZ: -1, KeyC: 1 };
+const MUNCH_KEYS = new Set(['KeyE', 'KeyF', 'Enter']);
+const BURP_KEYS = new Set(['KeyB']);
 
 export class KeyboardInput implements InputSource {
   private readonly down = new Set<string>();
   private jumpWas = false;
+  /** Presses since the last read (a tap shorter than a frame still counts). */
+  private munchTap = false;
+  private burpTap = false;
 
   constructor(target: Window = window) {
     target.addEventListener('keydown', (e) => {
       if (e.code in MOVE_KEYS || JUMP_KEYS.has(e.code)) e.preventDefault();
+      if (!e.repeat && MUNCH_KEYS.has(e.code)) this.munchTap = true;
+      if (!e.repeat && BURP_KEYS.has(e.code)) this.burpTap = true;
       this.down.add(e.code);
+    });
+    // A click on the game munches too.
+    target.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && e.target instanceof HTMLCanvasElement) this.munchTap = true;
     });
     target.addEventListener('keyup', (e) => this.down.delete(e.code));
     target.addEventListener('blur', () => this.down.clear());
@@ -79,7 +96,11 @@ export class KeyboardInput implements InputSource {
       jump,
       jumpPressed: jump && !this.jumpWas,
       look: Math.max(-1, Math.min(1, look)),
+      munchPressed: this.munchTap,
+      burpPressed: this.burpTap,
     };
+    this.munchTap = false;
+    this.burpTap = false;
     this.jumpWas = jump;
     return frame;
   }
@@ -87,6 +108,8 @@ export class KeyboardInput implements InputSource {
 
 export class GamepadInput implements InputSource {
   private jumpWas = false;
+  private munchWas = false;
+  private burpWas = false;
 
   read(): InputFrame {
     const pads = typeof navigator.getGamepads === 'function' ? navigator.getGamepads() : [];
@@ -94,9 +117,22 @@ export class GamepadInput implements InputSource {
     if (!pad) return idleFrame();
     const [x, y] = shapeStick(pad.axes[0] ?? 0, -(pad.axes[1] ?? 0));
     const [look] = shapeStick(pad.axes[2] ?? 0, 0, 0.2);
+    // A jumps; X munches, Y burps (standard mapping; B jumps too, it's next to A).
     const jump = Boolean(pad.buttons[0]?.pressed || pad.buttons[1]?.pressed);
-    const frame = { moveX: x, moveY: y, jump, jumpPressed: jump && !this.jumpWas, look };
+    const munch = Boolean(pad.buttons[2]?.pressed);
+    const burp = Boolean(pad.buttons[3]?.pressed);
+    const frame = {
+      moveX: x,
+      moveY: y,
+      jump,
+      jumpPressed: jump && !this.jumpWas,
+      look,
+      munchPressed: munch && !this.munchWas,
+      burpPressed: burp && !this.burpWas,
+    };
     this.jumpWas = jump;
+    this.munchWas = munch;
+    this.burpWas = burp;
     return frame;
   }
 }
@@ -122,6 +158,8 @@ export class MergedInput implements InputSource {
       }
       out.jump ||= f.jump;
       out.jumpPressed ||= f.jumpPressed;
+      out.munchPressed ||= f.munchPressed;
+      out.burpPressed ||= f.burpPressed;
       if (Math.abs(f.look) > Math.abs(out.look)) out.look = f.look;
     }
     return out;

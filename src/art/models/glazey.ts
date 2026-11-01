@@ -24,7 +24,7 @@ export const GLAZEY_VOXEL = 1 / 32;
 export const FACE_SCALE = 4;
 export const GLAZEY_FACE_VOXEL = GLAZEY_VOXEL / FACE_SCALE;
 
-export type GlazeyExpression = 'happy' | 'bliss' | 'surprised' | 'munch';
+export type GlazeyExpression = 'happy' | 'bliss' | 'surprised' | 'munch' | 'burp';
 export type GlazeyPartName = 'body' | 'face' | 'tuft' | 'armL' | 'armR' | 'footL' | 'footR';
 
 /** Smooth-shading normal at a point in a part's grid coordinates (voxel units). */
@@ -46,6 +46,8 @@ export interface GlazeyModel {
   height: number;
   /** Body half extents and center height (body voxels): the rig's proportions. */
   body: { rx: number; ry: number; rz: number; y0: number };
+  /** The middle of the mouth on the face (body voxels): where a munched donut goes. */
+  mouth: Vec3;
 }
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -134,6 +136,14 @@ const TUFT: VoxelColorName[] = [
   'sprinkleGreen',
   'sprinkleBlue',
 ];
+
+/** Glazey's height in body voxels at a belly stage (tuft included), without building him. */
+export function glazeyHeight(belly: number): number {
+  const t = clamp(belly, 0, 5) / 5;
+  const ry = lerp(13.2, 17.5, t);
+  const feetH = lerp(2.6, 1.6, t);
+  return Math.ceil(feetH + 2 * ry + 6);
+}
 
 export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): GlazeyModel {
   const t = clamp(belly, 0, 5) / 5;
@@ -311,6 +321,11 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
     },
     height: Math.ceil(crownY + 6),
     body: { rx, ry, rz, y0 },
+    mouth: (() => {
+      const { mouthY } = mouthLayout(t, rx, ry, y0);
+      const front = rz * Math.sqrt(Math.max(0, 1 - ((mouthY - y0) / ry) ** 2));
+      return [0, mouthY, front] as Vec3;
+    })(),
   };
 }
 
@@ -366,8 +381,17 @@ function faceLayout(
   const eyeRx = expression === 'surprised' ? 3.4 : 3.1;
   const eyeRy = expression === 'surprised' ? 3.9 : 3.55;
   const mouthY = eyeY - lerp(4.3, 3.9, t);
-  const mouthRx = expression === 'surprised' ? 1.6 : expression === 'munch' ? 3.6 : 3.1;
-  const mouthRy = expression === 'surprised' ? 2.0 : 2.6;
+  const round = expression === 'surprised' || expression === 'burp';
+  // The giant burp (sheet 03): a wide round "O", eyes squeezed shut.
+  const mouthRx =
+    expression === 'burp'
+      ? 3.0
+      : expression === 'surprised'
+        ? 1.6
+        : expression === 'munch'
+          ? 3.6
+          : 3.1;
+  const mouthRy = expression === 'burp' ? 3.1 : expression === 'surprised' ? 2.0 : 2.6;
   const cheekX = eyeX + 2.3;
   const cheekY = mouthY + 0.2;
   const tummy = bellyLayout(t, rx, ry, y0);
@@ -424,7 +448,7 @@ function faceLayout(
     // Mouth: a wide open smile (flat-ish top, round bottom), tongue at the bottom.
     const mx = x;
     const my = y - mouthY;
-    if (expression === 'surprised') {
+    if (round) {
       if (ell(mx, my, mouthRx, mouthRy, s) <= 1)
         return {
           color: my < -mouthRy * 0.45 ? 'tongueSoft' : 'mouthInside',

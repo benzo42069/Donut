@@ -261,14 +261,50 @@ if ( vVoxelMat.z < 0.0 ) {
 }
 `;
 
+/**
+ * The burp shockwave (art bible §8): world (x, z), ring radius (m) and strength
+ * (0 = off). Shared by every material made with `{ shock: true }`, so one write
+ * bends all the grass and sprinkles on the island.
+ */
+export const SHOCK = { value: new Vector4(0, 0, 0, 0) };
+
+/**
+ * Instanced decor leans away from the shock ring: a shear that grows with the
+ * height of each vertex in the decor model, so blades bend from the root.
+ */
+const SHOCK_VERTEX = /* glsl */ `
+#ifdef USE_INSTANCING
+if (uShock.w > 0.0) {
+  vec3 org = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec2 d = org.xz - uShock.xy;
+  float r = max(length(d), 1e-3);
+  float x = (r - uShock.z) / 0.55;
+  // A leading push and a small springy rebound behind the front.
+  float wave = exp(-x * x) - 0.35 * exp(-(x + 1.6) * (x + 1.6));
+  float si = max(length(instanceMatrix[0].xyz), 1e-6);
+  mat3 rot = mat3(instanceMatrix) / si;
+  vec3 away = transpose(rot) * vec3(d.x / r, 0.0, d.y / r);
+  transformed += away * (uShock.w * wave * 0.75 * max(position.y, 0.0));
+  transformed.y -= uShock.w * wave * wave * 0.2 * max(position.y, 0.0);
+}
+#endif
+`;
+
+export interface VoxelMaterialOptions {
+  /** Bend instanced decor with the burp shockwave (`SHOCK`). */
+  shock?: boolean;
+}
+
 export function createVoxelMaterial(
   params: MeshStandardMaterialParameters = {},
   tuning: VoxelMaterialTuning = DEFAULT_TUNING,
+  opts: VoxelMaterialOptions = {},
 ): MeshStandardMaterial {
   const mat = new MeshStandardMaterial({ roughness: 1, metalness: 0, ...params });
   const colors = paletteUniforms();
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uPalette = { value: colors };
+    if (opts.shock) shader.uniforms.uShock = SHOCK;
     const t = tuning;
     shader.uniforms.uTune0 = {
       value: new Vector4(t.roughMatte, t.roughGloss, t.roughRough, t.emissive),
@@ -282,8 +318,11 @@ export function createVoxelMaterial(
     shader.uniforms.uClearcoat = { value: tuning.clearcoat };
     shader.uniforms.uSmooth = { value: tuning.smooth };
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', `#include <common>\n${VERTEX_PARS}`)
-      .replace('#include <begin_vertex>', VERTEX_MAIN);
+      .replace(
+        '#include <common>',
+        `#include <common>\n${VERTEX_PARS}${opts.shock ? 'uniform vec4 uShock;' : ''}`,
+      )
+      .replace('#include <begin_vertex>', opts.shock ? VERTEX_MAIN + SHOCK_VERTEX : VERTEX_MAIN);
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>\n${FRAGMENT_PARS}`)
       .replace('#include <color_fragment>', FRAGMENT_COLOR)
@@ -304,6 +343,6 @@ if (vVoxelMat.w >= 5.0) {
       .replace('#include <lights_physical_pars_fragment>', WRAP_LIGHTS)
       .replace('#include <lights_fragment_end>', HUE_HOLD);
   };
-  mat.customProgramCacheKey = () => 'voxel-v15';
+  mat.customProgramCacheKey = () => (opts.shock ? 'voxel-v15-shock' : 'voxel-v15');
   return mat;
 }

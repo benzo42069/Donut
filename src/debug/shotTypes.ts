@@ -6,8 +6,8 @@ import type { QualitySettings, QualityTier } from '../engine/quality';
 export interface ShotScene {
   readonly scene: Scene;
   readonly camera: Camera;
-  /** Poses the scene at time `t` seconds. The clock is frozen otherwise. */
-  update?(t: number): void;
+  /** Poses the scene at time `t` seconds (may wait for remeshing). The clock is frozen otherwise. */
+  update?(t: number): void | Promise<void>;
   /** Time of the still frame (overrides the definition's `time`). */
   readonly stillTime?: number;
   /** DOM overlay shown over the canvas (the touch UI). */

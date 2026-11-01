@@ -1,11 +1,111 @@
 # Progress
 
-## M4 in progress (Glazey in motion)
+## Handoff → M5 (The Munch ★)
+
+**M4 status: DONE, accepted by the user (option B), gate NOT passed.** After 8
+reviewed iterations (best and final mean 7.1, bar 9.0; iter 8 had no blockers
+and no regressions), the user accepted M4 as it stands (2026-11-01). The bar,
+rubric, art bible and reviewer definition are unchanged. Final shots are in
+`shots/M4/final/` (iter 8, harness capture at `75e6e9b`). The gate record is in
+the M4 section below.
+
+**What was built (M4):**
+- **Glazey part rig** (`src/art/models/glazey.ts`, `src/game/player/GlazeyRig.ts`):
+  - `buildGlazey(belly, expression)` returns separately baked parts (`body`,
+    `face` decal at 1/128 m, `tuft`, `armL/R`, `footL/R`) with SDF normals;
+  - `GlazeyRig.build(model, material, pool)` and `rig.pose(GlazeyPose)`;
+  - the belly is one shared `bellyLayout`: a convex swell in the body SDF with
+    the cream oval decal on top. Belly stages 0–5 are separate builds.
+- **Animation** (`GlazeyAnimator.ts`): procedural and bone-less. It covers
+  idle breathing, a waddle walk with step squash and stretch, a jump with the
+  arms thrown up, and a jelly squash spring on landing. It is deterministic for
+  a fixed step.
+- **Controller and camera:**
+  - `PlayerController.ts` is a Rapier kinematic character controller;
+  - `FollowCamera.ts` is a leash camera with collision probes. It adds
+    look-ahead framing toward a third by facing (`CAM.leadAcross`), pitch 0.09,
+    and a 45 % follow of the jump rise.
+- **Game shell** (`src/game/Game.ts`):
+  - `Game.create(quality, aspect, input, {spawn})`;
+  - `simulateTo(t)` is the deterministic fixed step the shot harness uses;
+  - scripted input for the shots;
+  - `HERO_TUNING` for Glazey's material (self-light, fresnel rim, low wrap).
+- **FX:**
+  - `fx/VoxelParticles.ts` makes voxel dust on footfalls and jumps. It uses
+    only the listed `kinds` colours; anything else is dropped silently.
+  - `fx/ContactShadow.ts` is a blob shadow with normal blending.
+- **Touch UI** (`src/ui/TouchControls.ts`, `touchIcons.ts`, `voxelIcon.ts`): a
+  candy stick and a jump button with a rendered Glazey hop icon.
+- **World for play:**
+  - `MeadowDiorama` play mode adds micro-decor, a relaxed terrain skin
+    (`relaxAll` in the mesher and material; high tier only), trees at
+    resolution 2, a warm play ground, a play sky and a cloud ring.
+  - The M4 stage lives in `src/debug/scenes/m4Play.ts`.
+
+**Decisions:**
+- **New pass bar from M5 on** (user, 2026-11-01): a mean of at least 7.5, every
+  category at least 6, zero blockers and no regressions (`docs/AGENTIC_LOOP.md`
+  §4). The scoring scale is unchanged. List open findings that score below 9 as
+  polish follow-ups.
+- **Same thread as M3.** The user asked for it, so M4 ran in the M3 thread.
+- **The M2 cloud stays exactly as approved.** A cloud ramp tried in iter 5 was
+  reverted.
+- **The M4 shots are scripted walks** on the meadow ring (`stage(ringDeg, u,
+  cameraOffsetDeg)`). Glazey walks 14° toward the lens, so his face and
+  belly show at a true 3/4. The jump uses its own stage at u 0.42.
+
+**Gotchas (read these first):**
+- **Palette:** at most 127 entries plus the empty slot (a test enforces it).
+  Adding a colour means removing or reusing one.
+- **Perf:**
+  - The full M4 shot run takes about 200 s, and perf runs can be OOM-killed
+    when chained after shots, so run them alone.
+  - Low tier is 35–38 fps in play (target 30).
+  - High tier is about 12 fps on the Apple M4 (target 60), because it draws
+    about 33 M triangles from the micro-decor and the res-2 trees. This is the
+    biggest open tech item.
+- **Relaxed terrain on the low tier** dropped it to 31 fps, so it is disabled
+  there.
+- **The face decal facing test** in `glazey.ts` is `gz + 0.3·gy > facing`. The
+  belly uses `facing: -0.1`, so the oval is not clipped flat at the bottom.
+- **Eyes** must stay `MAT.gloss`, with no hash dither in the iris. The matte or
+  dithered version was the iter 7 blocker.
+
+**Open follow-ups from M4** (the details are in `reviews/M4-iter8.md`):
+1. **Glazey in play:**
+   - the belly reads as a flat khaki sticker (it needs convex falloff and a lit
+     colour near #F5E2A8);
+   - the material is felt-like (no sheen or rim, per-voxel blotches);
+   - the eyes lose their gloss streak in play.
+2. **Glazey in the studio:**
+   - grainy, sandy belly surface with a khaki shadow side;
+   - the body silhouette is a narrow egg instead of the sheet's broad bean;
+   - muddy arm tips.
+3. **World:**
+   - the pink canopy has a dark lit side and a dither band;
+   - the milk is peach-pink satin;
+   - the play clouds are flat slabs with a hard lilac underside.
+4. **Jump:** no readable contact shadow at the apex.
+
+**First 3 steps for M5:**
+1. Add the M5 gate to `scripts/gates.json`: `m5-bite-1`, `m5-bite-3`,
+   `m5-crumbs-strip`, `m5-burp-strip`, `m5-belly-5-roll`. Build their scripted
+   stages in a `src/debug/scenes/m5Munch.ts`, following `m4Play.ts`.
+2. Build the munch loop on the M4 rig: auto-aim to the nearest donut, three
+   bites carved with `biteDonut` (scalloped), crumb particles with Rapier
+   physics, and belly inflation that swaps `buildGlazey(belly)` stages with a
+   squash-spring wobble.
+3. Since belly growth puts the belly in every M5 shot, fix the Glazey material
+   and belly follow-ups (1 and 2 above) before the first review. Then do the
+   burp shockwave, rolling at belly ≥ 3, and the four powers.
+
+## M4 — Glazey in motion (DONE: accepted by user, option B, gate not passed)
 
 - **Pass bar lowered by the user (2026-11-01):** a gate now passes at mean ≥ 7.5
   with every category ≥ 6, zero blockers and no regressions (`docs/AGENTIC_LOOP.md` §4).
   The scoring scale is unchanged. M4's iter 8 (7.1, no blockers) is still below the
-  new bar, so when the user replies in this thread, re-review against the new bar.
+  new bar. The user then replied "Accept, move on", so M4 closes under option B
+  with no re-review.
 
 - **Thread exception:** M4 runs in the same thread as M3, because the user asked
   for it ("Please run M4 in this thread"). This overrides CLAUDE.md's
@@ -81,9 +181,10 @@
   - the body silhouette is too narrow;
   - the pink canopy, the milk and the play clouds are unchanged.
 
-  M4 is waiting for the user's decision.
+  The user chose option B (2026-11-01): accept M4 as it stands and move on to
+  M5. The final shots are in `shots/M4/final/` (iter 8).
 
-## Handoff → M4 (Glazey in motion)
+## Handoff → M4 (Glazey in motion) (archived)
 
 **M3 status: DONE, accepted by the user (option B), gate NOT passed.** After 8
 reviewed iterations of the ★ double gate (best mean 6.80, final 6.75, bar 9.0;
@@ -678,7 +779,8 @@ threat and nothing scary.
 | M1 Voxel engine core | **DONE** | perf budget | remesh 1.4–2.7 ms/chunk (median, in-browser); real-GPU fps unverified (no GPU here) |
 | M2 Beauty slice ★ | **DONE (accepted by user, gate not passed)** | double reviewer | best reviewed mean 6.5 / 6.5 (bar 9.0); accepted at iter 8; final shots in `shots/M2/final/` |
 | M3 Procedural asset library ★ | **DONE (accepted by user, option B; gate not passed)** | double reviewer | best mean 6.80, final 6.75 (bar 9.0); 0 blockers at iters 7–8; Glazey re-gated in M4; final shots in `shots/M3/final/` |
-| M4–M10 | — | | |
+| M4 Glazey in motion | **DONE (accepted by user, option B; gate not passed)** | single reviewer | best and final mean 7.1 (bar 9.0); 0 blockers at iter 8; final shots in `shots/M4/final/` |
+| M5–M10 | — | | |
 
 ## M0 — Scaffold and screenshot harness (DONE)
 

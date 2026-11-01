@@ -223,7 +223,7 @@ export class GlazeyAnimator {
       const k = this.munchW;
       const hug = m.munch?.beat === 'chew' ? 0.12 * Math.sin((m.munch.since ?? 0) * 26) : 0;
       p.arms.forEach((a) => {
-        a.swing = a.swing * (1 - k) + (-1.35 + hug) * k;
+        a.swing = a.swing * (1 - k) + (-1.6 + hug) * k;
         a.raise = a.raise * (1 - k) + 0.25 * k;
         a.reach = k;
       });

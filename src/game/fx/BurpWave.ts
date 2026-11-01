@@ -24,7 +24,7 @@ export const RAINBOW: VoxelColorName[] = [
 export const BURP = {
   /** The hoop that flies out of his mouth. */
   hoopLife: 0.95,
-  hoopSpeed: 2.3,
+  hoopSpeed: 1.4,
   hoopGrow: 0.95,
   /** The ring that runs out along the ground, bending the grass. */
   groundLife: 1.3,

@@ -516,8 +516,12 @@ export async function buildMeadowDiorama(
     // Decor bends with the burp shockwave (art bible §8).
     const decor = buildMicroDecor(shape, createVoxelMaterial({}, DEFAULT_TUNING, { shock: true }), {
       low,
+      // Edible donuts sit in the grass (it hides inside the dough), so the lawn
+      // stays whole when one is lifted and eaten.
       clear: obstacles.flatMap((o) =>
-        o.kind === 'cylinder' ? [[o.x, o.z, o.radius + 0.06] as const] : [],
+        o.kind === 'cylinder' && o.edible === undefined
+          ? [[o.x, o.z, o.radius + 0.06] as const]
+          : [],
       ),
     });
     scene.add(decor.group);

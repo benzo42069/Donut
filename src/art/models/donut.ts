@@ -618,6 +618,32 @@ export function biteDonut(
   const sdf = biteSdf(flavor, bite, voxel, center, seed);
   const max: [number, number, number] = [size[0], size[1], size[2]];
   const removed = carveSdf(grid, sdf, [0, 0, 0], max);
+  // Between overlapping tooth cups the carve can leave one-voxel fins and
+  // loose specks; shave them so the lip is a soft cusp (art bible §8, ref 04).
+  let near: [number, number, number][] = [];
+  grid.forEachVoxel((x, y, z) => {
+    if (sdf(x + 0.5, y + 0.5, z + 0.5) <= 3) near.push([x, y, z]);
+  });
+  for (let pass = 0; pass < 3; pass++) {
+    const thin: RemovedVoxel[] = [];
+    for (const [x, y, z] of near) {
+      const c = grid.get(x, y, z);
+      if (!c) continue;
+      const s = (dx: number, dy: number, dz: number): boolean =>
+        grid.get(x + dx, y + dy, z + dz) !== 0;
+      const faces =
+        +s(1, 0, 0) + +s(-1, 0, 0) + +s(0, 1, 0) + +s(0, -1, 0) + +s(0, 0, 1) + +s(0, 0, -1);
+      const sliver =
+        (!s(1, 0, 0) && !s(-1, 0, 0)) ||
+        (!s(0, 0, 1) && !s(0, 0, -1)) ||
+        (!s(0, 1, 0) && !s(0, -1, 0));
+      if (faces < 3 || sliver) thin.push({ x, y, z, index: c });
+    }
+    if (!thin.length) break;
+    for (const v of thin) grid.set(v.x, v.y, v.z, 0);
+    removed.push(...thin);
+    near = near.filter(([x, y, z]) => grid.get(x, y, z) !== 0);
+  }
   const dough = new Set([
     PALETTE_INDEX.bunGolden,
     PALETTE_INDEX.bunToasted,

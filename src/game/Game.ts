@@ -67,7 +67,9 @@ const BURP_END = BURP_AT + 1.1;
  * A held donut's center from his mouth (m, mouth space: +y up, +z forward):
  * below and in front, so its top rim just meets his lips.
  */
-const HOLD = new Vector3(0, -0.01, 0.36);
+const HOLD = new Vector3(0, 0.04, 0.36);
+/** How far the held ring rolls open toward the sky (radians from standing on edge). */
+const HOLD_ROLL = 1.2;
 /** Belly 3–4: hold jump this long on the ground to curl into a roll. */
 const ROLL_HOLD = 0.25;
 
@@ -174,8 +176,6 @@ export class Game {
   private readonly swirl: PowerSwirl;
   private readonly glow: PointLight;
   private readonly shadow = new ContactShadow();
-  /** Under a held donut, so it reads as lifted off the lawn. */
-  private readonly donutShadow = new ContactShadow();
   private readonly groundBelow: (p: Vector3) => number;
   private spawn: Spawn;
   private readonly start: { belly: number; power?: PowerName };
@@ -239,16 +239,7 @@ export class Game {
     this.glow.position.y = 0.7;
     this.avatar.add(this.glow);
     this.animator = new GlazeyAnimator();
-    this.scene.add(
-      avatar,
-      fx.dust,
-      fx.crumbs,
-      fx.sparkles,
-      wave,
-      swirl,
-      this.shadow,
-      this.donutShadow,
-    );
+    this.scene.add(avatar, fx.dust, fx.crumbs, fx.sparkles, wave, swirl, this.shadow);
     this.reset();
   }
 
@@ -639,7 +630,7 @@ export class Game {
     // the rim nearest his mouth is at this angle; each bite takes fresh rim.
     // The donut has turned by `turn` in his hands (about its own axis), so the
     // rim at his lips sits that much further back in its own frame.
-    const angle = Math.atan2(HOLD.z, -HOLD.y) + this.munch.turn;
+    const angle = Math.atan2(HOLD.z, -HOLD.y) + -this.camSide * this.munch.turn;
     const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.19 }, e.voxel, 31 + k * 7, true);
     for (const c of e.grid.chunkCoords()) e.grid.markDirty(c.cx, c.cy, c.cz);
     this.track(e.object.update());
@@ -666,16 +657,23 @@ export class Game {
         index,
       });
     }
+    // Out of the bite, away from his body and toward the lens, then down onto
+    // the lawn in front of the donut: never back over his face.
     const yaw = this.player.yaw;
+    const side = this.camSide * 0.7;
+    const out = new Vector3(
+      Math.sin(yaw) + side * Math.cos(yaw),
+      0,
+      Math.cos(yaw) - side * Math.sin(yaw),
+    ).normalize();
     this.crumbs.emit({
       at: points[0]?.at ?? this.player.position.clone(),
       points,
       count: points.length,
-      // A fan out of the bite and down onto the lawn: one or two voxels of
-      // the donut each (art bible §3), a few twice that.
-      speed: [0.6, 1.7],
-      up: [0.4, 1.3],
-      dir: { x: Math.sin(yaw), z: Math.cos(yaw), bias: 0.35 },
+      // One or two voxels of the donut each (art bible §3), a few twice that.
+      speed: [0.5, 1.4],
+      up: [-0.1, 0.55],
+      dir: { x: out.x, z: out.z, bias: 0.6 },
       colors: ['crumbFresh'],
       size: [e.voxel * 1.1, e.voxel * 2.1],
       life: [3.6, 4.4],
@@ -756,11 +754,11 @@ export class Game {
     this.lastPhase = phase;
     this.sinceFx += STEP;
     // Rolling: a spray of dust off the back of the ball.
-    if (this.rolling && m.grounded && m.speed > 1 && this.sinceFx > 0.07) {
+    if (this.rolling && m.grounded && m.speed > 0.5 && this.sinceFx > 0.06) {
       this.sinceFx = 0;
       this.dust.emit({
         at: p.clone().setY(p.y + 0.05),
-        count: 9,
+        count: 12,
         speed: [0.4, 1.0],
         up: [0.9, 1.8],
         dir: { x: -fwd.x, z: -fwd.z, bias: 0.8 },
@@ -899,10 +897,20 @@ export class Game {
     this.presentRipple();
   }
 
+  /**
+   * Which side of Glazey the camera is on (+1: his right). The held ring opens
+   * toward it, and turns between bites so the fresh scallops roll round to the
+   * rim facing the lens.
+   */
+  private get camSide(): 1 | -1 {
+    const yaw = this.player.yaw;
+    const d = this.camera.camera.position.clone().sub(this.player.position);
+    return d.x * Math.cos(yaw) - d.z * Math.sin(yaw) >= 0 ? 1 : -1;
+  }
+
   /** The held donut rides in his arms; the rest sit on the grass. */
   private presentDonuts(): void {
     const target = this.munch.target;
-    this.donutShadow.visible = false;
     this.world.edibles.forEach((e, i) => {
       const held = target?.index === i;
       if (!held) {
@@ -924,9 +932,11 @@ export class Game {
         new Matrix4().makeBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0), new Vector3(0, 0, -1)),
       );
       // Turned so each fresh bite rolls up over the top rim, into view.
-      const spin = new Quaternion().setFromEuler(new Euler(0, this.munch.turn, 0));
-      // Tipped back a little about his facing, so the glaze catches the sky (gloss).
-      const tip = new Quaternion().setFromEuler(new Euler(0, 0, 0.32));
+      const spin = new Quaternion().setFromEuler(new Euler(0, -this.camSide * this.munch.turn, 0));
+      // Rolled about his facing so the glaze lies open to the sky and the lens,
+      // on whichever side the camera is (gloss: it reflects the bright sky).
+      const roll = this.camSide > 0 ? HOLD_ROLL : Math.PI - HOLD_ROLL;
+      const tip = new Quaternion().setFromEuler(new Euler(0, 0, roll));
       const heldQ = aq.clone().multiply(tip).multiply(basis).multiply(spin);
       const remain = this.munch.remain;
       const cy = donutCenterY(e.voxel, e.flavor) * e.voxel;
@@ -947,13 +957,6 @@ export class Game {
       e.group.position.y += 0.25 * Math.sin(Math.PI * k);
       e.group.quaternion.slerpQuaternions(groundQ, heldQ, k);
       e.group.scale.setScalar(Math.max(1e-3, remain));
-      const c = e.group.position
-        .clone()
-        .add(new Vector3(0, cy * remain, 0).applyQuaternion(e.group.quaternion));
-      const g = this.world.shape.surface(c.x, c.z);
-      this.donutShadow.visible = remain > 0.05;
-      this.donutShadow.place(c.x, g, c.z, c.y - g);
-      this.donutShadow.scale.multiplyScalar(0.85 * remain);
     });
   }
 

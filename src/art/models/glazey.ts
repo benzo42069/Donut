@@ -1,4 +1,4 @@
-import { PALETTE_INDEX, type VoxelColorName } from '../palette';
+import { PALETTE_INDEX, hash3, type VoxelColorName } from '../palette';
 import { smoothUnion, type Sdf } from '../sdf';
 import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 
@@ -175,7 +175,7 @@ export function buildGlazey(belly = 0, expression: GlazeyExpression = 'happy'): 
   const tummy = bellyLayout(t, rx, ry, y0);
   const bellyDepth = lerp(4.5, 6, t);
   const bellyFront =
-    rz * Math.sqrt(Math.max(0, 1 - ((tummy.cy - y0) / ry) ** 2)) + lerp(0.9, 1.4, t);
+    rz * Math.sqrt(Math.max(0, 1 - ((tummy.cy - y0) / ry) ** 2)) + lerp(0.4, 0.8, t);
   const bellyC: Vec3 = [0, tummy.cy, bellyFront - bellyDepth];
   const bellyR = Math.max(tummy.rx, tummy.ry);
   const skin = smoothUnion(
@@ -472,8 +472,16 @@ function faceLayout(
     // narrower on top, with a faint dome for a soft highlight.
     const dy = y - tummy.cy;
     const egg = tummy.rx * (1 - 0.1 * clamp(dy / tummy.ry, -1, 1));
-    if (ell(x, dy, egg, tummy.ry, s) <= 1)
-      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, tummy.ry, 0.3, 0.3), facing: -0.1 };
+    const r = ell(x, dy, egg, tummy.ry, s);
+    if (r <= 1) {
+      // A soft, slightly broken seam into the coral instead of a cut edge.
+      const seam = r > 0.84 + 0.08 * hash3(Math.floor(x * 3), Math.floor(y * 3), 0, 29);
+      return {
+        color: seam ? 'glazeyBellyEdge' : 'glazeyBellySoft',
+        ...dome(x, dy, egg, tummy.ry, 0.3, 0.3),
+        facing: -0.1,
+      };
+    }
     return null;
   };
 }

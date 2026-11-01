@@ -20,6 +20,8 @@ export type M5Shot = 'bite1' | 'bite3' | 'crumbs' | 'burp' | 'roll';
 const DONUT = 2;
 /** When the munch button is pressed (Glazey is standing near the donut). */
 const MUNCH_AT = 0.1;
+/** Stage turn off the lighthouse line (radians). */
+const STAGE_TURN = 13 * DEG;
 
 const idle =
   (extra: (t: number) => Partial<WorldInput> = () => ({})) =>
@@ -36,7 +38,8 @@ function munchStage(game: Game, side: 1 | -1): GameOptions['spawn'] {
   if (!d) throw new Error('m5: no edible donut');
   const bg = SPOTS.lighthouse;
   // The camera sits opposite the background, so the lighthouse stands behind him.
-  const camYaw = Math.atan2(d.x - bg.x, d.z - bg.z);
+  // Turned a few degrees so the pier's rails clear his head and tuft.
+  const camYaw = Math.atan2(d.x - bg.x, d.z - bg.z) + STAGE_TURN;
   const face = camYaw - side * CAM.focusSide;
   return {
     x: d.x - Math.sin(face) * 0.8,
@@ -106,7 +109,7 @@ export function m5Shot(kind: M5Shot) {
       // Rolling along the path toward the lens, like the M4 walk.
       const at = band(116, 0.3);
       const walkYaw = Math.atan2(-Math.sin(116 * DEG), Math.cos(116 * DEG));
-      Object.assign(spawn, { x: at.x, z: at.z, yaw: walkYaw, cameraYaw: walkYaw + 19 * DEG });
+      Object.assign(spawn, { x: at.x, z: at.z, yaw: walkYaw, cameraYaw: walkYaw + 30 * DEG });
       const dir = walkYaw + 14 * DEG;
       input = () => ({
         move: { x: Math.sin(dir) * 0.85, z: Math.cos(dir) * 0.85 },

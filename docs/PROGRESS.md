@@ -16,6 +16,7 @@
   | 5 | 6.7 | 5 | 1 |
   | 6 | 6.9 | 6 | 1 |
   | 7 | 7.0 | 6 | 1 |
+  | 8 | 7.1 | 6 | 0 |
 
   Reports are in `reviews/M4-iter*.md`.
 - **Plateau (§5), before iter 5.** Iters 3 and 4 gained less than 0.3, so
@@ -67,6 +68,15 @@
   3/4. The camera pitch is flatter again (0.09), so the lighthouse's donut
   clears the top edge. The jump stage moves to u 0.42, so he jumps over the path with
   the lighthouse in frame.
+- **Escalated to the user after iter 8 (§6).** FAIL at mean 7.1 (bar 9.0)
+  with no blockers and no regressions. The iteration means rose steadily
+  (5.9 → 7.1), but the gate did not pass. The open findings are in `reviews/M4-iter8.md`:
+  - the play belly reads as a flat khaki sticker;
+  - Glazey's play material is felt-like, with no sheen;
+  - the body silhouette is too narrow;
+  - the pink canopy, the milk and the play clouds are unchanged.
+
+  M4 is waiting for the user's decision.
 
 ## Handoff → M4 (Glazey in motion)
 

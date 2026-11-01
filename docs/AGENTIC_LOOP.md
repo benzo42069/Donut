@@ -67,18 +67,24 @@ so they run independently. Neither sees the other's report.
 A gate **passes only if all of these hold**:
 
 1. **Zero blockers.** Any instant-fail item (art bible §10) in any shot is an automatic FAIL.
-2. **Every category ≥ 8** in every shot it applies to.
-3. **Mean across categories ≥ 9.0** for the gate (≥ 8.5 for `*-low-tier` shots).
-4. **The store-page test.** The reviewer answers "yes" to: *would I put the
-   hero shot of this gate on the front page of a premium kids' game store
-   listing, next to the best indie games of the year?*
+2. **Every category ≥ 6** in every shot it applies to (no weak spot).
+3. **Mean across categories ≥ 7.5** for the gate (≥ 7.0 for `*-low-tier` shots).
+4. **The store-page test.** The reviewer answers "yes" to: *would this hero
+   shot look at home on the store page of a polished, well-reviewed indie
+   kids' game?*
 5. **No regressions.** If earlier gates have `final/` shots, any visible quality
    drop in shared content (the same assets or lighting) is a blocker.
 6. For ★ double gates, **both** reviewers must pass independently.
 
-A score of 10 is reserved for work that matches or beats the reference. The
-reviewer is told that a 7 is already "good indie quality" and good is not
-enough here.
+**The scoring scale itself does not change, only the threshold.** A 7 is
+still "good indie quality" and a 10 still matches or beats the reference.
+Reviewers must not inflate scores to fit the new bar. Each gate's open
+findings that still score below 9 go into `docs/PROGRESS.md` as follow-ups for
+the polish pass.
+
+*Changed 2026-11-01 by the user's decision:* the bar was mean ≥ 9.0 with every
+category ≥ 8. M2 (6.5), M3 (6.75) and M4 (7.1) all hit the 8-iteration
+escalation under it.
 
 ## 5. Plateau rule (stops endless tweaking)
 

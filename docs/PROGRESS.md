@@ -2,6 +2,11 @@
 
 ## M4 in progress (Glazey in motion)
 
+- **Pass bar lowered by the user (2026-11-01):** a gate now passes at mean ≥ 7.5
+  with every category ≥ 6, zero blockers and no regressions (`docs/AGENTIC_LOOP.md` §4).
+  The scoring scale is unchanged. M4's iter 8 (7.1, no blockers) is still below the
+  new bar, so when the user replies in this thread, re-review against the new bar.
+
 - **Thread exception:** M4 runs in the same thread as M3, because the user asked
   for it ("Please run M4 in this thread"). This overrides CLAUDE.md's
   one-milestone-per-thread rule for M4 only.

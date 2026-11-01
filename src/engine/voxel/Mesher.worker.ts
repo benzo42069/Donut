@@ -6,14 +6,16 @@ export interface MeshRequest {
   id: number;
   padded: Uint8Array;
   origin: [number, number, number];
+  /** Relax every non-crisp voxel (see `meshChunk`). */
+  relax?: boolean;
 }
 
 declare const self: DedicatedWorkerGlobalScope;
 
 self.onmessage = (e: MessageEvent<MeshRequest>): void => {
-  const { id, padded, origin } = e.data;
+  const { id, padded, origin, relax } = e.data;
   const t0 = performance.now();
-  const data = meshChunk(padded, origin);
+  const data = meshChunk(padded, origin, undefined, relax);
   const ms = performance.now() - t0;
   self.postMessage({ id, data, ms, padded }, [
     data.positions.buffer,

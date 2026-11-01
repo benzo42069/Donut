@@ -16,7 +16,7 @@ export class ContactShadow extends Mesh<CircleGeometry, ShaderMaterial> {
         polygonOffset: true,
         polygonOffsetFactor: -4,
         uniforms: {
-          uColor: { value: new Color(LIGHT_PALETTE.studioOcclusion) },
+          uColor: { value: new Color(LIGHT_PALETTE.contactShadow) },
           uOpacity: { value: 0.5 },
         },
         vertexShader: /* glsl */ `

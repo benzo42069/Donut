@@ -34,7 +34,7 @@ import {
 } from '../../art/models/smallProps';
 import { TREE_SIZE, buildSprinkleTree, type TreeLeaf } from '../../art/models/sprinkleTree';
 import type { QualitySettings } from '../../engine/quality';
-import { createVoxelMaterial } from '../../engine/render/Materials';
+import { DEFAULT_TUNING, createVoxelMaterial } from '../../engine/render/Materials';
 import { createSky } from '../../engine/render/Sky';
 import { createMilk, type Milk } from '../../engine/render/Water';
 import { MesherPool } from '../../engine/voxel/MesherPool';
@@ -463,7 +463,17 @@ export async function buildMeadowDiorama(
   const pool = new MesherPool();
   const t0 = performance.now();
   const coarse = new VoxelObject(terrain.coarse, COARSE, material, pool);
-  const fine = new VoxelObject(fineGrid, FINE, material, pool);
+  // In play the camera skims the lawn, so the fine skin is relaxed everywhere:
+  // gentle slopes become smooth facets instead of 1/32 m stair-step risers.
+  // Relaxed quads don't merge, so the low tier (phone resolution) skips it.
+  const relaxSkin = opts.microDecor === true && !low;
+  const fine = new VoxelObject(
+    fineGrid,
+    FINE,
+    relaxSkin ? createVoxelMaterial({}, { ...DEFAULT_TUNING, relaxAll: 1 }) : material,
+    pool,
+  );
+  fine.relax = relaxSkin;
   scene.add(coarse, fine);
   const objects: Promise<unknown>[] = [coarse.update(), fine.update()];
   let decorCounts: Record<string, number> = {};

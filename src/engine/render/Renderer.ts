@@ -43,6 +43,9 @@ export interface PostSettings {
   /** Color grade strength and vignette. */
   grade?: number;
   vignette?: number;
+  /** Grade saturation and contrast (defaults 1.06 and 0.18). */
+  saturation?: number;
+  contrast?: number;
 }
 
 export interface RendererInfo {
@@ -149,7 +152,7 @@ export class Renderer {
       );
     }
     effects.push(new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL }));
-    effects.push(new ColorGradeEffect(post.grade, post.vignette));
+    effects.push(new ColorGradeEffect(post.grade, post.vignette, post.saturation, post.contrast));
     if (q.smaa) effects.push(new SMAAEffect({ preset: SMAAPreset.HIGH }));
     composer.addPass(new EffectPass(camera, ...effects));
 

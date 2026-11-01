@@ -68,7 +68,20 @@ export class Game {
   readonly camera: FollowCamera;
   readonly rig: GlazeyRig;
   readonly player: PlayerController;
-  readonly post: PostSettings = { aoRadius: 0.3, aoFalloff: 0.35, aoIntensity: 2.2 };
+  /**
+   * Play grade (art bible §4, §6): a firmer warm/cool split and a little more
+   * saturation and contrast than the vista, so golden hour reads through the
+   * haze, and a vignette that settles the foreground under Glazey.
+   */
+  readonly post: PostSettings = {
+    aoRadius: 0.3,
+    aoFalloff: 0.35,
+    aoIntensity: 2.2,
+    grade: 0.2,
+    vignette: 0.34,
+    saturation: 1.14,
+    contrast: 0.24,
+  };
   private animator: GlazeyAnimator;
   private readonly physics: RAPIER.World;
   private readonly dust: VoxelParticles;

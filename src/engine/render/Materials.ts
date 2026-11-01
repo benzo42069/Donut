@@ -48,6 +48,8 @@ export interface VoxelMaterialTuning {
   selfLight: number;
   /** Fresnel rim on every voxel, candy entries included (the hero's silhouette lift). */
   heroRim: number;
+  /** Shade every non-crisp voxel with its smooth normal (pairs with `VoxelObject.relax`). */
+  relaxAll: number;
   /** How far gloss voxels bend their shading normal toward the smooth normal. */
   smooth: number;
   /** 0 = no baked AO, 1 = AO level 0 is black. */
@@ -73,6 +75,7 @@ export const DEFAULT_TUNING: VoxelMaterialTuning = {
   hueHold: 0.9,
   selfLight: 0,
   heroRim: 0,
+  relaxAll: 0,
   smooth: 1.0,
   aoStrength: 0.42,
   crackEps: 5e-5,
@@ -129,8 +132,8 @@ const VERTEX_MAIN = /* glsl */ `
       : (flags & ${MAT.emissive}) != 0 ? uTune0.w : 0.0,
     (flags & ${MAT.translucent}) != 0 ? uTune1.z : (flags & ${MAT.candy}) != 0 ? -uTune2.x : 0.0,
     ((flags & ${MAT.soft}) != 0 ? uTune1.w : 0.0)
-      + ((flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 && (flags & ${MAT.crisp}) == 0
-        ? ${SMOOTH_FLAG}.0 : 0.0));
+      + (((flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 || uTune2.w > 0.5)
+        && (flags & ${MAT.crisp}) == 0 ? ${SMOOTH_FLAG}.0 : 0.0));
   // Nudge inward from the face so floor() lands in the owning voxel.
   vCell = position - normal * 0.5;
   vAO = float(packed & 3) / 3.0;
@@ -144,7 +147,8 @@ const VERTEX_MAIN = /* glsl */ `
   // Relaxed (smooth) quads are never merged and share exact corners, so they
   // skip it: their corners no longer lie in the axis plane, and growing each
   // face's copy of a corner along different axes opens pinholes (fireflies).
-  bool relaxed = (flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 && (flags & ${MAT.crisp}) == 0;
+  bool relaxed = ((flags & ${MAT.gloss | MAT.lit | MAT.smooth}) != 0 || uTune2.w > 0.5)
+    && (flags & ${MAT.crisp}) == 0;
   vec3 an = abs(normal);
   vec3 axisU = an.x > 0.5 ? vec3(0.0, 1.0, 0.0) : an.y > 0.5 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
   vec3 axisV = an.x > 0.5 ? vec3(0.0, 0.0, 1.0) : an.y > 0.5 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
@@ -270,7 +274,7 @@ export function createVoxelMaterial(
       value: new Vector4(t.roughMatte, t.roughGloss, t.roughRough, t.emissive),
     };
     shader.uniforms.uTune1 = { value: new Vector4(t.glow, t.lit, t.rim, t.wrap) };
-    shader.uniforms.uTune2 = { value: new Vector4(t.hueHold, t.selfLight, t.heroRim, 0) };
+    shader.uniforms.uTune2 = { value: new Vector4(t.hueHold, t.selfLight, t.heroRim, t.relaxAll) };
     shader.uniforms.uAoStrength = { value: tuning.aoStrength };
     shader.uniforms.uCrackEps = { value: tuning.crackEps };
     shader.uniforms.uSssTint = { value: new Vector3(1.0, 0.82, 0.68) };

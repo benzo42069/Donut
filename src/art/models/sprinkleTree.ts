@@ -98,7 +98,9 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1, res 
         if (leaf === 'pink') {
           // Frosted crown: fine per-voxel grain darkening toward the underside,
           // never big patches (two-tone blotches read as camouflage).
-          const k = py / 60 + (h - 0.5) * 0.9 * q;
+          // The fine (play) build shades more strongly top to bottom with less
+          // grain, so the ball reads as a lit form, not a checker.
+          const k = res > 1 ? py / 40 + (h - 0.5) * 0.25 : py / 60 + (h - 0.5) * 0.9;
           return PALETTE_INDEX[k < -0.55 ? leafC : k < 0.05 ? leafB : leafA];
         }
         const n = fbm3((x * q) / 9 + seed * 3, (y * q) / 9, (z * q) / 9, 2, 17);
@@ -120,8 +122,8 @@ export function buildSprinkleTree(seed: number, leaf: TreeLeaf, height = 1, res 
   // Sprinkles stuck all over the crown: 1×1×3 capsules lying on the surface.
   let placed = 0;
   // Directions on a jittered Fibonacci sphere: evenly scattered, no bands.
-  const want = 480 * res * res;
-  const tries = Math.round(want * 1.9);
+  const want = (res > 1 ? 1100 : 480) * res * res;
+  const tries = Math.round(want * 2.6);
   for (let i = 0; i < tries && placed < want; i++) {
     const u = 1 - (2 * (i + 0.2 + 0.6 * hash3(i, seed, 1, 47))) / tries;
     const phi = i * 2.399963 + (hash3(i, seed, 2, 47) - 0.5) * 0.8;

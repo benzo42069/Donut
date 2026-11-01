@@ -1,9 +1,9 @@
 import {
-  AgXToneMapping,
   Box3,
   Color,
   DirectionalLight,
   HemisphereLight,
+  NeutralToneMapping,
   OrthographicCamera,
   SRGBColorSpace,
   Scene,
@@ -65,7 +65,8 @@ export function renderIcon(object: Object3D, view: Vector3, cssPx: number): stri
     preserveDrawingBuffer: true,
   });
   gl.setClearColor(0x000000, 0);
-  gl.toneMapping = AgXToneMapping;
+  // Neutral tone mapping keeps the palette's coral and the tuft's rainbow saturated.
+  gl.toneMapping = NeutralToneMapping;
   gl.toneMappingExposure = 1.0;
   gl.outputColorSpace = SRGBColorSpace;
 

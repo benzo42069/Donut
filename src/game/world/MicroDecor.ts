@@ -128,7 +128,13 @@ export function buildMicroDecor(
   tufts.forEach((list, v) => {
     if (list.length) {
       add(
-        createPropInstances(buildGrassTuft(v, false), FINE_DECOR_VOXEL, tuftPivot, material, list),
+        createPropInstances(
+          buildGrassTuft(v, false, true),
+          FINE_DECOR_VOXEL,
+          tuftPivot,
+          material,
+          list,
+        ),
       );
     }
   });
@@ -136,7 +142,7 @@ export function buildMicroDecor(
     if (list.length) {
       add(
         createPropInstances(
-          buildGrassTuft(100 + v, true),
+          buildGrassTuft(100 + v, true, true),
           FINE_DECOR_VOXEL,
           tuftPivot,
           material,

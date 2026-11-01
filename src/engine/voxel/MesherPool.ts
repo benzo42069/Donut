@@ -64,18 +64,22 @@ export class MesherPool {
   }
 
   /** Meshes a padded chunk. The buffer is transferred: do not reuse it. */
-  mesh(padded: Uint8Array<ArrayBuffer>, origin: [number, number, number]): Promise<MeshResult> {
+  mesh(
+    padded: Uint8Array<ArrayBuffer>,
+    origin: [number, number, number],
+    relax = false,
+  ): Promise<MeshResult> {
     const w = this.workers[this.turn++ % Math.max(1, this.workers.length)];
     if (!w) {
       const t0 = performance.now();
-      const data = meshChunk(padded, origin);
+      const data = meshChunk(padded, origin, undefined, relax);
       this.spare.push(padded);
       return Promise.resolve({ data, ms: performance.now() - t0 });
     }
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      w.postMessage({ id, padded, origin }, [padded.buffer]);
+      w.postMessage({ id, padded, origin, relax }, [padded.buffer]);
     });
   }
 

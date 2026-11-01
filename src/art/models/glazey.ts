@@ -360,7 +360,7 @@ function faceLayout(
   const bellyBot = FOOT_CREASE + lerp(2.2, 1.6, t);
   const bellyCy = (bellyTop + bellyBot) / 2;
   const bellyRy = (bellyTop - bellyBot) / 2;
-  const bellyRx = rx * lerp(0.48, 0.56, t);
+  const bellyRx = rx * lerp(0.6, 0.62, t);
   // Normalized radius inside an ellipse, inset by `s` body voxels.
   const ell = (dx: number, dy: number, ax: number, ay: number, s: number): number =>
     Math.hypot(dx / Math.max(0.1, ax - s), dy / Math.max(0.1, ay - s));
@@ -444,8 +444,10 @@ function faceLayout(
         ...belly,
         // The swell sits under the equator and faces a little down; its
         // shading leans up toward the sky so the cream stays bright.
-        slope: [belly.slope[0], belly.slope[1] - 0.45],
-        facing: 0.08,
+        slope: [belly.slope[0], belly.slope[1] - 0.25],
+        // Only where the swell faces the viewer: in 3/4 the patch stops short
+        // of the outline instead of wrapping onto it like a bill.
+        facing: 0.3,
       };
     return null;
   };

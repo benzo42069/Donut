@@ -12,7 +12,11 @@ export const FINE_DECOR_VOXEL = 1 / 64;
 /** A tuft of thin blades that lean outward in steps (base center at (8, 0, 8)). */
 export const TUFT_SIZE = [17, 12, 17] as const;
 
-export function buildGrassTuft(seed = 0, flower = false): VoxelGrid {
+/** `warm` uses the play-mode meadow greens (sunny tips). */
+export function buildGrassTuft(seed = 0, flower = false, warm = false): VoxelGrid {
+  const [deep, mid, tip] = warm
+    ? [PALETTE_INDEX.grassDeep, PALETTE_INDEX.tuftMid, PALETTE_INDEX.tuftSun]
+    : [PALETTE_INDEX.grassDeep, PALETTE_INDEX.grassMint, PALETTE_INDEX.grassLight];
   const grid = new VoxelGrid();
   const c = 8;
   const blades = 5 + Math.floor(hash3(seed, 0, 0, 5) * 3);
@@ -27,12 +31,7 @@ export function buildGrassTuft(seed = 0, flower = false): VoxelGrid {
       const x = Math.round(x0 + Math.cos(a) * t);
       const z = Math.round(z0 + Math.sin(a) * t);
       const k = y / h;
-      const color =
-        k > 0.7
-          ? PALETTE_INDEX.grassLight
-          : k > 0.3
-            ? PALETTE_INDEX.grassMint
-            : PALETTE_INDEX.grassDeep;
+      const color = k > 0.7 ? tip : k > 0.3 ? mid : deep;
       grid.set(x, y, z, color);
     }
   }

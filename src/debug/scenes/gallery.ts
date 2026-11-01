@@ -186,16 +186,17 @@ export async function buildGlazeyGallery(
     ),
   );
   pool.dispose();
-  // Two rows of three: the small stages in front, the round ones behind and
-  // set between them, so every face and belly shows and the six fill the frame.
+  // Two rows of three: the small stages behind, the round ones in front and
+  // set between them, so size grows left to right and back to front and
+  // every face and belly shows while the six fill the frame.
   rigs.forEach((rig, b) => {
-    const back = b >= 3;
+    const back = b < 3;
     const col = b % 3;
-    rig.position.set((col - 1) * 1.65 + (back ? 0.5 : -0.5), 0, back ? -1.5 : 0.9);
+    rig.position.set((col - 1) * 1.65 + (back ? -0.65 : 0.15), 0, back ? -1.7 : 0.9);
     rig.pose(restPose());
     studio.scene.add(rig);
   });
-  const camera = studioCamera(aspect, 17, new Vector3(0, 4.6, 10.4), new Vector3(0, 0.5, -0.3));
+  const camera = studioCamera(aspect, 17, new Vector3(0, 5.2, 10.4), new Vector3(0, 0.55, -0.4));
   return {
     scene: studio.scene,
     camera,

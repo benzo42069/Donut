@@ -13,6 +13,13 @@ PALETTE_NAMES.forEach((n, i) => {
   const m = VOXEL_PALETTE[n].mat;
   if (m & (MAT.gloss | MAT.lit | MAT.smooth) && !(m & MAT.crisp)) SMOOTH[i + 1] = 1;
 });
+/** Every non-crisp entry relaxed: for terrain the play camera meets up close. */
+const RELAX_ALL = new Uint8Array(256);
+PALETTE_NAMES.forEach((n, i) => {
+  if (!(VOXEL_PALETTE[n].mat & MAT.crisp)) RELAX_ALL[i + 1] = 1;
+});
+/** The table the current `meshChunk` call uses (meshing is synchronous). */
+let smoothTable = SMOOTH;
 /** Outside this solid fraction of the 6³ window (or above 1 − it), keep the 4³ normal. */
 const WIDE_FILL = 0.36;
 /** Corner relaxation strength: voxels moved per unit of (solid fraction − ½). */
@@ -71,7 +78,9 @@ export function meshChunk(
   padded: Uint8Array,
   origin: readonly [number, number, number] = [0, 0, 0],
   size = CHUNK,
+  relaxAll = false,
 ): MeshData {
+  smoothTable = relaxAll ? RELAX_ALL : SMOOTH;
   // Growable output (pre-size for a typical surface chunk).
   let cap = 4096;
   let positions = new Float32Array(cap * 12);
@@ -151,7 +160,7 @@ export function meshChunk(
               i++;
               continue;
             }
-            const smooth = SMOOTH[key & 255] === 1;
+            const smooth = smoothTable[key & 255] === 1;
             let w = 1;
             while (!smooth && i + w < size && mask[j * size + i + w] === key) w++;
             let h = 1;
@@ -257,7 +266,7 @@ function cornerNormal(padded: Uint8Array, l: readonly number[], out: Int8Array, 
       padded[paddedIndex(x0 - 1 + (c & 1), y0 - 1 + ((c >> 1) & 1), z0 - 1 + ((c >> 2) & 1))] ?? 0;
     if (pal === 0) continue;
     solid++;
-    if (SMOOTH[pal] !== 1) pinned = true;
+    if (smoothTable[pal] !== 1) pinned = true;
   }
   // The normal uses a tent-weighted window, so shading flows smoothly across
   // voxel steps instead of faceting at every edge. A wide 6×6×6 window

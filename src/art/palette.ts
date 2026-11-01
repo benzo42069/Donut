@@ -117,6 +117,10 @@ export const VOXEL_PALETTE = {
   bladeDeep: entry('#78B868', MAT.smooth | MAT.candy, 0.06),
   bladeMint: entry('#84C890', MAT.smooth | MAT.candy, 0.06),
   bladeLight: entry('#98D6AA', MAT.smooth | MAT.candy, 0.06),
+  // Play-mode meadow tufts: a warmer, sunnier green with yellow-green tips, so
+  // golden hour reads in the grass the camera skims (art bible §4, §6).
+  tuftMid: entry('#88C068', MAT.matte | MAT.candy, 0.06),
+  tuftSun: entry('#B4D67A', MAT.matte | MAT.candy, 0.06),
   // Lighthouse shell stripes: relaxed, so the tapering cylinder's voxel steps
   // don't print baked-AO vein lines down the tower.
   towerRed: entry('#E0555E', MAT.smooth, 0.03),
@@ -272,6 +276,8 @@ export const LIGHT_PALETTE = {
   studioRim: '#E4ECFF',
   // Studio occlusion tint: crevices darken toward toasted caramel, never grey.
   studioOcclusion: '#7A4424',
+  // Glazey's contact blob in play: a cool, deep grass shade, never mud.
+  contactShadow: '#2C3F4C',
 } as const;
 
 export type LightColorName = keyof typeof LIGHT_PALETTE;

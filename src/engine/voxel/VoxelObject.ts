@@ -35,6 +35,8 @@ export class VoxelObject extends Group {
    * one smooth surface instead of a lumpy voxel staircase).
    */
   normalField: ((x: number, y: number, z: number) => readonly number[]) | null = null;
+  /** Mesh every non-crisp voxel relaxed (play-mode terrain: no stair-step risers). */
+  relax = false;
 
   constructor(grid: VoxelGrid, voxelSize: number, material: Material, pool: MesherPool) {
     super();
@@ -57,7 +59,11 @@ export class VoxelObject extends Group {
         const version = (this.versions.get(c.key) ?? 0) + 1;
         this.versions.set(c.key, version);
         const padded = this.grid.padded(c.cx, c.cy, c.cz, this.pool.buffer());
-        const r = await this.pool.mesh(padded, [c.cx * CHUNK, c.cy * CHUNK, c.cz * CHUNK]);
+        const r = await this.pool.mesh(
+          padded,
+          [c.cx * CHUNK, c.cy * CHUNK, c.cz * CHUNK],
+          this.relax,
+        );
         workerMsTotal += r.ms;
         workerMsMax = Math.max(workerMsMax, r.ms);
         quads += r.data.quads;

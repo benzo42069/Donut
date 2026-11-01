@@ -1,4 +1,4 @@
-import { PALETTE_INDEX, hash3, type VoxelColorName } from '../palette';
+import { PALETTE_INDEX, type VoxelColorName } from '../palette';
 import { smoothUnion, type Sdf } from '../sdf';
 import { VoxelGrid } from '../../engine/voxel/VoxelGrid';
 
@@ -328,8 +328,8 @@ function mouthLayout(t: number, rx: number, ry: number, y0: number) {
 function bellyLayout(t: number, rx: number, ry: number, y0: number) {
   const { mouthY } = mouthLayout(t, rx, ry, y0);
   const top = mouthY - 2.6 - 0.25;
-  const halfH = ry * lerp(0.4, 0.42, t);
-  return { cy: top - halfH, rx: rx * lerp(0.6, 0.62, t), ry: halfH };
+  const halfH = ry * lerp(0.36, 0.38, t);
+  return { cy: top - halfH, rx: rx * lerp(0.5, 0.52, t), ry: halfH };
 }
 
 /** Socket depth under the decal and its inset from the outline (body voxels). */
@@ -399,17 +399,16 @@ function faceLayout(
         if (r <= 1) {
           // A glossy dome, at most about half a body voxel proud so in profile it
           // stays inside the head: one big glint at the upper left (the sheet's
-          // key light), a small twinkle low right, and a warm lower iris that
-          // fades in over a few decal voxels (dithered, no hard band).
+          // key light), a small twinkle low right, and a clean warm crescent
+          // in the lower iris (no dither, so the gloss reads unbroken).
           const u = ex / eyeRx;
           const v = ey / eyeRy;
           const hit = { ...dome(ex, ey, eyeRx, eyeRy, 0.3, 0.3), facing: 0.45 };
           if (Math.hypot(u + 0.32, v - 0.36) < 0.27) return { ...hit, color: 'eyeShine' };
           if (Math.hypot(u - 0.36, v + 0.4) < 0.12) return { ...hit, color: 'eyeShine' };
-          if (r < 0.48) return { ...hit, color: 'eyePupil' };
-          const warm = clamp((-v - 0.05) * 2.2 + (r - 0.6) * 1.5, 0, 1);
-          const n = hash3(Math.floor(x * FACE_SCALE), Math.floor(y * FACE_SCALE), side, 41);
-          return { ...hit, color: n < warm ? 'eyeIrisLight' : 'eyeIris' };
+          if (r < 0.5) return { ...hit, color: 'eyePupil' };
+          if (v < -0.25 && r > 0.62) return { ...hit, color: 'eyeIrisLight' };
+          return { ...hit, color: 'eyeIris' };
         }
       } else {
         // Closed happy eyes: a smooth ^ arc.
@@ -448,7 +447,7 @@ function faceLayout(
     const dy = y - tummy.cy;
     const egg = tummy.rx * (1 - 0.1 * clamp(dy / tummy.ry, -1, 1));
     if (ell(x, dy, egg, tummy.ry, s) <= 1)
-      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, tummy.ry, 0.3, 0.3), facing: 0.15 };
+      return { color: 'glazeyBellySoft', ...dome(x, dy, egg, tummy.ry, 0.3, 0.3), facing: -0.1 };
     return null;
   };
 }

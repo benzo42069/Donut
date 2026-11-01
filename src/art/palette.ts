@@ -183,9 +183,9 @@ export const VOXEL_PALETTE = {
   // lower iris and painted white glints (the glints carry the gloss: a mirror
   // finish showed each eye a different slice of the sky, so they mismatched),
   // a relaxed mouth, two-tone soft blush.
-  eyeIris: entry('#4A2A26', MAT.smooth, 0.02),
-  eyeIrisLight: entry('#7A4636', MAT.smooth, 0.02),
-  eyePupil: entry('#2C1719', MAT.smooth, 0.015),
+  eyeIris: entry('#4A2A26', MAT.gloss, 0.02),
+  eyeIrisLight: entry('#7A4636', MAT.gloss, 0.02),
+  eyePupil: entry('#2C1719', MAT.gloss, 0.015),
   eyeShine: entry('#FFF9F0', MAT.gloss | MAT.emissive, 0),
   mouthInside: entry('#7E2A3A', MAT.smooth, 0.02),
   tongueSoft: entry('#F2788C', MAT.soft | MAT.smooth, 0.02),

@@ -9,7 +9,7 @@ export const CAM = {
    */
   distance: 6.4,
   /** Elevation above the horizon (radians): low, so the sky shows up top (ref 02). */
-  pitch: 0.13,
+  pitch: 0.09,
   /** Aim point above Glazey's soles (meters): he sits on the lower third. */
   aimHeight: 1.3,
   fov: 38,

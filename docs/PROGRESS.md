@@ -15,6 +15,7 @@
   | 4 | 6.8 | 6 | 0 |
   | 5 | 6.7 | 5 | 1 |
   | 6 | 6.9 | 6 | 1 |
+  | 7 | 7.0 | 6 | 1 |
 
   Reports are in `reviews/M4-iter*.md`.
 - **Plateau (§5), before iter 5.** Iters 3 and 4 gained less than 0.3, so
@@ -58,6 +59,14 @@
 
   Smaller changes: the studio's back row sits deeper (no overlap), with a
   stronger lilac fill and less bounce.
+- **Iter 8 (last before escalation, §6).** The iter 7 blocker was the eyes:
+  the irises had gone matte, with a hash-dithered band. They are glossy again
+  with a clean lower crescent (as in M3). The belly oval is narrower and taller (about
+  half the body width), with a coral margin at the bottom. In play, Glazey
+  walks angled 14° toward the lens, so his face and belly show at a true
+  3/4. The camera pitch is flatter again (0.09), so the lighthouse's donut
+  clears the top edge. The jump stage moves to u 0.42, so he jumps over the path with
+  the lighthouse in frame.
 
 ## Handoff → M4 (Glazey in motion)
 

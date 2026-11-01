@@ -28,11 +28,13 @@ function stage(ringDeg: number, u: number, cameraOffsetDeg: number): Stage {
 }
 
 /** The walk: the lighthouse over the lagoon behind him. */
-const WALK_STAGE = stage(112, 0.3, 24);
+const WALK_STAGE = stage(112, 0.3, 19);
 /** The jump: further out on open lawn, so he takes off with grass, not the lagoon rim, below him. */
-const JUMP_STAGE = stage(112, 0.6, 24);
+const JUMP_STAGE = stage(112, 0.42, 19);
 /** Stick magnitude: a brisk walk, not a run. */
 const PACE = 0.78;
+/** He angles a little toward the lens, so his face and belly show at a true 3/4 (degrees). */
+const WALK_TOWARD = 14;
 const JUMP_AT = 0.9;
 
 const walking =
@@ -77,7 +79,7 @@ export function m4Shot(kind: M4Shot) {
     const game = await Game.create(
       quality,
       aspect,
-      { kind: 'scripted', at: walking(st.walkYaw, jumpAt) },
+      { kind: 'scripted', at: walking(st.walkYaw + WALK_TOWARD * DEG, jumpAt) },
       { spawn: st.spawn },
     );
     let stillTime: number;

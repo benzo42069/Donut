@@ -99,6 +99,31 @@ the M4 section below.
    and belly follow-ups (1 and 2 above) before the first review. Then do the
    burp shockwave, rolling at belly ≥ 3, and the four powers.
 
+## M5 — The Munch ★ (IN PROGRESS)
+
+### M5 gate record
+| iter | r1 | r2 | mean | notes |
+|---|---|---|---|---|
+| 1 | 6.44 | 6.3 | 6.37 | blockers: dice-sized crumbs (M3 regression), far squint arc outside the head |
+| 2 | 6.65 | 6.6 | 6.62 | r1 blocker: held glaze matte against the M3 gallery |
+| 3 | 6.63 | 6.7 | 6.67 | r1 blocker narrowed (glaze still chalky); new: the hand reads as a snout |
+
+**Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
+under the 0.3 bar, and the same three findings have come back every round
+(the held glaze, the hands, the crumbs). Those came from tuning one
+pose against a backlit golden-hour key: the held glaze faces away from the
+sun in any pose that keeps the lighthouse behind him. Trying the other side
+(camera on the sun's side) loses every landmark and exposes banding on his
+body. So the structural change is a **munch close-up lighting rig plus
+a re-authored hold**:
+- a warm card light (palette `sunGolden`, 1.6 m reach) rides
+  with the held donut on the lens side and fades in with the scoop, so the glaze
+  gets a real key and specular lobe in any camera (game and gate alike);
+- the hold is re-authored so the hands grip the ring's near rim *below*
+  his lips at either side, instead of being pushed forward to the face line;
+- crumbs settle on a contact plane at the blade tips (not the soil under the grass), so the
+  scatter stays readable on the lawn.
+
 ## M4 — Glazey in motion (DONE: accepted by user, option B, gate not passed)
 
 - **Pass bar lowered by the user (2026-11-01):** a gate now passes at mean ≥ 7.5

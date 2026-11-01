@@ -160,8 +160,6 @@ export const VOXEL_PALETTE = {
   // No hue hold: his shadow side takes the cool fill (lilac core, art bible §6).
   glazeyBody: entry('#F28B6E', MAT.soft | MAT.smooth, 0.018),
   glazeyBellySoft: entry('#F5E2A8', MAT.soft | MAT.smooth, 0.015),
-  // A one-voxel graded seam where the cream belly meets the coral (sheet 03).
-  glazeyBellyEdge: entry('#F4B88C', MAT.soft | MAT.smooth, 0.015),
   glazeyMouth: entry('#7E2A3A', MAT.matte, 0.02),
   glazeyTongue: entry('#F2788C', MAT.soft, 0.02),
   glazeyCheek: entry('#F4798F', MAT.soft | MAT.smooth | MAT.candy, 0.02),

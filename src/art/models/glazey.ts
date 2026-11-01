@@ -474,12 +474,15 @@ function faceLayout(
     const egg = tummy.rx * (1 - 0.1 * clamp(dy / tummy.ry, -1, 1));
     const r = ell(x, dy, egg, tummy.ry, s);
     if (r <= 1) {
-      // A soft, slightly broken seam into the coral instead of a cut edge.
-      const seam = r > 0.84 + 0.08 * hash3(Math.floor(x * 3), Math.floor(y * 3), 0, 29);
+      // The outer rim dithers into the coral (sheet 03's soft terraces), so
+      // there is no cut edge and no outline ring.
+      const fade = clamp((r - 0.8) / 0.2, 0, 1);
+      const coral = fade * fade > hash3(Math.floor(x * 3), Math.floor(y * 3), 0, 29);
       return {
-        color: seam ? 'glazeyBellyEdge' : 'glazeyBellySoft',
+        color: coral ? 'glazeyBody' : 'glazeyBellySoft',
         ...dome(x, dy, egg, tummy.ry, 0.3, 0.3),
-        facing: -0.1,
+        // Low enough that the oval wraps under the round tummy (no flat cut).
+        facing: -0.7,
       };
     }
     return null;

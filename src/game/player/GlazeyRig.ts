@@ -165,9 +165,9 @@ export class GlazeyRig extends Group {
       const reach = a?.reach ?? 0;
       if (rest)
         g.position.set(
-          rest[0] * (1 - 0.5 * p.tuck - 0.42 * reach),
-          rest[1] + 0.04 * reach,
-          rest[2] + 0.42 * reach,
+          rest[0] * (1 - 0.5 * p.tuck - 0.15 * reach),
+          rest[1] - 0.02 * reach,
+          rest[2] + 0.3 * reach,
         );
       g.scale.setScalar(Math.max(1e-3, 1 - p.tuck));
     });

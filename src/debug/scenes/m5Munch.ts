@@ -21,7 +21,7 @@ const DONUT = 2;
 /** When the munch button is pressed (Glazey is standing near the donut). */
 const MUNCH_AT = 0.1;
 /** Stage turn off the lighthouse line (radians). */
-const STAGE_TURN = 13 * DEG;
+const STAGE_TURN = 20 * DEG;
 
 const idle =
   (extra: (t: number) => Partial<WorldInput> = () => ({})) =>
@@ -122,7 +122,9 @@ export function m5Shot(kind: M5Shot) {
       while (game.now < 3) {
         game.simulateTo(game.now + STEP);
         const a = game.motion.roll % (Math.PI * 2);
-        if (a > Math.PI * 2 - 0.62) break;
+        // Just past the front: his face dips toward the lens and the tuft
+        // tips up over the top of the ball (it reads as mid-roll).
+        if (a > 0.4 && a < 1 && game.now > 1.4) break;
       }
       stillTime = game.now;
     }

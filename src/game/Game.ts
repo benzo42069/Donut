@@ -70,6 +70,8 @@ const BURP_END = BURP_AT + 1.1;
 const HOLD = new Vector3(0, 0.04, 0.36);
 /** How far the held ring rolls open toward the sky (radians from standing on edge). */
 const HOLD_ROLL = 1.2;
+/** Munch card light strength (candela). */
+const FILL = 1.6;
 /** Belly 3–4: hold jump this long on the ground to curl into a roll. */
 const ROLL_HOLD = 0.25;
 
@@ -175,6 +177,8 @@ export class Game {
   private readonly wave: BurpWave;
   private readonly swirl: PowerSwirl;
   private readonly glow: PointLight;
+  /** A soft warm card light on the munch close-up: the backlit glaze still reads glossy. */
+  private readonly fill: PointLight;
   private readonly shadow = new ContactShadow();
   private readonly groundBelow: (p: Vector3) => number;
   private spawn: Spawn;
@@ -238,8 +242,9 @@ export class Game {
     this.glow = new PointLight(new Color(LIGHT_PALETTE.lampLight), 0, 3.2, 2);
     this.glow.position.y = 0.7;
     this.avatar.add(this.glow);
+    this.fill = new PointLight(new Color(LIGHT_PALETTE.sunGolden), 0, 1.6, 2);
     this.animator = new GlazeyAnimator();
-    this.scene.add(avatar, fx.dust, fx.crumbs, fx.sparkles, wave, swirl, this.shadow);
+    this.scene.add(avatar, fx.dust, fx.crumbs, fx.sparkles, wave, swirl, this.shadow, this.fill);
     this.reset();
   }
 
@@ -302,7 +307,8 @@ export class Game {
     const crumbs = new VoxelParticles(
       createVoxelMaterial(),
       CRUMB_COLORS,
-      (x, z) => ground(x, z) + 0.035,
+      // Settled on the blade tips, so the scatter reads on top of the lawn.
+      (x, z) => ground(x, z) + 0.075,
       320,
     );
     const fxMaterial = createVoxelMaterial({}, FX_TUNING);
@@ -528,6 +534,7 @@ export class Game {
       jumpPressed: intent.jumpPressed,
     };
     const target = this.munch.target;
+    this.fill.intensity = 0;
     if (target) {
       const s = this.standoff(target);
       const p = this.player.position;
@@ -638,7 +645,10 @@ export class Game {
     // Crumbs: a spread of the removed voxels, thrown out of the bite and down.
     const n = Math.min(removed.length, 110);
     const points: { at: Vector3; index: number }[] = [];
-    for (let i = 0; i < n; i++) {
+    // Only from the bite at or below his lips: nothing bursts over his eyes.
+    const lips = new Vector3();
+    this.avatar.rig?.hold.getWorldPosition(lips);
+    for (let i = 0; i < n * 2 && points.length < n; i++) {
       const v = removed[Math.floor(hash3(i, k, 3, 211) * removed.length)];
       if (!v) continue;
       // Mostly crumb in three tones (light, golden, toasted grains that read
@@ -652,15 +662,14 @@ export class Game {
             : r < 0.8
               ? PALETTE_INDEX.bunToasted
               : v.index;
-      points.push({
-        at: e.object.localToWorld(new Vector3(v.x + 0.5, v.y + 0.5, v.z + 0.5)),
-        index,
-      });
+      const at = e.object.localToWorld(new Vector3(v.x + 0.5, v.y + 0.5, v.z + 0.5));
+      if (this.avatar.rig && at.y > lips.y) continue;
+      points.push({ at, index });
     }
     // Out of the bite, away from his body and toward the lens, then down onto
     // the lawn in front of the donut: never back over his face.
     const yaw = this.player.yaw;
-    const side = this.camSide * 0.7;
+    const side = this.camSide * 0.35;
     const out = new Vector3(
       Math.sin(yaw) + side * Math.cos(yaw),
       0,
@@ -957,6 +966,13 @@ export class Game {
       e.group.position.y += 0.25 * Math.sin(Math.PI * k);
       e.group.quaternion.slerpQuaternions(groundQ, heldQ, k);
       e.group.scale.setScalar(Math.max(1e-3, remain));
+      // The card light: up and toward the lens from the ring, lifting the glaze.
+      const toCam = this.camera.camera.position.clone().sub(center).setY(0).normalize();
+      this.fill.position
+        .copy(center)
+        .addScaledVector(toCam, 0.45)
+        .add(new Vector3(0, 0.5, 0));
+      this.fill.intensity = FILL * k * remain;
     });
   }
 

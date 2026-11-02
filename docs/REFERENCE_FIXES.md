@@ -30,7 +30,7 @@ proves it.
 | [x] RF-09 | 02 ground | Glazey's voxels are too large | character-sheet density: about 32 voxels tall at belly 0 (1/32 m) | M3; done (c656127): test `is about 32 voxels tall`, gallery-glazey-belly. Glazey's look is re-gated in M4 |
 | [x] RF-10 | 03 sheet | back view is pink, not coral | coral consistent from every angle | M3; done (c656127): strip f2 and the `coral on the back` test |
 | [x] RF-11 | 03 sheet | side view has an extra limb or tail | clean silhouette: 2 arms, 2 feet, nothing else | M3; done (c656127): strip f1 |
-| [ ] RF-12 | 03 sheet | "normal" vs "full" belly barely differ | belly stages 0–5 clearly distinct in a silhouette lineup | M3 (model), M5 (animated); M3 model part done (c656127): gallery-glazey-belly and the `rounder at every belly stage` test. M5 part open |
+| [x] RF-12 | 03 sheet | "normal" vs "full" belly barely differ | belly stages 0–5 clearly distinct in a silhouette lineup | M3 (model), M5 (animated); M3 model part done (c656127): gallery-glazey-belly and the `rounder at every belly stage` test. M5 part done (c0e1194): belly stages 0–5 animate with a spring wobble on each bite and on the burp (m5-belly-5-roll, m5-burp-strip) |
 | [x] RF-13 | 03 sheet | text labels on the sheet | annotations are not part of the art; never render text on the character | M3; done (c656127): no text on any frame of gallery-glazey-belly |
 
 ## Fixes: donuts

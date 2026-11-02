@@ -1,6 +1,99 @@
 # Progress
 
-## Handoff → M5 (The Munch ★)
+## Handoff → M6 (Glaze Meadows and the Milk Lagoon ★)
+
+**M5 status: DONE, accepted by the user (option A), gate NOT passed.** After 8
+reviewed iterations (final and best mean 6.91, bar 7.5; iter 8 had no blockers),
+the user accepted M5 as it stands with follow-ups (2026-11-02). The bar,
+rubric, art bible and reviewer definition are unchanged. Final shots are in
+`shots/M5/final/` (iter 8, harness capture at `c0e1194`). The gate record is
+in the M5 section below.
+
+**What was built (M5):**
+- **Munch loop** (`src/game/munch/Munch.ts`): `pickTarget` auto-aims at the
+  nearest edible donut, `munchTimeline()` gives the scoop, three chomps and the
+  gulp. `MUNCH.turn` turns the ring between bites; `Munch.show` is a
+  presentation-only show-off turn through each chew so the fresh bite faces out.
+- **Bites** (`biteDonut` in `src/art/models/donut.ts`): a jaw ball plus tooth
+  balls with crumb noise carve the held donut's grid. Exposed dough repaints as
+  crumb. A sliver pass shaves one-voxel fins. It returns the `removed` voxels.
+- **Hold and grip** (`src/game/Game.ts`, `src/game/player/GlazeyRig.ts`): the
+  held donut rides at `HOLD`, scaled to `HELD_SCALE`, rolled open to the sky.
+  `GlazeyRig.grip(points, weight)` slides each shoulder and aims each arm at the
+  ring's rim ±`GRIP_ANGLE` from his lips. A warm card light
+  (`LIGHT_PALETTE.cardLight`) keys the held glaze from the lens side.
+- **Crumbs**: up to 64 per bite, sampled from the removed voxels, filtered below
+  his lips in world and screen space, bounce at most twice, settle on the lawn
+  tops and fade at about 4 s (`fx/VoxelParticles.ts`).
+- **Belly**: stages 0–5 swap `buildGlazey(belly)` with a spring wobble; the
+  belly rim is one wavy terrace (`glazeyBellyEdge`).
+- **Burp** (`src/game/fx/BurpWave.ts`, `src/engine/render/Ripple.ts`): a rainbow
+  voxel hoop from his mouth, a rainbow ring over the lawn, a shared `SHOCK`
+  uniform bending grass and sprinkles, and a screen-space refraction ring
+  (`RIPPLE`). The belly drops to 0.
+- **Rolling** at belly ≥ 3 (always at 5): the ball spins by distance/radius
+  with limbs tucked and a dust spray.
+- **Powers** (`src/game/powers/Powers.ts`): boing (strawberry), slide
+  (chocolate), puff (powdered), shine (glazed), with a pickup swirl
+  (`fx/PowerSwirl.ts`). A burp keeps the power for `BURP_KEEP` (20 s).
+- **Sound**: procedural WebAudio crunch, nom, gulp, chime, Boing landing and a
+  burp that grows with the belly.
+- **Input**: munch is E, F or Enter; burp is B; jump is Space, J or K; look is
+  Q/Z and C. Touch has a bitten-donut munch button and a burp-face button (no
+  text).
+- **Gate stages** in `src/debug/scenes/m5Munch.ts`; the munch stage is turned
+  `STAGE_TURN` (25°) off the lighthouse line.
+
+**Juice audit and kid-sense check:** every beat in art bible §8 and game design
+§2 pillar 1 is in (chomp squash, scalloped bite, crumb explosion, sound, belly
+wobble, power VFX, burp shockwave, roll). Gaps for M9: no hit-stop or camera
+shake, and the burp ripple ignores reduced motion until the parent menu exists.
+Nothing scary, no text, nothing punishes; munch auto-aims generously.
+
+**Decisions:**
+- The user accepted M5 with follow-ups (option A); the pass bar stays at mean
+  ≥ 7.5, every category ≥ 6, zero blockers, no regressions.
+- Grass is no longer cleared under edible donuts (the bald disc read as a
+  green plate). The donut's own blob shadow was removed.
+- A front-lit munch stage was tried and reverted (empty background, banding on
+  his body); the card light is the fix for the backlit glaze.
+
+**Gotchas (read these first):**
+- **GPU path:** the harness runs on ANGLE Metal (Apple M4). A full M5 shot run
+  takes several minutes; use `--only <ids>` while iterating.
+- **Palette:** still at most 127 entries plus empty (a test enforces it).
+- **Crumbs vs the chomp squash:** the squash drops his face by several pixels,
+  so any FX born near the lips must be filtered in screen space with a margin.
+- **`camSide`** in `Game.ts` flips the hold roll, spin and grip by which side
+  the camera sees; keep it in mind for any new held-item pose.
+- **Perf:** high tier is still about 12 fps on the M4 (target 60); low tier
+  35–38 fps. M6 adds a full ring sector, so terrain LOD is the first perf item.
+
+**Open follow-ups from M5** (details in `reviews/M5-iter8-r1.md` and `-r2.md`):
+1. **Hold and belly in the munch pose:** the near arm reads as resting beside
+   the donut with a cream belly lobe between; his arms are much shorter than
+   the donut is wide. Re-author the arms for holding (longer, real hands) and
+   mask the belly to the body's front in the grip frame.
+2. **Roll:** no visible tilt, squash, dust or contact; a large foreground
+   frosting band with oversized sprinkles. Check that the still is timed on the
+   value that turns the visible ball.
+3. **Finish:** frayed closed-eye arcs; no contact shadow under Glazey at the
+   munch stage; a torn third bite (hanging crumb strands); crumb interior too
+   orange; cropped canopy and lighthouse top; burp hoop seam, small burp
+   framing and an invisible ripple; near terrain over the §3 density limit.
+4. Carried from M4: the play material, the pink canopy, the milk colour and
+   the play clouds.
+
+**First 3 steps for M6:**
+1. Add the M6 gate to `scripts/gates.json` (`m6-vista`, `m6-bakery`,
+   `m6-pier-sunset`, `m6-donut-herd`, `m6-low-tier`) and stub their stages in a
+   `src/debug/scenes/m6World.ts`, following `m5Munch.ts`.
+2. Build terrain LOD for the full Glaze Meadows sector before adding content
+   (high tier is already far below target), and log fps per tier.
+3. Then the lagoon water shader (fix the peach-pink milk follow-up there), the
+   lighthouse and Moon Donut sightlines, and the wild donut herd AI.
+
+## Handoff → M5 (The Munch ★) (archived)
 
 **M4 status: DONE, accepted by the user (option B), gate NOT passed.** After 8
 reviewed iterations (best and final mean 7.1, bar 9.0; iter 8 had no blockers
@@ -99,7 +192,12 @@ the M4 section below.
    and belly follow-ups (1 and 2 above) before the first review. Then do the
    burp shockwave, rolling at belly ≥ 3, and the four powers.
 
-## M5 — The Munch ★ (ESCALATED after iter 8, awaiting the user)
+## M5 — The Munch ★ (DONE: accepted by user, option A, gate not passed)
+
+- **Escalated after iter 8 (§6)** at mean 6.91 (bar 7.5), no blockers. The
+  user chose option A (2026-11-02): accept M5 with follow-ups and move on to
+  M6. Final shots are in `shots/M5/final/` (iter 8). RF-12's M5 part (belly
+  stages animated) is done.
 
 ### M5 gate record
 | iter | r1 | r2 | mean | notes |

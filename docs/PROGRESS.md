@@ -99,7 +99,7 @@ the M4 section below.
    and belly follow-ups (1 and 2 above) before the first review. Then do the
    burp shockwave, rolling at belly ≥ 3, and the four powers.
 
-## M5 — The Munch ★ (IN PROGRESS)
+## M5 — The Munch ★ (ESCALATED after iter 8, awaiting the user)
 
 ### M5 gate record
 | iter | r1 | r2 | mean | notes |
@@ -111,6 +111,7 @@ the M4 section below.
 | 5 | 6.73 | 6.85 | 6.79 | no blockers; hero 7.2 (r2); hands nearly there, crumbs f0, roll and burp hoop still open |
 | 6 | 6.73 | 6.85 | 6.79 | flat; crumbs over the eye (5th time), hold, roll, burp hoop size |
 | 7 | 6.83 | 6.96 | 6.90 | no blockers; hero 7.3 and crumbs 7.09 (r2); hold, roll, bite-1 nick |
+| 8 | 6.84 | 6.98 | 6.91 | no blockers; best per-shot: hero 7.2, crumbs 7.18, bite-1 7.1 (r2). **Escalated to the user (§6).** |
 
 **Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
 under the 0.3 bar, and the same three findings have come back every round

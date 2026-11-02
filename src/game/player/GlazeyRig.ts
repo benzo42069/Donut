@@ -187,7 +187,7 @@ export class GlazeyRig extends Group {
   }
 
   /**
-   * Hands on the held donut (M5): each arm slides its shoulder up to 0.16 m
+   * Hands on the held donut (M5): each arm slides its shoulder up to 0.26 m
    * toward a world-space grip point and points its tip there, blended over
    * the posed arm by `weight` (0–1). Call after `pose` and a world-matrix update.
    */
@@ -200,8 +200,8 @@ export class GlazeyRig extends Group {
       const local = this.squash.worldToLocal(at.clone());
       const shoulder = new Vector3(...rest);
       const to = local.clone().sub(shoulder);
-      const reach = this.armLength * 0.8;
-      const slide = Math.min(0.16, Math.max(0, to.length() - reach));
+      const reach = this.armLength * 0.95;
+      const slide = Math.min(0.26, Math.max(0, to.length() - reach));
       shoulder.addScaledVector(to.clone().normalize(), slide);
       const dir = local.clone().sub(shoulder).normalize();
       const s = i === 0 ? -1 : 1;

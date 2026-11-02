@@ -645,7 +645,7 @@ export class Game {
     const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.19 }, e.voxel, 31 + k * 7, true);
     for (const c of e.grid.chunkCoords()) e.grid.markDirty(c.cx, c.cy, c.cz);
     this.track(e.object.update());
-    e.object.updateMatrixWorld(true);
+    e.group.updateMatrixWorld(true);
     // Crumbs: a spread of the removed voxels, thrown out of the bite and down.
     const n = Math.min(removed.length, 110);
     const points: { at: Vector3; index: number }[] = [];
@@ -673,7 +673,7 @@ export class Game {
     // Out of the bite, away from his body and toward the lens, then down onto
     // the lawn in front of the donut: never back over his face.
     const yaw = this.player.yaw;
-    const side = this.camSide * 0.35;
+    const side = this.camSide * 0.15;
     const out = new Vector3(
       Math.sin(yaw) + side * Math.cos(yaw),
       0,
@@ -685,8 +685,8 @@ export class Game {
       count: points.length,
       // One or two voxels of the donut each (art bible §3), a few twice that.
       speed: [0.5, 1.4],
-      up: [-0.3, 0.3],
-      dir: { x: out.x, z: out.z, bias: 0.6 },
+      up: [-0.5, 0.05],
+      dir: { x: out.x, z: out.z, bias: 0.85 },
       colors: ['crumbFresh'],
       size: [e.voxel * 1.1, e.voxel * 2.1],
       life: [3.6, 4.4],

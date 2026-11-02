@@ -108,6 +108,7 @@ the M4 section below.
 | 2 | 6.65 | 6.6 | 6.62 | r1 blocker: held glaze matte against the M3 gallery |
 | 3 | 6.63 | 6.7 | 6.67 | r1 blocker narrowed (glaze still chalky); new: the hand reads as a snout |
 | 4 | 6.66 | 6.7 | 6.68 | glaze blocker closed by the card light; r1 blocker: dithered belly edge regresses M4; hands still a snout |
+| 5 | 6.73 | 6.85 | 6.79 | no blockers; hero 7.2 (r2); hands nearly there, crumbs f0, roll and burp hoop still open |
 
 **Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
 under the 0.3 bar, and the same three findings have come back every round

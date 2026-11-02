@@ -21,7 +21,7 @@ const DONUT = 2;
 /** When the munch button is pressed (Glazey is standing near the donut). */
 const MUNCH_AT = 0.1;
 /** Stage turn off the lighthouse line (radians). */
-const STAGE_TURN = 20 * DEG;
+const STAGE_TURN = 25 * DEG;
 
 const idle =
   (extra: (t: number) => Partial<WorldInput> = () => ({})) =>
@@ -100,7 +100,7 @@ export function m5Shot(kind: M5Shot) {
       const walkYaw = Math.atan2(-Math.sin(112 * DEG), Math.cos(112 * DEG));
       // He faces 50° off the lens: the hoop flies out past his face, still open to the camera.
       const camYaw = walkYaw + 19 * DEG;
-      Object.assign(spawn, { x: at.x, z: at.z, yaw: camYaw - 50 * DEG, cameraYaw: camYaw });
+      Object.assign(spawn, { x: at.x, z: at.z, yaw: camYaw - 36 * DEG, cameraYaw: camYaw });
       const BURP = 0.3;
       input = idle((t) => ({ burp: t >= BURP && t < BURP + STEP }));
       stripTimes = [BURP + BURP_AT * 0.85, BURP + BURP_AT + 0.3, BURP + BURP_AT + 0.6];

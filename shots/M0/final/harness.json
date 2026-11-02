@@ -1,0 +1,30 @@
+{
+  "gate": "M0",
+  "iter": "2",
+  "webglPath": "swiftshader",
+  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "flags": [
+    "--use-angle=swiftshader",
+    "--enable-unsafe-swiftshader"
+  ],
+  "files": [
+    "m0-test-cube_1920x1080.png",
+    "m0-test-cube_844x390.png",
+    "m0-low-tier_1920x1080.png",
+    "m0-low-tier_844x390.png",
+    "m0-test-cube_strip_f0.png",
+    "m0-test-cube_strip_f1.png",
+    "m0-test-cube_strip_f2.png",
+    "m0-test-cube_strip.png"
+  ],
+  "timingsMs": {
+    "m0-test-cube_1920x1080.png": 21232,
+    "m0-test-cube_844x390.png": 8949,
+    "m0-low-tier_1920x1080.png": 10412,
+    "m0-low-tier_844x390.png": 5818,
+    "m0-test-cube_strip.png": 72622
+  },
+  "totalMs": 120928,
+  "log": [],
+  "ok": true
+}

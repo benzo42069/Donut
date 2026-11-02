@@ -1,0 +1,6 @@
+dist/
+node_modules/
+shots/
+reviews/
+package-lock.json
+*.md

@@ -1,0 +1,25 @@
+{
+  "gate": "M1",
+  "iter": "final",
+  "webglPath": "swiftshader",
+  "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+  "flags": [
+    "--use-angle=swiftshader",
+    "--enable-unsafe-swiftshader"
+  ],
+  "files": [
+    "m1-terrain_1920x1080.png",
+    "m1-terrain_844x390.png",
+    "m1-low-tier_1920x1080.png",
+    "m1-low-tier_844x390.png"
+  ],
+  "timingsMs": {
+    "m1-terrain_1920x1080.png": 11712,
+    "m1-terrain_844x390.png": 7503,
+    "m1-low-tier_1920x1080.png": 6995,
+    "m1-low-tier_844x390.png": 6327
+  },
+  "totalMs": 33246,
+  "log": [],
+  "ok": true
+}

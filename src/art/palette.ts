@@ -261,6 +261,8 @@ export const LIGHT_PALETTE = {
   skySea: '#A6C0EA',
   skySeaWarm: '#F8DCC6',
   lampLight: '#FFC46B',
+  // The munch close-up card light: a near-white warm, so vanilla glaze stays vanilla.
+  cardLight: '#FFF3E6',
   milkDeep: '#EAD6BC',
   milkFoam: '#FFFAF2',
   // Studio sweep for the asset gallery (K-06): warm cream cloth.

@@ -25,7 +25,7 @@ export const BURP = {
   /** The hoop that flies out of his mouth. */
   hoopLife: 0.95,
   hoopSpeed: 1.4,
-  hoopGrow: 0.95,
+  hoopGrow: 0.6,
   /** The ring that runs out along the ground, bending the grass. */
   groundLife: 1.3,
   groundReach: 4.2,

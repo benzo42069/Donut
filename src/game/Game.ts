@@ -246,7 +246,7 @@ export class Game {
     this.glow = new PointLight(new Color(LIGHT_PALETTE.lampLight), 0, 3.2, 2);
     this.glow.position.y = 0.7;
     this.avatar.add(this.glow);
-    this.fill = new PointLight(new Color(LIGHT_PALETTE.sunGolden), 0, 1.6, 2);
+    this.fill = new PointLight(new Color(LIGHT_PALETTE.cardLight), 0, 1.6, 2);
     this.animator = new GlazeyAnimator();
     this.scene.add(avatar, fx.dust, fx.crumbs, fx.sparkles, wave, swirl, this.shadow, this.fill);
     this.reset();
@@ -652,6 +652,10 @@ export class Game {
     // Only from the bite at or below his lips: nothing bursts over his eyes.
     const lips = new Vector3();
     this.avatar.rig?.hold.getWorldPosition(lips);
+    const cam = this.camera.camera;
+    cam.updateMatrixWorld();
+    // The chomp squash drops his face onto them a moment later: keep a margin.
+    const lipsY = lips.clone().project(cam).y - 0.08;
     for (let i = 0; i < n * 2 && points.length < n; i++) {
       const v = removed[Math.floor(hash3(i, k, 3, 211) * removed.length)];
       if (!v) continue;
@@ -667,7 +671,9 @@ export class Game {
               ? PALETTE_INDEX.bunToasted
               : v.index;
       const at = e.object.localToWorld(new Vector3(v.x + 0.5, v.y + 0.5, v.z + 0.5));
-      if (this.avatar.rig && at.y > lips.y - 0.02) continue;
+      // Below his lips on screen too: a crumb in front of his face toward the
+      // lens would otherwise project up over his eyes.
+      if (this.avatar.rig && (at.y > lips.y - 0.07 || at.clone().project(cam).y > lipsY)) continue;
       points.push({ at, index });
     }
     // Out of the bite, away from his body and toward the lens, then down onto

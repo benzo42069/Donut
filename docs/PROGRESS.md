@@ -109,6 +109,7 @@ the M4 section below.
 | 3 | 6.63 | 6.7 | 6.67 | r1 blocker narrowed (glaze still chalky); new: the hand reads as a snout |
 | 4 | 6.66 | 6.7 | 6.68 | glaze blocker closed by the card light; r1 blocker: dithered belly edge regresses M4; hands still a snout |
 | 5 | 6.73 | 6.85 | 6.79 | no blockers; hero 7.2 (r2); hands nearly there, crumbs f0, roll and burp hoop still open |
+| 6 | 6.73 | 6.85 | 6.79 | flat; crumbs over the eye (5th time), hold, roll, burp hoop size |
 
 **Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
 under the 0.3 bar, and the same three findings have come back every round
@@ -143,6 +144,22 @@ re-proportioned hold**:
 - the munch camera comes in from 4.0 to 3.2 m. The belly rim is one clean,
   slightly wavy terrace (`glazeyBellyEdge`, a third of the way from cream to
   coral) instead of a per-voxel dither.
+
+**Plateau a third time (§5), before iter 7.** Iters 5–6 held at 6.79. The
+crumb-over-the-eye finding survived four "fixes" because the crumbs were
+born below his lips and the chomp squash then dropped his face onto them.
+Changes:
+- crumbs are now filtered in screen space, against his lips with a margin
+  for the squash;
+- the card light is a neutral warm white (`cardLight`), so the vanilla glaze
+  stops reading apricot;
+- the burp hoop grows to about his height (0.6, was 0.95);
+- the munch stage's stills fall inside the show-off turn, so the bite reads
+  in bite-1 and in the crumb strip.
+
+This is narrower than a full structural change. With two iterations left before §6, the remaining gap is
+spread over roll FX, near-terrain density and the hold, with no single
+cause, so if iter 8 fails this goes to the user.
 
 ## M4 — Glazey in motion (DONE: accepted by user, option B, gate not passed)
 

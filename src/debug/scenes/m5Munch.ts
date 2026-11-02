@@ -88,10 +88,10 @@ export function m5Shot(kind: M5Shot) {
     const spawn = game.world.edibles.length ? munchStage(game, 1) : opts.spawn;
     if (munching) {
       input = idle((t) => ({ munch: t >= MUNCH_AT && t < MUNCH_AT + STEP }));
-      if (kind === 'bite1') stillTime = chomp(0) + 0.6;
+      if (kind === 'bite1') stillTime = chomp(0) + 0.3;
       if (kind === 'bite3') stillTime = chomp(2) + 0.22;
       if (kind === 'crumbs') {
-        stripTimes = [chomp(0) + 0.08, chomp(0) + 0.3, chomp(0) + 0.62];
+        stripTimes = [chomp(0) + 0.08, chomp(0) + 0.24, chomp(0) + 0.42];
         stillTime = stripTimes[0] ?? 0;
       }
     } else if (kind === 'burp') {

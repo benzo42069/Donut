@@ -642,7 +642,7 @@ export class Game {
     // The donut has turned by `turn` in his hands (about its own axis), so the
     // rim at his lips sits that much further back in its own frame.
     const angle = Math.atan2(HOLD.z, -HOLD.y) + -this.camSide * this.munch.turn;
-    const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.19 }, e.voxel, 31 + k * 7, true);
+    const removed = biteDonut(e.grid, e.flavor, { angle, radius: 0.23 }, e.voxel, 31 + k * 7, true);
     for (const c of e.grid.chunkCoords()) e.grid.markDirty(c.cx, c.cy, c.cz);
     this.track(e.object.update());
     e.group.updateMatrixWorld(true);
@@ -777,13 +777,14 @@ export class Game {
       this.sinceFx = 0;
       this.dust.emit({
         at: p.clone().setY(p.y + 0.05),
-        count: 12,
-        speed: [0.4, 1.0],
+        count: 14,
+        speed: [0.6, 1.4],
         up: [0.9, 1.8],
-        dir: { x: -fwd.x, z: -fwd.z, bias: 0.8 },
+        // Out to both sides as well as behind, so the puffs show past the ball.
+        dir: { x: -fwd.x, z: -fwd.z, bias: 0.25 },
         colors: ['butter', 'doughGolden', 'candyCream', 'sprinkleYellow'],
-        size: [0.022, 0.034],
-        life: [0.5, 0.8],
+        size: [0.03, 0.05],
+        life: [0.7, 1.1],
       });
     }
     const power = this.powers.power;

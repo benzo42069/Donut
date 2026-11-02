@@ -488,7 +488,7 @@ function faceLayout(
         color: r > rim ? 'glazeyBellyEdge' : 'glazeyBellySoft',
         ...dome(x, dy, egg, tummy.ry, 0.3, 0.3),
         // Low enough that the oval wraps under the round tummy (no flat cut).
-        facing: -0.7,
+        facing: -0.35,
       };
     }
     return null;

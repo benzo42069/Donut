@@ -110,6 +110,7 @@ the M4 section below.
 | 4 | 6.66 | 6.7 | 6.68 | glaze blocker closed by the card light; r1 blocker: dithered belly edge regresses M4; hands still a snout |
 | 5 | 6.73 | 6.85 | 6.79 | no blockers; hero 7.2 (r2); hands nearly there, crumbs f0, roll and burp hoop still open |
 | 6 | 6.73 | 6.85 | 6.79 | flat; crumbs over the eye (5th time), hold, roll, burp hoop size |
+| 7 | 6.83 | 6.96 | 6.90 | no blockers; hero 7.3 and crumbs 7.09 (r2); hold, roll, bite-1 nick |
 
 **Plateau (§5), before iter 4.** The mean rose 0.295 over iterations 1–3,
 under the 0.3 bar, and the same three findings have come back every round

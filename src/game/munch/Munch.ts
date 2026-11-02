@@ -23,7 +23,7 @@ export const MUNCH = {
   /** Turn of the donut between bites (radians), so each bite takes fresh rim. */
   turn: 0.6,
   /** How far he turns the ring to show off each fresh bite (radians). */
-  show: 1.1,
+  show: 1.8,
 } as const;
 
 /** When each beat of a munch happens, from its start. */
